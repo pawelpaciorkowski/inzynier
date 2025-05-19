@@ -102,9 +102,6 @@ dotnet build
 dotnet run
 ```
 
-```
-Jasne, Pacior! Oto **gotowy fragment o bazie danych**, który możesz wkleić **bezpośrednio pod sekcją “Uruchamianie lokalnie”** (albo w innym wygodnym miejscu).
-Zachowałem Twój styl i język, żeby README był spójny.
 
 ---
 
