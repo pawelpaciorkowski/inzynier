@@ -1,22 +1,4 @@
-Świetnie, że dodałeś już aplikację mobilną! Poniżej:
 
----
-
-### ✅ 1. **Usuń duplikat folderu**
-
-Obecnie masz strukturę:
-`crm-mobile/crm-mobile`
-Przenieś zawartość *wewnętrznego* folderu `crm-mobile` o jeden poziom wyżej:
-
-```bash
-# z poziomu głównego katalogu projektu
-mv crm-mobile/crm-mobile/* crm-mobile/
-rm -r crm-mobile/crm-mobile
-```
-
----
-
-### ✅ 2. **Poprawiony `README.md` (z opisem mobilki)**
 
 ```markdown
 # 📊 CRM Panel – Projekt Inżynierski
