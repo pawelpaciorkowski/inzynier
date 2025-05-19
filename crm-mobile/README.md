@@ -1,4 +1,3 @@
-Świetnie! Oto **dedykowany `README.md`** do folderu `crm-mobile`, który możesz wrzucić bezpośrednio do tego katalogu:
 
 ---
 
