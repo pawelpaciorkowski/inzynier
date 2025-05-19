@@ -102,6 +102,64 @@ dotnet build
 dotnet run
 ```
 
+```
+Jasne, Pacior! Oto **gotowy fragment o bazie danych**, który możesz wkleić **bezpośrednio pod sekcją “Uruchamianie lokalnie”** (albo w innym wygodnym miejscu).
+Zachowałem Twój styl i język, żeby README był spójny.
+
+---
+
+## 🗄️ Baza danych – MySQL w Dockerze
+
+Aplikacja korzysta z bazy danych **MySQL 8.4** uruchamianej lokalnie w kontenerze Docker.
+
+### Jak uruchomić bazę?
+
+1. **Upewnij się, że masz zainstalowanego Dockera.**
+2. W terminalu wpisz:
+
+   ```bash
+   docker run --name crm-db \
+     -e MYSQL_ROOT_PASSWORD=admin123 \
+     -e MYSQL_DATABASE=crm_project \
+     -p 3307:3306 \
+     -d mysql:8.4
+   ```
+
+   > **Uwaga:** Jeżeli port 3307 jest zajęty, możesz go zmienić np. na 3308 (`-p 3308:3306`).
+
+### Parametry połączenia
+
+| Parametr    | Wartość       |
+| ----------- | ------------- |
+| Host        | `localhost`   |
+| Port        | `3307`        |
+| User        | `root`        |
+| Hasło       | `admin123`    |
+| Baza danych | `crm_project` |
+
+### Przykładowa konfiguracja `.env`
+
+```env
+DB_HOST=localhost
+DB_PORT=3307
+DB_USER=root
+DB_PASSWORD=admin123
+DB_NAME=crm_project
+```
+
+**Po uruchomieniu bazy backend aplikacji powinien działać bez dodatkowej konfiguracji**.
+W razie problemów sprawdź, czy kontener jest uruchomiony i port nie jest blokowany przez firewall.
+
+---
+
+Możesz śmiało dokleić **ten fragment pod “Uruchamianie lokalnie”**, np. tuż przed “Wymagania formalne”.
+
+> “Bo dobra dokumentacja to taka, która działa nawet o 3 w nocy przed deadlinem!” 😎
+
+Jeśli chcesz rozbudować ten fragment np. o instrukcję seedowania bazy albo backup, napisz!
+
+```
+
 ### Mobilna aplikacja (Expo)
 
 ```bash
