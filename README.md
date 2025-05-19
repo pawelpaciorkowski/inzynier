@@ -149,15 +149,6 @@ W razie problemów sprawdź, czy kontener jest uruchomiony i port nie jest bloko
 
 ---
 
-Możesz śmiało dokleić **ten fragment pod “Uruchamianie lokalnie”**, np. tuż przed “Wymagania formalne”.
-
-> “Bo dobra dokumentacja to taka, która działa nawet o 3 w nocy przed deadlinem!” 😎
-
-Jeśli chcesz rozbudować ten fragment np. o instrukcję seedowania bazy albo backup, napisz!
-
-
----
-
 ## 📈 Wymagania formalne (zgodne z uczelnią)
 
 ✅ 30+ tabel w bazie danych
