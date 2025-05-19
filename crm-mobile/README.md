@@ -1,9 +1,5 @@
-
 ---
 
-### 📄 `crm-mobile/README.md`
-
-```markdown
 # 📱 CRM Mobile – Aplikacja mobilna (Expo)
 
 > Część projektu inżynierskiego: **Zintegrowany system CRM**  
