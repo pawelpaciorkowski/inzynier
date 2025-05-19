@@ -1,4 +1,4 @@
-
+---
 
 ```markdown
 # 📊 CRM Panel – Projekt Inżynierski
