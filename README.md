@@ -1,6 +1,5 @@
 ---
 
-```markdown
 # 📊 CRM Panel – Projekt Inżynierski
 
 > Autor: **Paweł Paciorkowski**  
