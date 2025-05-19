@@ -155,15 +155,6 @@ Możesz śmiało dokleić **ten fragment pod “Uruchamianie lokalnie”**, np. 
 
 Jeśli chcesz rozbudować ten fragment np. o instrukcję seedowania bazy albo backup, napisz!
 
-```
-
-### Mobilna aplikacja (Expo)
-
-```bash
-cd crm-mobile
-npm install
-npm run web    # lub: npm run android / npm run ios
-```
 
 ---
 
