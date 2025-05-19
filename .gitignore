@@ -1,0 +1,48 @@
+# ---- FRONTEND (Node.js, Vite, React) ----
+node_modules/
+dist/
+dist-ssr/
+*.local
+.env.local
+.env.*.local
+.vite
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- BACKEND (.NET) ----
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build results
+**/bin/
+**/obj/
+*.dll
+*.exe
+*.pdb
+*.cache
+*.dbmdl
+
+# ASP.NET
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Visual Studio Code
+.vscode/
+!.vscode/extensions.json
+
+# JetBrains / Rider
+.idea/
+*.sln.iml
+
+# System
+.DS_Store
+Thumbs.db
