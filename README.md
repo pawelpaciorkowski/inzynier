@@ -1,7 +1,5 @@
 ---
 
-### ✅ **Plik `README.md`**
-
 # 📊 CRM Panel – Projekt Inżynierski
 
 > Autor: **Paweł Paciorkowski**  
