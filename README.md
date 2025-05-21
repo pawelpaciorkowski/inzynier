@@ -148,6 +148,121 @@ DB_NAME=crm_project
 W razie problemów sprawdź, czy kontener jest uruchomiony i port nie jest blokowany przez firewall.
 
 ---
+Okej, oto czysty, sformatowany kod Markdown do sekcji o Dockerze do wklejenia w README.md:
+
+````markdown
+## 🐳 Uruchamianie środowiska z Dockerem
+
+Projekt CRM można wygodnie uruchomić w środowisku kontenerowym Docker, co zapewnia spójną konfigurację i izolację usług.
+
+### Co zawiera `docker-compose`?
+
+- baza danych MariaDB (MySQL kompatybilna)  
+- backend ASP.NET Core 9.0  
+- frontend React + Vite + nginx  
+
+### Jak uruchomić całość?
+
+Upewnij się, że masz zainstalowanego Dockera oraz Docker Compose.  
+
+W katalogu głównym projektu (tam, gdzie jest `docker-compose.yml`) uruchom:
+
+```bash
+docker compose build
+docker compose up -d
+````
+
+Sprawdź działanie kontenerów:
+
+```bash
+docker ps
+```
+
+Powinieneś zobaczyć działające usługi:
+
+| Usługa      | Port kontenera | Port lokalny (host) |
+| ----------- | -------------- | ------------------- |
+| baza danych | 3306           | 3306                |
+| backend API | 8080           | 5167                |
+| frontend    | 80             | 5173                |
+
+---
+
+### Dostęp do aplikacji
+
+* **Frontend:** [http://localhost:5173](http://localhost:5173)
+  (Interfejs użytkownika React + Vite, serwowany przez nginx)
+
+* **Backend API:** [http://localhost:5167/api](http://localhost:5167/api)
+  (REST API ASP.NET Core)
+
+* **Baza danych:** port 3306, dostęp lokalny (możesz użyć np. MySQL Workbench lub DBeaver)
+
+---
+
+### Konfiguracja połączenia z bazą danych w backendzie
+
+W `docker-compose.yml` backend łączy się z bazą używając nazwy usługi `db` jako hosta (Docker DNS):
+
+```yaml
+environment:
+  - ConnectionStrings__DefaultConnection=server=db;port=3306;database=crm_project;user=root;password=kapljca
+```
+
+### Wolumen danych
+
+Dane bazy są przechowywane w wolumenie Docker, by zachować je między restartami kontenerów:
+
+```yaml
+volumes:
+  dbdata:
+```
+
+---
+
+### Debugowanie i logi
+
+* Logi backendu:
+
+```bash
+docker logs -f inzynier-backend-1
+```
+
+* Wejście do kontenera backendu:
+
+```bash
+docker exec -it inzynier-backend-1 bash
+```
+
+* Logowanie do bazy w kontenerze:
+
+```bash
+docker exec -it inzynier-db-1 mysql -u root -p
+# podaj hasło: kapljca
+```
+
+---
+
+### Zalecenia
+
+Po każdej zmianie frontendu:
+
+```bash
+cd crm-ui
+npm run build
+cd ..
+docker compose build frontend
+docker compose up -d
+```
+
+Po zmianach backendu:
+
+```bash
+docker compose build backend
+docker compose up -d
+```
+
+---
 
 ## 📈 Wymagania formalne (zgodne z uczelnią)
 
