@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: kapljca
+      MYSQL_DATABASE: crm_project
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: CRM.API/Dockerfile
+    depends_on:
+      - db
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=server=db;port=3306;database=crm_project;user=root;password=kapljca
+    ports:
+      - "5167:8080"
+
+  frontend:
+    build:
+      context: ./crm-ui
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  dbdata:

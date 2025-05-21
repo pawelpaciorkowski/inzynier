@@ -27,6 +27,7 @@ export function RolesPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const api = import.meta.env.VITE_API_URL;
 
     const token = localStorage.getItem('token');
 
@@ -36,7 +37,7 @@ export function RolesPage() {
 
     const loadRoles = () => {
         setLoading(true);
-        axios.get('http://localhost:5167/api/admin/roles', {
+        axios.get(`${api}/admin/roles`, {   // <-- tutaj backtick i interpolacja api
             headers: { Authorization: `Bearer ${token}` },
         })
             .then(res => setRoles(res.data))
@@ -46,7 +47,7 @@ export function RolesPage() {
 
     const showUsers = (roleId: number) => {
         setLoading(true);
-        axios.get(`http://localhost:5167/api/admin/roles/${roleId}/users`, {
+        axios.get(`${api}/admin/roles/${roleId}/users`, {  // <-- backtick i interpolacja
             headers: { Authorization: `Bearer ${token}` },
         })
             .then(res => {
@@ -61,7 +62,7 @@ export function RolesPage() {
         e.preventDefault();
         setError(null);
         try {
-            await axios.post('http://localhost:5167/api/admin/roles', {
+            await axios.post(`${api}/admin/roles`, {   // <-- backtick i interpolacja
                 name: newRoleName,
                 description: newRoleDesc,
             }, {
@@ -87,7 +88,7 @@ export function RolesPage() {
         if (!editRole) return;
         setError(null);
         try {
-            await axios.put(`http://localhost:5167/api/admin/roles/${editRole.id}`, {
+            await axios.put(`${api}/admin/roles/${editRole.id}`, {  // <-- backtick i interpolacja
                 name: editRoleName,
                 description: editRoleDesc,
             }, {
@@ -105,7 +106,7 @@ export function RolesPage() {
         if (!deleteRole) return;
         setError(null);
         try {
-            await axios.delete(`http://localhost:5167/api/admin/roles/${deleteRole.id}`, {
+            await axios.delete(`${api}/admin/roles/${deleteRole.id}`, {  // <-- backtick i interpolacja
                 headers: { Authorization: `Bearer ${token}` },
             });
             setSuccess('Usunięto rolę');
@@ -115,6 +116,7 @@ export function RolesPage() {
             setError('Błąd usuwania roli');
         }
     };
+
 
     return (
         <div className="p-6 max-w-3xl mx-auto">

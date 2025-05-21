@@ -22,13 +22,14 @@ export default function UsersPage() {
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [formData, setFormData] = useState<Partial<User>>({});
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
+    const api = import.meta.env.VITE_API_URL;
 
     const token = localStorage.getItem('token');
     const [roles, setRoles] = useState<Role[]>([]);
 
     // Dodaj do useEffect (obok ładowania użytkowników)
     useEffect(() => {
-        axios.get('http://localhost:5167/api/admin/roles', {
+        axios.get('${api}/admin/roles', {
             headers: { Authorization: `Bearer ${token}` },
         })
             .then(res => setRoles(res.data))
@@ -36,11 +37,21 @@ export default function UsersPage() {
     }, []);
 
     useEffect(() => {
-        axios.get('http://localhost:5167/api/admin/users', {
-            headers: { Authorization: `Bearer ${token}` },
+        axios.get(`${api}/admin/users`, {
+            headers: { Authorization: `Bearer ${token}` }
         })
-            .then(res => setUsers(res.data))
-            .catch(err => console.error('❌ Błąd ładowania użytkowników:', err));
+            .then(res => {
+                console.log("users response:", res.data);
+                if (Array.isArray(res.data)) setUsers(res.data);
+                else {
+                    console.error("Niepoprawny format users:", res.data);
+                    setUsers([]);
+                }
+            })
+            .catch(err => {
+                console.error('❌ Błąd ładowania użytkowników:', err);
+                setUsers([]);
+            });
     }, []);
 
     const handleEdit = (user: User) => {
@@ -51,7 +62,7 @@ export default function UsersPage() {
     const handleDelete = async () => {
         if (!userToDelete) return;
         try {
-            await axios.delete(`http://localhost:5167/api/admin/users/${userToDelete.id}`, {
+            await axios.delete('${api}/admin/users/${userToDelete.id}', {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
@@ -67,7 +78,7 @@ export default function UsersPage() {
 
         try {
             await axios.put(
-                `http://localhost:5167/api/admin/users/${editingUser.id}`,
+                `${api}/admin/users/${editingUser.id}`,
                 {
                     username: formData.username,
                     email: formData.email,

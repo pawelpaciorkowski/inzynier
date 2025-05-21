@@ -15,7 +15,7 @@ export default function ClientsPage() {
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
     const [formData, setFormData] = useState<Partial<Customer>>({});
     const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
-
+    const api = import.meta.env.VITE_API_URL;
 
     const handleEdit = (customer: Customer) => {
         setEditingCustomer(customer);
@@ -31,7 +31,7 @@ export default function ClientsPage() {
         const token = localStorage.getItem('token');
 
         try {
-            await axios.delete(`http://localhost:5167/api/customers/${customerToDelete.id}`, {
+            await axios.delete('${api}/customers/${customerToDelete.id}', {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setClients(prev => prev.filter(c => c.id !== customerToDelete.id));
@@ -46,15 +46,23 @@ export default function ClientsPage() {
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-
-        axios.get('http://localhost:5167/api/customers', {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
+        axios.get('/api/customers', {
+            headers: { Authorization: `Bearer ${token}` },
         })
-            .then(res => setClients(res.data))
-            .catch(err => console.error('❌ Błąd ładowania klientów:', err));
+            .then(res => {
+                // Sprawdź, czy response to tablica
+                if (Array.isArray(res.data)) setClients(res.data);
+                else {
+                    console.error("❌ Nieoczekiwany format odpowiedzi:", res.data);
+                    setClients([]);
+                }
+            })
+            .catch(err => {
+                console.error('❌ Błąd ładowania klientów:', err);
+                setClients([]);
+            });
     }, []);
+
 
 
 
@@ -96,7 +104,7 @@ export default function ClientsPage() {
 
                                     try {
                                         await axios.put(
-                                            `http://localhost:5167/api/customers/${editingCustomer.id}`,
+                                            `${api}/customers/${editingCustomer.id}`,
                                             formData,
                                             {
                                                 headers: { Authorization: `Bearer ${token}` },

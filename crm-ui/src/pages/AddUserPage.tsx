@@ -19,15 +19,16 @@ export function AddUserPage() {
     const [roles, setRoles] = useState<Role[]>([]);
     const [success, setSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-
+    const api = import.meta.env.VITE_API_URL;
     const token = localStorage.getItem('token');
 
     useEffect(() => {
-        axios.get('http://localhost:5167/api/admin/roles', {
+        axios.get(`${api}//admin/roles`, {
             headers: { Authorization: `Bearer ${token}` },
         })
             .then(res => setRoles(res.data))
-            .catch(err => setError('Błąd ładowania ról'));
+            .catch(() => setError('Błąd ładowania ról'));
+
     }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -51,7 +52,7 @@ export function AddUserPage() {
         setError(null);
         setSuccess(null);
         try {
-            await axios.post('http://localhost:5167/api/admin/users', {
+            await axios.post('${api}//admin/users', {
                 username: formData.username,
                 email: formData.email,
                 password: formData.password,
