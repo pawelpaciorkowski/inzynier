@@ -6,7 +6,7 @@ namespace CRM.BusinessLogic.Services.Admin
     {
         Task<List<User>> GetAllAsync();
         Task<User?> GetByIdAsync(int id);
-        Task<User> CreateAsync(User user);
+        Task<User> CreateAsync(CreateUserDto dto);
         Task<bool> UpdateAsync(int id, UpdateUserDto dto);
         Task<bool> DeleteAsync(int id);
         Task<List<User>> GetAllWithRolesAsync();

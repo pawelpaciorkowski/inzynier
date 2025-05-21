@@ -18,11 +18,12 @@ namespace CRM.API.Controllers.Admin
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<Role>>> GetAll()
-        {
-            var roles = await _roleService.GetAllAsync();
-            return Ok(roles);
-        }
+public async Task<ActionResult<List<RoleWithUserCountDto>>> GetAll()
+{
+    var roles = await _roleService.GetAllWithUserCountAsync();
+    return Ok(roles);
+}
+
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Role>> GetById(int id)
@@ -35,21 +36,23 @@ namespace CRM.API.Controllers.Admin
         }
 
         [HttpPost]
-        public async Task<ActionResult<Role>> Create(Role role)
+        public async Task<ActionResult<Role>> Create(CreateRoleDto dto)
         {
-            var created = await _roleService.CreateAsync(role);
+            var created = await _roleService.CreateAsync(dto);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
+
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, Role updatedRole)
+        public async Task<IActionResult> Update(int id, UpdateRoleDto dto)
         {
-            var success = await _roleService.UpdateAsync(id, updatedRole);
+            var success = await _roleService.UpdateAsync(id, dto);
             if (!success)
                 return NotFound();
 
             return NoContent();
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
@@ -60,5 +63,13 @@ namespace CRM.API.Controllers.Admin
 
             return NoContent();
         }
+
+       [HttpGet("{roleId}/users")]
+        public async Task<ActionResult<List<UserWithRoleDto>>> GetUsersInRole(int roleId)
+        {
+            var users = await _roleService.GetUsersInRoleAsync(roleId);
+            return Ok(users);
+        }
+
     }
 }

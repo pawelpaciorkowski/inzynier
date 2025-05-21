@@ -46,11 +46,20 @@ namespace CRM.API.Controllers.Admin
         }
 
         [HttpPost]
-        public async Task<ActionResult<CRM.Data.Models.User>> Create(CRM.Data.Models.User user)
+        public async Task<ActionResult<UserWithRoleDto>> Create(CreateUserDto dto)
         {
-            var created = await _userService.CreateAsync(user);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+            var created = await _userService.CreateAsync(dto);
+            var result = new UserWithRoleDto
+            {
+                Id = created.Id,
+                Username = created.Username,
+                Email = created.Email,
+                Role = created.Role.Name
+            };
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, result);
         }
+
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, UpdateUserDto dto)

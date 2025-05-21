@@ -13,6 +13,28 @@ namespace CRM.BusinessLogic.Services.Admin
             _context = context;
         }
 
+        public async Task<User> CreateAsync(CreateUserDto dto)
+        {
+            var role = await _context.Roles.FindAsync(dto.RoleId);
+            if (role == null)
+                throw new Exception("Rola nie istnieje!");
+
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+
+            var user = new User
+            {
+                Username = dto.Username,
+                Email = dto.Email,
+                PasswordHash = passwordHash,
+                RoleId = dto.RoleId,
+                Role = role
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return user;
+        }
+
         public async Task<List<User>> GetAllAsync()
         {
             return await _context.Users.Include(u => u.Role).ToListAsync();
