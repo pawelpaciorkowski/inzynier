@@ -32,6 +32,9 @@ import { SystemLogsPage } from "./pages/SystemLogsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AddInvoicePage } from "./pages/AddInvoicePage";
 import { ModalProvider } from './context/ModalContext';
+import { AddContractPage } from './pages/AddContractPage';
+import { EditContractPage } from './pages/EditContractPage';
+import { EditClientPage } from './pages/EditClientPage';
 
 import './index.css';
 
@@ -58,6 +61,7 @@ function App() {
               <Route path="/aktywnosci" element={<ActivitiesPage />} />
               <Route path="/klienci/tagi" element={<ClientTagsPage />} />
               <Route path="/klienci/dodaj" element={<AddClientPage />} />
+              <Route path="/klienci/edytuj/:id" element={<PrivateRoute><EditClientPage /></PrivateRoute>} />
 
               <Route path="/uzytkownicy/dodaj" element={<AddUserPage />} />
               <Route path="/role" element={<RolesPage />} />
@@ -66,6 +70,8 @@ function App() {
               <Route path="/zadania/wszystkie" element={<AllTasksPage />} />
 
               <Route path="/kontrakty" element={<ContractsPage />} />
+              <Route path="/kontrakty/dodaj" element={<PrivateRoute><AddContractPage /></PrivateRoute>} />
+              <Route path="/kontrakty/edytuj/:id" element={<PrivateRoute><EditContractPage /></PrivateRoute>} />
               <Route path="/faktury" element={<InvoicesPage />} />
               <Route path="/faktury/dodaj" element={<AddInvoicePage />} />
               <Route path="/platnosci" element={<PaymentsPage />} />

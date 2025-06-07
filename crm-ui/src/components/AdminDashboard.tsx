@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Link } from "react-router-dom";
 
 interface AdminDashboardProps {
@@ -8,21 +9,24 @@ interface AdminDashboardProps {
         paymentsCount: number;
         usersCount: number;
         systemLogsCount: number;
-        taskPerUser?: { username: string; count: number }[];
+        taskPerUser?: { username: string; count: number }[] | { $id: string; $values: { username: string; count: number }[] };
     };
 }
 
 export default function AdminDashboard({ data }: AdminDashboardProps) {
-    // 👇 Dodaj debug log
-    console.log("Zadania per user:", data.taskPerUser);
+    // Poprawiona logika do "rozpakowania" danych
+    const tasks = (data.taskPerUser && !Array.isArray(data.taskPerUser) && (data.taskPerUser as any).$values)
+        ? (data.taskPerUser as any).$values
+        : (Array.isArray(data.taskPerUser) ? data.taskPerUser : []);
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            <DashboardWidget title="Umowy" count={data.contractsCount} to="/umowy" />
+            {/* ... DashboardWidget pozostają bez zmian ... */}
+            <DashboardWidget title="Umowy" count={data.contractsCount} to="/kontrakty" />
             <DashboardWidget title="Faktury" count={data.invoicesCount} to="/faktury" />
             <DashboardWidget title="Płatności" count={data.paymentsCount} to="/platnosci" />
             <DashboardWidget title="Użytkownicy" count={data.usersCount} to="/uzytkownicy" />
-            <DashboardWidget title="Logi systemowe" count={data.systemLogsCount} to="/logi-systemowe" />
+            <DashboardWidget title="Logi systemowe" count={data.systemLogsCount} to="/logi" />
             <DashboardWidget title="Zadania" count={data.tasksCount} to="/zadania" />
 
             <div className="col-span-full mt-8">
@@ -30,9 +34,10 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
                     Zadania wg użytkownika
                 </h3>
 
-                {Array.isArray(data.taskPerUser) && data.taskPerUser.length > 0 ? (
+                {/* Zmiana tutaj: używamy nowej zmiennej `tasks` */}
+                {tasks.length > 0 ? (
                     <ul className="divide-y divide-gray-700 border border-gray-700 rounded-md overflow-hidden">
-                        {data.taskPerUser.map((entry, index) => (
+                        {tasks.map((entry: any, index: any) => (
                             <li
                                 key={index}
                                 className="flex justify-between px-4 py-2 bg-gray-800 hover:bg-gray-700"

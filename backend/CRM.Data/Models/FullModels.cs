@@ -6,6 +6,7 @@ namespace CRM.Data.Models
         public string Title { get; set; } = default!;
         public DateTime SignedAt { get; set; }
         public int CustomerId { get; set; }
+        public virtual Customer Customer { get; set; } = null!;
     }
 
     public class Invoice
@@ -73,6 +74,7 @@ namespace CRM.Data.Models
         public string Topic { get; set; } = default!;
         public DateTime ScheduledAt { get; set; }
         public int CustomerId { get; set; }
+        public virtual Customer Customer { get; set; } = null!;
     }
 
     public class Reminder
@@ -137,6 +139,7 @@ namespace CRM.Data.Models
         public int Id { get; set; }
         public string Content { get; set; } = default!;
         public int CustomerId { get; set; }
+        public virtual Customer Customer { get; set; } = null!;
     }
 
     public class Setting
