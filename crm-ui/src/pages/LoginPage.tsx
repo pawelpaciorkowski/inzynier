@@ -1,4 +1,4 @@
-// src/pages/LoginPage.tsx
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState } from "react";
 import axios from "axios";
 import { FiMail, FiLock } from "react-icons/fi";
@@ -9,19 +9,23 @@ export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
-    // const api = import.meta.env.VITE_API_URL;
+    const api = import.meta.env.VITE_API_URL; // <-- ODKOMENTOWANE
+
     const handleLogin = async () => {
         setError("");
         try {
-            const res = await axios.post('${api}/Auth/login', {
+            // POPRAWKA TUTAJ: Używamy backticków (`) do stworzenia template string
+            const res = await axios.post(`${api}/Auth/login`, {
                 username,
                 password,
             });
 
             // Zapisz token do localStorage
             localStorage.setItem("token", res.data.token);
-            // Po zalogowaniu przekierowanie na dashboard
-            navigate("/dashboard");  // Przekierowanie na dashboard
+
+            // Po zalogowaniu odświeżamy stronę, aby kontekst autoryzacji się zaktualizował
+            window.location.href = "/dashboard";
+
         } catch {
             setError("Niepoprawna nazwa użytkownika lub hasło.");
         }
@@ -64,6 +68,7 @@ export default function LoginPage() {
                             className="w-full pl-14 pr-4 py-4 bg-gray-900 text-white rounded-lg border border-transparent focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none placeholder-gray-400 transition"
                             autoComplete="current-password"
                             required
+                            onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                         />
                     </label>
 
