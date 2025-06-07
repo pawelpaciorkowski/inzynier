@@ -41,6 +41,8 @@ namespace CRM.Data
         public DbSet<CustomerTag> CustomerTags { get; set; }
         public DbSet<Address> Addresses { get; set; }
         public DbSet<CalendarEvent> CalendarEvents { get; set; }
+        public DbSet<InvoiceItem> InvoiceItems { get; set; }
+        public DbSet<TaxRate> TaxRates { get; set; }
 
 
         // 👇 Dodajemy mapowanie nazw kolumn z bazy na właściwości w C#

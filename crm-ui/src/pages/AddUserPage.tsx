@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Plik: crm-ui/src/pages/AddUserPage.tsx
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
@@ -6,30 +8,42 @@ type Role = {
     name: string;
 };
 
-type User = {
-    id: number;
-    username: string;
-    email: string;
-    password: string;
-    role: Role;
+// Uproszczony typ User na potrzeby formularza
+type UserFormData = {
+    username?: string;
+    email?: string;
+    password?: string;
+    role?: Role;
 };
 
 export function AddUserPage() {
-    const [formData, setFormData] = useState<Partial<User>>({});
+    const [formData, setFormData] = useState<UserFormData>({});
     const [roles, setRoles] = useState<Role[]>([]);
     const [success, setSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const api = import.meta.env.VITE_API_URL;
+    const api = import.meta.env.VITE_API_URL; // Upewnij się, że ta zmienna jest zdefiniowana w .env
     const token = localStorage.getItem('token');
 
     useEffect(() => {
-        axios.get(`${api}//admin/roles`, {
+        // Poprawiony fetch z użyciem backticków (`)
+        axios.get(`${api}/admin/roles`, {
             headers: { Authorization: `Bearer ${token}` },
         })
-            .then(res => setRoles(res.data))
+            .then(res => {
+                const data = res.data;
+                // Poprawiona logika do obsługi formatu odpowiedzi z API
+                if (data && Array.isArray((data as any).$values)) {
+                    setRoles((data as any).$values);
+                } else if (Array.isArray(data)) {
+                    setRoles(data);
+                } else {
+                    console.warn("Otrzymano nieoczekiwany format danych dla ról:", data);
+                    setRoles([]);
+                }
+            })
             .catch(() => setError('Błąd ładowania ról'));
 
-    }, []);
+    }, [api, token]); // Dodajemy zależności
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -52,7 +66,8 @@ export function AddUserPage() {
         setError(null);
         setSuccess(null);
         try {
-            await axios.post('${api}//admin/users', {
+            // Poprawiony POST z użyciem backticków (`)
+            await axios.post(`${api}/admin/users`, {
                 username: formData.username,
                 email: formData.email,
                 password: formData.password,
@@ -62,7 +77,8 @@ export function AddUserPage() {
             });
             setSuccess('Użytkownik dodany!');
             setFormData({});
-        } catch (err: any) {
+        } catch (err) {
+            console.error('Błąd dodawania użytkownika:', err);
             setError('❌ Błąd dodawania użytkownika');
         }
     };

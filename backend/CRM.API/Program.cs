@@ -11,12 +11,11 @@ using CRM.BusinessLogic.Services.Admin;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Dodaj CORS
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5173") // <- frontend
+        policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -73,7 +72,11 @@ builder.Services.AddSwaggerGen(c =>
 
 
 // 🔧 Kontrolery
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    // Ta opcja każe serializatorowi radzić sobie z cyklicznymi odwołaniami
+    options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+});
 
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>

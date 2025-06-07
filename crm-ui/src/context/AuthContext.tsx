@@ -1,5 +1,4 @@
-// src/context/AuthContext.tsx
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { jwtDecode } from "jwt-decode";
 
 interface User {
@@ -14,13 +13,19 @@ interface JwtPayload {
 
 interface AuthContextType {
     user: User | null;
+    loading: boolean; // <-- NOWY STAN
     logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, logout: () => { } });
+const AuthContext = createContext<AuthContextType>({
+    user: null,
+    loading: true, // <-- WARTOŚĆ POCZĄTKOWA
+    logout: () => { }
+});
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true); // <-- NOWY STAN
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -32,19 +37,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     role: decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"],
                 });
             } catch (error) {
-                console.error("Token decoding error:", error);
+                console.error("Błąd dekodowania tokena:", error);
                 localStorage.removeItem("token");
-                setUser(null); // Usuń użytkownika, gdy dekodowanie nie uda się
+                setUser(null);
             }
         }
-    }, []); // Będzie wykonywane raz, przy pierwszym renderowaniu
+        setLoading(false); // <-- ZAWSZE KOŃCZYMY ŁADOWANIE
+    }, []);
 
     const logout = () => {
         localStorage.removeItem("token");
         setUser(null);
     };
 
-    return <AuthContext.Provider value={{ user, logout }}>{children}</AuthContext.Provider>;
+    return (
+        <AuthContext.Provider value={{ user, loading, logout }}>
+            {children}
+        </AuthContext.Provider>
+    );
 };
 
 export const useAuth = () => useContext(AuthContext);
