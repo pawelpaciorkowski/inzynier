@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
@@ -35,29 +36,50 @@ export function RolesPage() {
         loadRoles();
     }, []);
 
+    // Zamień funkcję loadRoles na tę wersję:
     const loadRoles = () => {
         setLoading(true);
-        axios.get(`${api}/admin/roles`, {   // <-- tutaj backtick i interpolacja api
+        axios.get(`${api}/admin/roles`, {
             headers: { Authorization: `Bearer ${token}` },
         })
-            .then(res => setRoles(res.data))
+            .then(res => {
+                const data = res.data;
+                // POPRAWKA TUTAJ:
+                if (data && Array.isArray((data as any).$values)) {
+                    setRoles((data as any).$values);
+                } else if (Array.isArray(data)) {
+                    setRoles(data);
+                } else {
+                    console.error("Otrzymano nieoczekiwany format danych dla ról:", data);
+                    setRoles([]);
+                }
+            })
             .catch(() => setError('Błąd ładowania ról'))
             .finally(() => setLoading(false));
     };
 
+    // Zamień funkcję showUsers na tę wersję:
     const showUsers = (roleId: number) => {
         setLoading(true);
-        axios.get(`${api}/admin/roles/${roleId}/users`, {  // <-- backtick i interpolacja
+        axios.get(`${api}/admin/roles/${roleId}/users`, {
             headers: { Authorization: `Bearer ${token}` },
         })
             .then(res => {
-                setUsersInRole(res.data);
+                const data = res.data;
+                // POPRAWKA TUTAJ:
+                if (data && Array.isArray((data as any).$values)) {
+                    setUsersInRole((data as any).$values);
+                } else if (Array.isArray(data)) {
+                    setUsersInRole(data);
+                } else {
+                    console.error("Otrzymano nieoczekiwany format danych dla użytkowników w roli:", data);
+                    setUsersInRole([]);
+                }
                 setShowUsersModal(roleId);
             })
             .catch(() => setError('Błąd ładowania użytkowników tej roli'))
             .finally(() => setLoading(false));
     };
-
     const handleAddRole = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);

@@ -53,29 +53,48 @@ namespace CRM.API.Controllers.User
 
         // ✅ POST: dodaj nowe zadanie
         [HttpPost]
-        public async Task<ActionResult<TaskItem>> CreateTask([FromBody] TaskItem task)
+        public async Task<ActionResult<TaskItem>> CreateTask([FromBody] CreateTaskDto dto)
         {
-            task.UserId = GetUserId();
-            _context.Tasks.Add(task);
+            var userId = GetUserId();
+            if (userId == 0)
+            {
+                return Unauthorized(); // Użytkownik nie jest zalogowany
+            }
+
+            var newTask = new TaskItem
+            {
+                Title = dto.Title,
+                Description = dto.Description,
+                DueDate = dto.DueDate,
+                Completed = false,
+                UserId = userId, // Przypisujemy ID zalogowanego użytkownika
+                CustomerId = 1 // Tymczasowo przypisujemy stałe CustomerId, do zmiany w przyszłości
+            };
+
+            _context.Tasks.Add(newTask);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetTask), new { id = task.Id }, task);
+            return CreatedAtAction(nameof(GetTask), new { id = newTask.Id }, newTask);
         }
 
         // ✅ PUT: aktualizuj zadanie
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTask(int id, [FromBody] TaskItem task)
+        public async Task<IActionResult> UpdateTask(int id, [FromBody] UpdateTaskDto dto)
         {
-            var existing = await _context.Tasks
-                .FirstOrDefaultAsync(t => t.Id == id && t.UserId == GetUserId());
+            var userId = GetUserId();
+            var existingTask = await _context.Tasks
+                .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
 
-            if (existing == null)
+            if (existingTask == null)
+            {
                 return NotFound();
+            }
 
-            existing.Title = task.Title;
-            existing.Description = task.Description;
-            existing.DueDate = task.DueDate;
-            existing.Completed = task.Completed;
+            // Aktualizujemy tylko te pola, które przyszły z DTO
+            existingTask.Title = dto.Title;
+            existingTask.Description = dto.Description;
+            existingTask.DueDate = dto.DueDate;
+            existingTask.Completed = dto.Completed;
 
             await _context.SaveChangesAsync();
             return NoContent();

@@ -15,6 +15,8 @@ namespace CRM.Data.Models
         public DateTime IssuedAt { get; set; }
         public decimal TotalAmount { get; set; }
         public int CustomerId { get; set; }
+        public virtual Customer Customer { get; set; } = null!;
+        public virtual ICollection<InvoiceItem> Items { get; set; } = new List<InvoiceItem>();
     }
 
     public class Payment
@@ -87,6 +89,8 @@ namespace CRM.Data.Models
         public int Id { get; set; }
         public string Name { get; set; } = default!;
         public decimal Price { get; set; }
+        public int TaxRateId { get; set; }
+        public virtual TaxRate TaxRate { get; set; } = null!;
     }
 
     public class Order

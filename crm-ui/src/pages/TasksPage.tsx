@@ -29,27 +29,57 @@ export default function TasksPage() {
                     : "/api/user/tasks";
 
             try {
+                setLoading(true); // Przeniesione na początek
                 const res = await fetch(url, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                if (!res.ok) throw new Error();
+                if (!res.ok) throw new Error("Odpowiedź sieci nie była pomyślna.");
+
                 const data = await res.json();
-                setTasks(data);
-            } catch {
+
+                // POPRAWKA TUTAJ: Sprawdzamy, czy dane mają format z $values
+                if (data && Array.isArray((data as any).$values)) {
+                    // Jeśli tak, bierzemy tablicę z tego pola
+                    setTasks((data as any).$values);
+                } else if (Array.isArray(data)) {
+                    // Jeśli nie, a są tablicą, używamy ich bezpośrednio
+                    setTasks(data);
+                } else {
+                    console.error("Otrzymano nieoczekiwany format danych dla zadań:", data);
+                    setTasks([]);
+                }
+
+            } catch (err) {
                 setError("Nie udało się pobrać zadań.");
+                console.error(err);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchTasks();
+        if (token) { // Upewniamy się, że token istnieje przed próbą pobrania danych
+            fetchTasks();
+        } else {
+            setLoading(false);
+            setError("Brak autoryzacji do pobrania zadań.");
+        }
     }, [token, user?.role]);
 
+    // Zlokalizuj tę funkcję
     const toggleComplete = async (id: number, completed: boolean) => {
         const taskToUpdate = tasks.find((t) => t.id === id);
         if (!taskToUpdate) return;
 
-        const updatedTask = { ...taskToUpdate, completed };
+        // Tworzymy obiekt DTO, który wyślemy do API
+        const updateDto = {
+            title: taskToUpdate.title,
+            description: taskToUpdate.description,
+            dueDate: taskToUpdate.dueDate,
+            completed: completed, // nowa wartość
+        };
+
+        // Zaktualizowany obiekt do natychmiastowego odświeżenia UI
+        const updatedTaskInState = { ...taskToUpdate, completed };
 
         try {
             const res = await fetch(`/api/user/tasks/${id}`, {
@@ -58,13 +88,13 @@ export default function TasksPage() {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify(updatedTask),
+                body: JSON.stringify(updateDto), // <-- Wysyłamy DTO
             });
 
             if (res.ok) {
                 setTasks((prev) =>
                     prev.map((task) =>
-                        task.id === id ? updatedTask : task
+                        task.id === id ? updatedTaskInState : task // <-- aktualizujemy stan UI
                     )
                 );
             } else {
@@ -153,8 +183,8 @@ export default function TasksPage() {
                     <li
                         key={task.id}
                         className={`p-4 rounded-md border border-gray-700 ${task.completed
-                                ? "bg-gray-700 line-through"
-                                : "bg-gray-800"
+                            ? "bg-gray-700 line-through"
+                            : "bg-gray-800"
                             } flex flex-col gap-1`}
                     >
                         <div className="flex justify-between items-center">

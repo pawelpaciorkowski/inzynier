@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
@@ -13,8 +14,6 @@ type User = {
     role: Role;
 
 };
-
-
 
 
 export default function UsersPage() {
@@ -42,9 +41,18 @@ export default function UsersPage() {
         })
             .then(res => {
                 console.log("users response:", res.data);
-                if (Array.isArray(res.data)) setUsers(res.data);
-                else {
-                    console.error("Niepoprawny format users:", res.data);
+                const data = res.data;
+
+                // POPRAWKA TUTAJ:
+                // Sprawdzamy, czy dane mają format z $values
+                if (data && Array.isArray((data as any).$values)) {
+                    // Jeśli tak, bierzemy tablicę z tego pola
+                    setUsers((data as any).$values);
+                } else if (Array.isArray(data)) {
+                    // Jeśli nie, a są tablicą, używamy ich bezpośrednio
+                    setUsers(data);
+                } else {
+                    console.error("Niepoprawny format users:", data);
                     setUsers([]);
                 }
             })
