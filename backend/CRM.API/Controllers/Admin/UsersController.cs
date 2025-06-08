@@ -2,7 +2,6 @@ using CRM.BusinessLogic.Services.Admin;
 using CRM.Data.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using CRM.Data.Models;
 
 
 

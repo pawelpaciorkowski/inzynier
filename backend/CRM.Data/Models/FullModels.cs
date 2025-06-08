@@ -39,8 +39,10 @@ namespace CRM.Data.Models
     public class Template
     {
         public int Id { get; set; }
-        public string Name { get; set; } = default!;
-        public string Content { get; set; } = default!;
+        public string Name { get; set; } = null!;
+        public string FileName { get; set; } = null!;
+        public string FilePath { get; set; } = null!;
+        public DateTime UploadedAt { get; set; }
     }
 
     public class AuditLog

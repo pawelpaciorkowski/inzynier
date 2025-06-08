@@ -1,24 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Plik: crm-ui/src/pages/ClientsPage.tsx
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
 
-type Customer = {
-    id: number;
-    name: string;
-    email: string;
-    phone: string;
-    company: string;
-    createdAt: string;
-};
+type Customer = { id: number; name: string; email: string; phone: string; company: string; createdAt: string; };
 
 export default function ClientsPage() {
     const [clients, setClients] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isDownloading, setIsDownloading] = useState(false); // Stan dla pobierania raportu
     const [error, setError] = useState<string | null>(null);
     const api = import.meta.env.VITE_API_URL;
     const { openModal } = useModal();
@@ -70,15 +63,52 @@ export default function ClientsPage() {
         });
     };
 
+    // Nowa funkcja do pobierania raportu
+    const handleDownloadReport = async () => {
+        const token = localStorage.getItem('token');
+        setIsDownloading(true);
+        try {
+            const response = await axios.get(`${api}/reports/clients`, {
+                headers: { Authorization: `Bearer ${token}` },
+                responseType: 'blob', // WAŻNE: Oczekujemy danych binarnych (pliku)
+            });
+
+            // Tworzymy link w pamięci i symulujemy kliknięcie, aby pobrać plik
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'raport-klientow.pdf');
+            document.body.appendChild(link);
+            link.click();
+            link.remove(); // Czyścimy po sobie
+
+        } catch (err) {
+            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się pobrać raportu.' });
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
     return (
         <div className="p-6">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-white">📋 Klienci</h1>
-                <Link to="/klienci/dodaj">
-                    <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
-                        + Dodaj klienta
+                <div className="flex gap-2">
+                    {/* Nowy przycisk do pobierania raportu */}
+                    <button
+                        onClick={handleDownloadReport}
+                        disabled={isDownloading}
+                        className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                        <ArrowDownTrayIcon className="w-5 h-5" />
+                        {isDownloading ? 'Pobieranie...' : 'Pobierz raport PDF'}
                     </button>
-                </Link>
+                    <Link to="/klienci/dodaj">
+                        <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                            + Dodaj klienta
+                        </button>
+                    </Link>
+                </div>
             </div>
 
             {loading && <p className="text-center text-gray-400">Ładowanie...</p>}

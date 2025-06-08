@@ -1,77 +1,82 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // Plik: crm-ui/src/pages/ContractsPage.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
-import { useModal } from '../context/ModalContext'; // Import useModal
+import { TrashIcon, PencilIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
+import { useModal } from '../context/ModalContext';
 
-interface Contract {
-    id: number;
-    title: string;
-    signedAt: string;
-    customerName: string;
-}
+interface Contract { id: number; title: string; signedAt: string; customerName: string; }
+interface Template { id: number; name: string; }
 
 export function ContractsPage() {
     const [contracts, setContracts] = useState<Contract[]>([]);
+    const [templates, setTemplates] = useState<Template[]>([]);
+    const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { openModal } = useModal(); // Pobierz funkcję openModal
+    const { openModal } = useModal();
+    const api = import.meta.env.VITE_API_URL;
 
-    const fetchContracts = async () => {
+    const fetchData = useCallback(async () => {
+        const token = localStorage.getItem('token');
+        setLoading(true);
+        try {
+            const [contractsRes, templatesRes] = await Promise.all([
+                axios.get(`${api}/contracts`, { headers: { Authorization: `Bearer ${token}` } }),
+                axios.get(`${api}/templates`, { headers: { Authorization: `Bearer ${token}` } })
+            ]);
+
+            const contractsData = contractsRes.data;
+            setContracts(contractsData?.$values || (Array.isArray(contractsData) ? contractsData : []));
+
+            const templatesData = templatesRes.data;
+            setTemplates(templatesData?.$values || (Array.isArray(templatesData) ? templatesData : []));
+
+        } catch (err) { setError('Nie udało się pobrać danych.'); } finally { setLoading(false); }
+    }, [api]);
+
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    const handleDelete = (contract: Contract) => { /* ... bez zmian ... */ };
+
+    const handleGenerate = async (contractId: number) => {
+        if (!selectedTemplateId) {
+            openModal({ type: 'error', title: 'Brak szablonu', message: 'Proszę wybrać szablon z listy powyżej.' });
+            return;
+        }
         const token = localStorage.getItem('token');
         try {
-            const res = await axios.get('/api/contracts', {
-                headers: { Authorization: `Bearer ${token}` }
+            const response = await axios.get(`<span class="math-inline">{api}/contracts/</span>{contractId}/generate-document?templateId=${selectedTemplateId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+                responseType: 'blob',
             });
-            const data = res.data;
-            if (data && Array.isArray((data as any).$values)) {
-                setContracts((data as any).$values);
-            } else if (Array.isArray(data)) {
-                setContracts(data);
-            }
-        } catch (err) {
-            setError('Nie udało się pobrać kontraktów.');
-        } finally {
-            setLoading(false);
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `umowa-${contractId}.docx`);
+            link.click();
+            link.remove();
+        } catch {
+            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się wygenerować dokumentu.' });
         }
-    };
-
-    useEffect(() => {
-        fetchContracts();
-    }, []);
-
-    const handleDelete = (contract: Contract) => {
-        openModal({
-            type: 'confirm',
-            title: 'Potwierdź usunięcie',
-            message: `Czy na pewno chcesz usunąć kontrakt "${contract.title}"?`,
-            confirmText: 'Usuń',
-            onConfirm: async () => {
-                const token = localStorage.getItem('token');
-                try {
-                    await axios.delete(`/api/contracts/${contract.id}`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-                    fetchContracts(); // Odśwież listę po usunięciu
-                } catch (err) {
-                    openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się usunąć kontraktu.' });
-                }
-            }
-        });
     };
 
     return (
         <div className="p-6">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-white">📑 Kontrakty</h1>
-                <Link to="/kontrakty/dodaj">
-                    <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
-                        + Dodaj kontrakt
-                    </button>
-                </Link>
+                <div className="flex items-center gap-4">
+                    <select onChange={(e) => setSelectedTemplateId(e.target.value)} value={selectedTemplateId} className="p-2 rounded bg-gray-700 text-white border-gray-600">
+                        <option value="">-- Wybierz szablon do generowania --</option>
+                        {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                    <Link to="/kontrakty/dodaj">
+                        <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                            + Dodaj kontrakt
+                        </button>
+                    </Link>
+                </div>
             </div>
 
             {loading && <p className="text-center text-gray-400">Ładowanie danych...</p>}
@@ -97,6 +102,9 @@ export function ContractsPage() {
                                         <td className="px-5 py-4 border-b border-gray-700">{new Date(contract.signedAt).toLocaleDateString()}</td>
                                         <td className="px-5 py-4 border-b border-gray-700 text-center">
                                             <div className="flex justify-center gap-4">
+                                                <button onClick={() => handleGenerate(contract.id)} title="Generuj dokument">
+                                                    <DocumentArrowDownIcon className="w-5 h-5 text-gray-400 hover:text-green-400" />
+                                                </button>
                                                 <Link to={`/kontrakty/edytuj/${contract.id}`} title="Edytuj">
                                                     <PencilIcon className="w-5 h-5 text-gray-400 hover:text-yellow-400" />
                                                 </Link>

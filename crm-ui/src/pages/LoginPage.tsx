@@ -9,21 +9,18 @@ export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
-    const api = import.meta.env.VITE_API_URL; // <-- ODKOMENTOWANE
+    const api = import.meta.env.VITE_API_URL;
 
     const handleLogin = async () => {
         setError("");
         try {
-            // POPRAWKA TUTAJ: Używamy backticków (`) do stworzenia template string
             const res = await axios.post(`${api}/Auth/login`, {
                 username,
                 password,
             });
 
-            // Zapisz token do localStorage
             localStorage.setItem("token", res.data.token);
 
-            // Po zalogowaniu odświeżamy stronę, aby kontekst autoryzacji się zaktualizował
             window.location.href = "/dashboard";
 
         } catch {

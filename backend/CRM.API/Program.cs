@@ -7,10 +7,49 @@ using System.Text;
 using CRM.BusinessLogic.Auth;
 using CRM.BusinessLogic.Services.Admin;
 
-
-
 var builder = WebApplication.CreateBuilder(args);
 
+// --- Konfiguracja serwisów (Dependency Injection) ---
+
+// 1. Baza Danych i Kontekst
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+
+// 2. Kontrolery i Serializator JSON
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    // Obsługa cyklicznych referencji w odpowiedziach API
+    options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+});
+
+// 3. Serwisy biznesowe
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<ReportService>();
+builder.Services.AddScoped<DocumentGenerationService>();
+
+// 4. Autentykacja i Autoryzacja (JWT)
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        };
+    });
+builder.Services.AddAuthorization();
+
+// 5. CORS (Cross-Origin Resource Sharing)
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -21,26 +60,11 @@ builder.Services.AddCors(options =>
     });
 });
 
-// 🔌 Połączenie z bazą danych
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
-
-// 🔧 Serwisy
-builder.Services.AddScoped<ICustomerService, CustomerService>();
-
-// 🔍 Swagger / OpenAPI
+// 6. Swagger / OpenAPI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-    {
-        Title = "CRM.API",
-        Version = "v1"
-    });
-
-    // 🔐 Konfiguracja JWT w Swaggerze
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "CRM.API", Version = "v1" });
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Description = @"JWT Authorization header. Example: 'Bearer {token}'",
@@ -49,7 +73,6 @@ builder.Services.AddSwaggerGen(c =>
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
         Scheme = "bearer"
     });
-
     c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement()
     {
         {
@@ -70,77 +93,28 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 
-
-// 🔧 Kontrolery
-builder.Services.AddControllers().AddJsonOptions(options =>
-{
-    // Ta opcja każe serializatorowi radzić sobie z cyklicznymi odwołaniami
-    options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
-});
-
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
-        };
-    });
-
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IRoleService, RoleService>();
-
-
+// --- Budowanie aplikacji i konfiguracja pipeline'u HTTP ---
 
 var app = builder.Build();
 
-// 🌐 Middleware i mapowania
+// Konfiguracja dla środowiska deweloperskiego
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseCors();
+app.UseHttpsRedirection();
+
+app.UseCors(); // Ważne: CORS przed Authentication/Authorization
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseHttpsRedirection();
+app.MapControllers();
 
-app.MapControllers(); // <--- bardzo ważne! Mapa kontrolerów REST API
-
-// 👇 Pozostałe trasy (np. weatherforecast)
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
+// Przykładowy endpoint
+app.MapGet("/weatherforecast", () => "This is a sample endpoint.")
 .WithName("GetWeatherForecast");
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

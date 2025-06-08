@@ -1,5 +1,6 @@
 using CRM.Data;
 using CRM.Data.Models;
+using CRM.BusinessLogic.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -36,10 +37,12 @@ public class UpdateContractDto
 public class ContractsController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly DocumentGenerationService _docService;
 
     public ContractsController(ApplicationDbContext context)
     {
         _context = context;
+        _docService = _docService;
     }
 
     // GET: api/contracts
@@ -129,5 +132,21 @@ public class ContractsController : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    // GET: api/contracts/5/generate-document?templateId=1
+    [HttpGet("{contractId}/generate-document")]
+    public async Task<IActionResult> GenerateDocument(int contractId, [FromQuery] int templateId)
+    {
+        try
+        {
+            var fileBytes = await _docService.GenerateContractDocumentAsync(contractId, templateId);
+            var fileName = $"umowa-{contractId}-{DateTime.Now:yyyyMMdd}.docx";
+            return File(fileBytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", fileName);
+        }
+        catch (Exception ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 }
