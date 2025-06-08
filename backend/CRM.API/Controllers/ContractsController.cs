@@ -39,10 +39,10 @@ public class ContractsController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly DocumentGenerationService _docService;
 
-    public ContractsController(ApplicationDbContext context)
+    public ContractsController(ApplicationDbContext context, DocumentGenerationService docService)
     {
         _context = context;
-        _docService = _docService;
+        _docService = docService;
     }
 
     // GET: api/contracts

@@ -47,7 +47,7 @@ export function ContractsPage() {
         }
         const token = localStorage.getItem('token');
         try {
-            const response = await axios.get(`<span class="math-inline">{api}/contracts/</span>{contractId}/generate-document?templateId=${selectedTemplateId}`, {
+            const response = await axios.get(`${api}/contracts/${contractId}/generate-document?templateId=${selectedTemplateId}`, {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob',
             });
