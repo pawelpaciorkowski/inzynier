@@ -16,7 +16,7 @@ namespace CRM.API.Controllers
             _customerService = customerService;
         }
 
-        [Authorize] // ⬅️ Każdy zalogowany użytkownik może pobrać listę
+        [Authorize]
         [HttpGet]
         public async Task<ActionResult<List<Customer>>> GetAll()
         {
@@ -24,7 +24,7 @@ namespace CRM.API.Controllers
             return Ok(customers);
         }
 
-        [Authorize] // ⬅️ Każdy zalogowany użytkownik może pobrać jednego klienta
+        [Authorize]
         [HttpGet("{id}")]
         public async Task<ActionResult<Customer>> GetById(int id)
         {
@@ -34,7 +34,7 @@ namespace CRM.API.Controllers
             return Ok(customer);
         }
 
-        [Authorize] // ⬅️ Każdy zalogowany może dodać klienta
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<Customer>> Create(Customer customer)
         {
@@ -42,7 +42,7 @@ namespace CRM.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
-        [Authorize(Roles = "Admin,Manager")] // ⬅️ Tylko Admin lub Manager może edytować klienta
+        [Authorize(Roles = "Admin,Manager")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, Customer customer)
         {
@@ -52,7 +52,7 @@ namespace CRM.API.Controllers
             return NoContent();
         }
 
-        [Authorize(Roles = "Admin,Manager")] // ⬅️ Tylko Admin lub Manager może usuwać
+        [Authorize(Roles = "Admin,Manager")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
