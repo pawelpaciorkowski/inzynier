@@ -6,7 +6,15 @@ import { Link } from 'react-router-dom';
 import { TrashIcon, PencilIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
 
-interface Contract { id: number; title: string; signedAt: string; customerName: string; }
+interface Contract {
+    id: number;
+    title: string;
+    signedAt: string;
+    customerName: string;
+    contractNumber?: string;
+    endDate?: string;
+    netAmount?: number;
+}
 interface Template { id: number; name: string; }
 
 export function ContractsPage() {
@@ -85,21 +93,33 @@ export function ContractsPage() {
             {!loading && !error && (
                 <div className="bg-gray-800 shadow-md rounded-lg overflow-hidden">
                     <table className="min-w-full leading-normal text-white">
+                        {/* Zaktualizowany nagłówek tabeli */}
                         <thead>
                             <tr>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Tytuł</th>
+                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Tytuł / Numer</th>
                                 <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Klient</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Data podpisania</th>
+                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Daty</th>
+                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-right text-xs font-semibold uppercase tracking-wider">Wartość netto</th>
                                 <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-center text-xs font-semibold uppercase tracking-wider">Akcje</th>
                             </tr>
                         </thead>
+                        {/* Zaktualizowane ciało tabeli */}
                         <tbody>
                             {contracts.length > 0 ? (
                                 contracts.map((contract) => (
                                     <tr key={contract.id} className="hover:bg-gray-700">
-                                        <td className="px-5 py-4 border-b border-gray-700">{contract.title}</td>
+                                        <td className="px-5 py-4 border-b border-gray-700">
+                                            <p className="font-semibold">{contract.title}</p>
+                                            <p className="text-xs text-gray-400">{contract.contractNumber || 'Brak numeru'}</p>
+                                        </td>
                                         <td className="px-5 py-4 border-b border-gray-700">{contract.customerName}</td>
-                                        <td className="px-5 py-4 border-b border-gray-700">{new Date(contract.signedAt).toLocaleDateString()}</td>
+                                        <td className="px-5 py-4 border-b border-gray-700 text-sm">
+                                            <p>Podpisano: {new Date(contract.signedAt).toLocaleDateString()}</p>
+                                            {contract.endDate && <p className="text-gray-400">Zakończenie: {new Date(contract.endDate).toLocaleDateString()}</p>}
+                                        </td>
+                                        <td className="px-5 py-4 border-b border-gray-700 text-right font-semibold">
+                                            {contract.netAmount ? `${contract.netAmount.toFixed(2)} PLN` : '-'}
+                                        </td>
                                         <td className="px-5 py-4 border-b border-gray-700 text-center">
                                             <div className="flex justify-center gap-4">
                                                 <button onClick={() => handleGenerate(contract.id)} title="Generuj dokument">

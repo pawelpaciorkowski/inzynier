@@ -7,6 +7,15 @@ namespace CRM.Data.Models
         public DateTime SignedAt { get; set; }
         public int CustomerId { get; set; }
         public virtual Customer Customer { get; set; } = null!;
+
+        // Pola specyficzne dla kontraktu
+        public string? ContractNumber { get; set; }
+        public string? PlaceOfSigning { get; set; }
+        public string? ScopeOfServices { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public decimal? NetAmount { get; set; }
+        public int? PaymentTermDays { get; set; }
     }
 
     public class Invoice

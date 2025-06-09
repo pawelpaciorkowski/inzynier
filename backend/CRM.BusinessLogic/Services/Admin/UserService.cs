@@ -83,5 +83,26 @@ namespace CRM.BusinessLogic.Services.Admin
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<bool> ChangeUserPasswordAsync(int userId, string currentPassword, string newPassword)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return false;
+            }
+
+            // Weryfikacja bieżącego hasła
+            if (!BCrypt.Net.BCrypt.Verify(currentPassword, user.PasswordHash))
+            {
+                return false; // Bieżące hasło się nie zgadza
+            }
+
+            // Hashowanie i zapis nowego hasła
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
     }
 }
