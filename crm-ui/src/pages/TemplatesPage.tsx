@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { useModal } from '../context/ModalContext';
@@ -77,9 +78,13 @@ export function TemplatesPage() {
             onConfirm: async () => {
                 const token = localStorage.getItem('token');
                 try {
-                    await axios.delete(`<span class="math-inline">{api}/templates/</span>{template.id}`, { headers: { Authorization: `Bearer ${token}` } });
-                    fetchTemplates();
-                } catch {
+                    // ✅ POPRAWNA WERSJA z użyciem backticków (`) i składni ${...}
+                    await axios.delete(`${api}/templates/${template.id}`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+
+                    fetchTemplates(); // Odśwież listę po usunięciu
+                } catch (err) {
                     openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się usunąć szablonu.' });
                 }
             }

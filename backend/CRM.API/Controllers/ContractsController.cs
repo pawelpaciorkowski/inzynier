@@ -6,12 +6,18 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 // DTO do wyświetlania na liście
+// DTO do wyświetlania na liście - rozbudowane o nowe pola
 public class ContractListItemDto
 {
     public int Id { get; set; }
     public string Title { get; set; } = null!;
     public DateTime SignedAt { get; set; }
     public string CustomerName { get; set; } = null!;
+
+    // NOWE POLA
+    public string? ContractNumber { get; set; }
+    public DateTime? EndDate { get; set; }
+    public decimal? NetAmount { get; set; }
 }
 
 // DTO do tworzenia nowego kontraktu
@@ -39,24 +45,30 @@ public class ContractsController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly DocumentGenerationService _docService;
 
-    public ContractsController(ApplicationDbContext context)
+    public ContractsController(ApplicationDbContext context, DocumentGenerationService docService)
     {
         _context = context;
-        _docService = _docService;
+        _docService = docService;
     }
 
+    // GET: api/contracts
     // GET: api/contracts
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ContractListItemDto>>> GetContracts()
     {
         var contracts = await _context.Contracts
-            .Include(c => c.Customer) // Teraz ta linia zadziała poprawnie
+            .Include(c => c.Customer)
             .Select(c => new ContractListItemDto
             {
                 Id = c.Id,
                 Title = c.Title,
                 SignedAt = c.SignedAt,
-                CustomerName = c.Customer != null ? c.Customer.Name : "Brak klienta"
+                CustomerName = c.Customer != null ? c.Customer.Name : "Brak klienta",
+
+                // Wypełniamy nowe pola
+                ContractNumber = c.ContractNumber,
+                EndDate = c.EndDate,
+                NetAmount = c.NetAmount
             })
             .OrderByDescending(c => c.SignedAt)
             .ToListAsync();
