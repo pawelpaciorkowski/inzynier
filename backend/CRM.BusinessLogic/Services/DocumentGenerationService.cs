@@ -51,8 +51,9 @@ namespace CRM.BusinessLogic.Services
                         { "{SZCZEGOLOWY_ZAKRES_USLUG}", contract.ScopeOfServices ?? "" },
 
                         { "{NAZWA_KLIENTA}", contract.Customer.Name ?? "" },
-                        { "{ADRES_KLIENTA}", "Brak adresu w bazie" },
-                        { "{NIP_KLIENTA}", "Brak NIP w bazie" },
+                        { "{ADRES_KLIENTA}", contract.Customer.Address ?? "" },
+                        { "{NIP_KLIENTA}", contract.Customer.NIP ?? "" },
+                        { "{REPREZENTANT_KLIENTA}", contract.Customer.Representative ?? ""},
 
                         { "{NAZWA_WYKONAWCY}", settings.GetValueOrDefault("CompanyName", "TWOJA FIRMA") },
                         { "{ADRES_WYKONAWCY}", settings.GetValueOrDefault("CompanyAddress", "TWÓJ ADRES") },
