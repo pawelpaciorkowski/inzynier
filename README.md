@@ -1,297 +1,133 @@
----
+# 📊 Zintegrowany System CRM – Projekt Inżynierski
 
-# 📊 CRM Panel – Projekt Inżynierski
-
-> Autor: **Paweł Paciorkowski**  
-> Kierunek: Informatyka, IV rok  
-> Specjalność: Programista aplikacji biznesowych  
-> Temat: **Zintegrowany system CRM dla zarządzania klientami, użytkownikami i zadaniami**
+> Autor: **Paweł Paciorkowski** > Kierunek: Informatyka, IV rok  
+> Specjalność: Programista aplikacji biznesowych
 
 ---
 
 ## 🧩 Opis projektu
 
-System CRM (Customer Relationship Management) został zaprojektowany jako zintegrowana platforma do zarządzania:
-- klientami i ich danymi,
-- zadaniami przypisanymi użytkownikom,
-- rolami i grupami uprawnień,
-- dokumentami i płatnościami,
-- komunikacją i aktywnością w systemie.
+**Zintegrowany System CRM** to zaawansowana platforma stworzona w ramach pracy inżynierskiej, której celem jest usprawnienie i automatyzacja kluczowych procesów biznesowych związanych z zarządzaniem relacjami z klientem.
 
-Aplikacja zawiera panel administracyjny z autoryzacją użytkowników, zaawansowanym routingiem, widokami podzielonymi na sekcje oraz dynamicznym interfejsem użytkownika. Rozwijana jest także wersja **mobilna**.
+Aplikacja składa się z trzech głównych, w pełni zintegrowanych komponentów:
+1.  **Backend RESTful API** w technologii **ASP.NET Core**, pełniący rolę serca systemu, obsługujący logikę biznesową i komunikację z bazą danych.
+2.  **Aplikacja webowa** w technologii **React + TypeScript**, stanowiąca rozbudowany panel do zarządzania wszystkimi aspektami systemu.
+3.  **Aplikacja mobilna** w technologii **React Native (Expo)**, zapewniająca dostęp do kluczowych funkcji z urządzeń mobilnych.
+
+System został zaprojektowany z myślą o spełnieniu rygorystycznych wymagań akademickich oraz biznesowych, kładąc nacisk na nowoczesne technologie, dobre praktyki architektoniczne i realną użyteczność.
 
 ---
 
 ## 💡 Technologie
 
-### Frontend (Web):
-- ⚛️ React + TypeScript + Vite
-- 💨 TailwindCSS
-- 🧭 React Router
-- 💬 Heroicons
-- 🔐 JWT Auth (Context API)
+| Kategoria | Technologia |
+| :--- | :--- |
+| **Frontend (Web)** | React, TypeScript, Vite, TailwindCSS, React Router, Axios, Heroicons |
+| **Backend** | ASP.NET Core 9.0, Entity Framework Core, C# |
+| **Baza Danych** | MariaDB (MySQL) |
+| **API** | REST, JWT Token Authorization, Swagger (OpenAPI) |
+| **Mobilna** | React Native, Expo, Expo Router, `expo-secure-store` |
+| **Generowanie Plików** | **QuestPDF** (dla raportów PDF), **DocX** (dla szablonów .docx) |
+| **Konteneryzacja** | Docker, Docker Compose |
 
-### Backend:
-- 🟦 ASP.NET Core 9.0
-- 🧠 Entity Framework Core
-- 🐬 MySQL
-- 🔐 JWT Token Authorization
-- 🔄 RESTful API
-- 📑 Swagger (OpenAPI)
+---
 
-### Mobilna (Expo):
-- 📱 React Native + Expo
-- 🗂️ Navigation (TypeScript)
-- 🔐 JWT Auth (planowane)
-- 📦 Obsługa Android/iOS/Web
+## 📌 Kluczowe Funkcjonalności
+
+-   **Pełna obsługa CRUD** dla kluczowych modułów:
+    -   👥 **Klienci:** Dodawanie, edycja, listowanie, usuwanie.
+    -   📑 **Kontrakty:** Pełne zarządzanie umowami z nowymi, rozbudowanymi polami.
+    -   🧾 **Faktury:** Możliwość tworzenia faktur i powiązania ich z klientami.
+    -   ✅ **Zadania:** Zarządzanie zadaniami (dla admina i użytkownika) w aplikacji webowej i mobilnej.
+-   **Zaawansowany system autoryzacji:**
+    -   Logowanie i rejestracja oparte na tokenach **JWT**.
+    -   Role użytkowników (**Admin**, **User**) z zabezpieczonymi endpointami w API.
+-   **System powiadomień:**
+    -   Globalny, reużywalny **komponent `Modal`** oparty na React Context do wyświetlania potwierdzeń i błędów.
+-   **Moduł raportowania i dokumentów:**
+    -   **Generowanie raportów PDF** z listą klientów.
+    -   **Generowanie spersonalizowanych umów** na podstawie dynamicznych szablonów `.docx`.
+    -   System do zarządzania szablonami (upload, listowanie, usuwanie).
+-   **Panel Ustawień:**
+    -   Możliwość globalnego zarządzania danymi firmy (używanymi w dokumentach).
+    * Formularz do bezpiecznej zmiany hasła dla zalogowanego użytkownika.
+-   **Aplikacja mobilna:**
+    -   W pełni działający system logowania i zarządzania sesją.
+    -   Interaktywna lista zadań (wyświetlanie, oznaczanie jako ukończone, usuwanie, edycja).
 
 ---
 
 ## 📂 Struktura projektu
 
 ```
-
-projekt-inzynierski/
+inzynier/
 ├── backend/        # Projekt ASP.NET Core (API + logika biznesowa + EF Core)
 ├── crm-ui/         # Webowy frontend (Vite + React)
-├── crm-mobile/     # Mobilna aplikacja (Expo + React Native + TypeScript)
+├── crm-mobile/     # Mobilna aplikacja (Expo + React Native)
 ├── .gitignore
-└── README.md       # Ten plik
-
-````
-
----
-
-## 🔐 Moduł uwierzytelniania
-
-- Rejestracja i logowanie z JWT
-- Role użytkowników (Admin, User)
-- Middleware w API zabezpieczające dostęp do zasobów
-
----
-
-## 📌 Kluczowe funkcjonalności
-
-| Moduł               | Opis                                                                 |
-|--------------------|----------------------------------------------------------------------|
-| 👥 Klienci          | Lista, dodawanie, tagowanie klientów                                 |
-| 🔐 Użytkownicy      | Lista, edycja, przypisywanie ról i grup                              |
-| 📋 Zadania          | Moje zadania i wszystkie zadania w systemie                          |
-| 🧾 Dokumenty        | Kontrakty, faktury, płatności                                         |
-| 📅 Kalendarz        | Wydarzenia, spotkania, przypomnienia                                 |
-| 🧠 System           | Historia logowań, logi systemowe, ustawienia                         |
-| 💬 Komunikacja     | Wiadomości, notatki, powiadomienia                                   |
-| 🧩 Eksporty i raporty | Generowanie raportów i eksporty danych do PDF/Excel                  |
-
----
-
-## 📦 Uruchamianie lokalnie
-
-### Frontend (Vite)
-```bash
-cd crm-ui
-npm install
-npm run dev
-````
-
-### Backend (.NET)
-
-```bash
-cd backend
-dotnet build
-dotnet run
+├── docker-compose.yml
+└── README.md
 ```
 
-
 ---
 
-## 🗄️ Baza danych – MySQL w Dockerze
+## 🐳 Uruchamianie Środowiska (Zalecane: Docker Compose)
 
-Aplikacja korzysta z bazy danych **MySQL 8.4** uruchamianej lokalnie w kontenerze Docker.
+Projekt został w pełni skonfigurowany do uruchomienia w środowisku kontenerowym, co jest najprostszym i najszybszym sposobem na start.
 
-### Jak uruchomić bazę?
+### Wymagania
+- Zainstalowany **Docker** i **Docker Compose**.
 
-1. **Upewnij się, że masz zainstalowanego Dockera.**
-2. W terminalu wpisz:
-
-   ```bash
-   docker run --name crm-db \
-     -e MYSQL_ROOT_PASSWORD=admin123 \
-     -e MYSQL_DATABASE=crm_project \
-     -p 3307:3306 \
-     -d mysql:8.4
-   ```
-
-   > **Uwaga:** Jeżeli port 3307 jest zajęty, możesz go zmienić np. na 3308 (`-p 3308:3306`).
-
-### Parametry połączenia
-
-| Parametr    | Wartość       |
-| ----------- | ------------- |
-| Host        | `localhost`   |
-| Port        | `3307`        |
-| User        | `root`        |
-| Hasło       | `admin123`    |
-| Baza danych | `crm_project` |
-
-### Przykładowa konfiguracja `.env`
-
-```env
-DB_HOST=localhost
-DB_PORT=3307
-DB_USER=root
-DB_PASSWORD=admin123
-DB_NAME=crm_project
-```
-
-**Po uruchomieniu bazy backend aplikacji powinien działać bez dodatkowej konfiguracji**.
-W razie problemów sprawdź, czy kontener jest uruchomiony i port nie jest blokowany przez firewall.
-
----
-Okej, oto czysty, sformatowany kod Markdown do sekcji o Dockerze do wklejenia w README.md:
-
-````markdown
-## 🐳 Uruchamianie środowiska z Dockerem
-
-Projekt CRM można wygodnie uruchomić w środowisku kontenerowym Docker, co zapewnia spójną konfigurację i izolację usług.
-
-### Co zawiera `docker-compose`?
-
-- baza danych MariaDB (MySQL kompatybilna)  
-- backend ASP.NET Core 9.0  
-- frontend React + Vite + nginx  
-
-### Jak uruchomić całość?
-
-Upewnij się, że masz zainstalowanego Dockera oraz Docker Compose.  
-
-W katalogu głównym projektu (tam, gdzie jest `docker-compose.yml`) uruchom:
+### Uruchomienie
+W głównym katalogu projektu (tam, gdzie znajduje się plik `docker-compose.yml`) uruchom komendy:
 
 ```bash
+# Zbuduj obrazy dla wszystkich serwisów
 docker compose build
+
+# Uruchom wszystkie kontenery w tle
 docker compose up -d
-````
-
-Sprawdź działanie kontenerów:
-
-```bash
-docker ps
 ```
+Po chwili wszystkie serwisy będą dostępne pod następującymi adresami:
 
-Powinieneś zobaczyć działające usługi:
-
-| Usługa      | Port kontenera | Port lokalny (host) |
-| ----------- | -------------- | ------------------- |
-| baza danych | 3306           | 3306                |
-| backend API | 8080           | 5167                |
-| frontend    | 80             | 5173                |
+-   **Aplikacja Webowa (Frontend):** [http://localhost:5173](http://localhost:5173)
+-   **API (Backend):** [http://localhost:5167](http://localhost:5167)
+-   **Swagger (Dokumentacja API):** [http://localhost:5167/swagger](http://localhost:5167/swagger)
+-   **Baza Danych (MariaDB):** Dostępna na porcie `3306` dla `localhost`
 
 ---
 
-### Dostęp do aplikacji
+## 💻 Uruchamianie manualne (bez Dockera)
 
-* **Frontend:** [http://localhost:5173](http://localhost:5173)
-  (Interfejs użytkownika React + Vite, serwowany przez nginx)
+Jeśli nie chcesz używać Dockera, możesz uruchomić każdą część aplikacji osobno.
 
-* **Backend API:** [http://localhost:5167/api](http://localhost:5167/api)
-  (REST API ASP.NET Core)
-
-* **Baza danych:** port 3306, dostęp lokalny (możesz użyć np. MySQL Workbench lub DBeaver)
-
----
-
-### Konfiguracja połączenia z bazą danych w backendzie
-
-W `docker-compose.yml` backend łączy się z bazą używając nazwy usługi `db` jako hosta (Docker DNS):
-
-```yaml
-environment:
-  - ConnectionStrings__DefaultConnection=server=db;port=3306;database=crm_project;user=root;password=kapljca
-```
-
-### Wolumen danych
-
-Dane bazy są przechowywane w wolumenie Docker, by zachować je między restartami kontenerów:
-
-```yaml
-volumes:
-  dbdata:
-```
-
----
-
-### Debugowanie i logi
-
-* Logi backendu:
-
+### 1. Backend
 ```bash
-docker logs -f inzynier-backend-1
+# Przejdź do folderu backendu
+cd backend
+
+# Zbuduj projekt
+dotnet build
+
+# Uruchom API (będzie działać na http://localhost:5167)
+dotnet run --project CRM.API
 ```
 
-* Wejście do kontenera backendu:
-
+### 2. Frontend
 ```bash
-docker exec -it inzynier-backend-1 bash
-```
-
-* Logowanie do bazy w kontenerze:
-
-```bash
-docker exec -it inzynier-db-1 mysql -u root -p
-# podaj hasło: kapljca
-```
-
----
-
-### Zalecenia
-
-Po każdej zmianie frontendu:
-
-```bash
+# Otwórz nowy terminal i przejdź do folderu crm-ui
 cd crm-ui
-npm run build
-cd ..
-docker compose build frontend
-docker compose up -d
+
+# Zainstaluj zależności
+npm install
+
+# Uruchom serwer deweloperski (będzie działać na http://localhost:5173)
+npm run dev
 ```
-
-Po zmianach backendu:
-
-```bash
-docker compose build backend
-docker compose up -d
-```
-
----
-
-## 📈 Wymagania formalne (zgodne z uczelnią)
-
-✅ 30+ tabel w bazie danych
-✅ Operacje CRUD na wszystkich encjach
-✅ Wspólna baza danych i logika dla aplikacji
-✅ 50+ interfejsów użytkownika
-✅ Role, grupy, uprawnienia
-✅ Eksport danych i generowanie szablonów
-
----
-
-## 📄 Licencja
-
-Projekt stworzony na potrzeby obrony pracy inżynierskiej.
-Wykorzystywanie fragmentów kodu do celów edukacyjnych dozwolone.
-Dalsze komercyjne użycie wymaga zgody autora.
-
----
-
-## 📬 Kontakt
-
-Jeśli masz pytania dotyczące projektu, zapraszam do kontaktu poprzez platformę uczelni lub GitLaba.
+> **Uwaga:** Przy uruchomieniu manualnym upewnij się, że masz lokalnie działającą instancję bazy danych MySQL/MariaDB i zaktualizowałeś `ConnectionString` w pliku `appsettings.json` w backendzie.
 
 ---
 
 ## 🚧 Status projektu
 
-Projekt jest w trakcie **aktywnej realizacji** – co tydzień dodawane są nowe funkcjonalności, poprawki oraz moduły zgodne z wymaganiami pracy inżynierskiej.
-
----
-
+Projekt jest w fazie **aktywnego rozwoju**. Kluczowe moduły zostały zaimplementowane, a kolejne funkcjonalności są dodawane regularnie w celu spełnienia wszystkich wymagań pracy inżynierskiej.
