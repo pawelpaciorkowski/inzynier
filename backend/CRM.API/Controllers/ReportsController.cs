@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
-[Route("api/[controller]")] // <--- POPRAWKA
+[Route("api/[controller]")]
 [Authorize]
 public class ReportsController : ControllerBase
 {

@@ -3,13 +3,13 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getInvoices, deleteInvoice, type InvoiceListItemDto } from '../services/invoiceService';
 import { EyeIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { useModal } from '../context/ModalContext'; // Import useModal
+import { useModal } from '../context/ModalContext';
 
 export function InvoicesPage() {
     const [invoices, setInvoices] = useState<InvoiceListItemDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { openModal } = useModal(); // Pobierz funkcję openModal
+    const { openModal } = useModal();
 
     useEffect(() => {
         const fetchInvoices = async () => {
@@ -36,7 +36,6 @@ export function InvoicesPage() {
         fetchInvoices();
     }, []);
 
-    // Nowa funkcja do obsługi usuwania
     const handleDelete = (invoiceId: number) => {
         openModal({
             type: 'confirm',

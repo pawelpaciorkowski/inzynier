@@ -1,4 +1,3 @@
-// CRM.Data.Models.TaskItem.cs
 namespace CRM.Data.Models
 {
     public class TaskItem

@@ -13,19 +13,19 @@ interface JwtPayload {
 
 interface AuthContextType {
     user: User | null;
-    loading: boolean; // <-- NOWY STAN
+    loading: boolean;
     logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
     user: null,
-    loading: true, // <-- WARTOŚĆ POCZĄTKOWA
+    loading: true,
     logout: () => { }
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true); // <-- NOWY STAN
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setUser(null);
             }
         }
-        setLoading(false); // <-- ZAWSZE KOŃCZYMY ŁADOWANIE
+        setLoading(false);
     }, []);
 
     const logout = () => {

@@ -1,6 +1,5 @@
 namespace CRM.Data.Models
 {
-    // Główne DTO dla tworzenia nowej faktury
     public class CreateInvoiceDto
     {
         public int CustomerId { get; set; }

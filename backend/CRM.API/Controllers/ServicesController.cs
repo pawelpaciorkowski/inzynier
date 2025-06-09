@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // Dostępne dla każdego zalogowanego użytkownika
+[Authorize]
 public class ServicesController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
@@ -16,11 +16,9 @@ public class ServicesController : ControllerBase
         _context = context;
     }
 
-    // GET: api/services
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Service>>> GetServices()
     {
-        // Zwracamy listę wszystkich dostępnych usług
         return await _context.Services.ToListAsync();
     }
 }

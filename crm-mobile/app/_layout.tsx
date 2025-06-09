@@ -1,4 +1,3 @@
-// Plik: crm-mobile/app/_layout.tsx
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFonts } from 'expo-font';
 import { Slot, useRouter, useSegments } from 'expo-router';
@@ -10,14 +9,13 @@ export {
   ErrorBoundary,
 } from 'expo-router';
 
-// Komponent główny, który decyduje, co pokazać
 const InitialLayout = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoading) return; // Czekamy na załadowanie tokena
+    if (isLoading) return;
 
     const inTabsGroup = segments[0] === '(tabs)';
 
@@ -41,7 +39,6 @@ const InitialLayout = () => {
   );
 };
 
-// Główny komponent layoutu z dostawcą kontekstu
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),

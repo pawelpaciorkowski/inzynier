@@ -1,12 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Plik: crm-ui/src/pages/EditContractPage.tsx
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useModal } from '../context/ModalContext';
 
-// ... (interfejsy Customer i ContractFormData pozostają bez zmian) ...
 interface Customer { id: number; name: string; }
 interface ContractFormData {
     title: string;
@@ -33,7 +31,6 @@ export function EditContractPage() {
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        // ✅ POPRAWKA: Użycie backticków (`) do poprawnego formatowania URL
         const fetchCustomers = axios.get(`${api}/customers`, { headers: { Authorization: `Bearer ${token}` } });
         const fetchContract = axios.get(`${api}/contracts/${id}`, { headers: { Authorization: `Bearer ${token}` } });
 
@@ -77,7 +74,6 @@ export function EditContractPage() {
         };
 
         try {
-            // ✅ POPRAWKA: Użycie backticków (`) do poprawnego formatowania URL
             await axios.put(`${api}/contracts/${id}`, updatedContract, {
                 headers: { Authorization: `Bearer ${token}` }
             });

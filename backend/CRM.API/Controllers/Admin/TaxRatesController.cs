@@ -8,7 +8,7 @@ namespace CRM.API.Controllers.Admin
 {
     [Route("api/admin/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")] // Zabezpieczenie: tylko dla Admina
+    [Authorize(Roles = "Admin")]
     public class TaxRatesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -18,14 +18,12 @@ namespace CRM.API.Controllers.Admin
             _context = context;
         }
 
-        // GET: api/admin/taxrates
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TaxRate>>> GetTaxRates()
         {
             return await _context.TaxRates.OrderBy(tr => tr.Rate).ToListAsync();
         }
 
-        // GET: api/admin/taxrates/5
         [HttpGet("{id}")]
         public async Task<ActionResult<TaxRate>> GetTaxRate(int id)
         {
@@ -39,7 +37,6 @@ namespace CRM.API.Controllers.Admin
             return taxRate;
         }
 
-        // PUT: api/admin/taxrates/5
         [HttpPut("{id}")]
         public async Task<IActionResult> PutTaxRate(int id, TaxRate taxRate)
         {
@@ -69,11 +66,9 @@ namespace CRM.API.Controllers.Admin
             return NoContent();
         }
 
-        // POST: api/admin/taxrates
         [HttpPost]
         public async Task<ActionResult<TaxRate>> PostTaxRate(TaxRate taxRate)
         {
-            // Prosta walidacja, aby uniknąć duplikatów
             if (await _context.TaxRates.AnyAsync(tr => tr.Rate == taxRate.Rate))
             {
                 return Conflict(new { message = $"Stawka podatkowa o wartości {taxRate.Rate} już istnieje." });
@@ -85,7 +80,6 @@ namespace CRM.API.Controllers.Admin
             return CreatedAtAction("GetTaxRate", new { id = taxRate.Id }, taxRate);
         }
 
-        // DELETE: api/admin/taxrates/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTaxRate(int id)
         {

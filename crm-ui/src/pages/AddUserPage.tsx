@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Plik: crm-ui/src/pages/AddUserPage.tsx
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
@@ -8,7 +7,6 @@ type Role = {
     name: string;
 };
 
-// Uproszczony typ User na potrzeby formularza
 type UserFormData = {
     username?: string;
     email?: string;
@@ -21,17 +19,15 @@ export function AddUserPage() {
     const [roles, setRoles] = useState<Role[]>([]);
     const [success, setSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const api = import.meta.env.VITE_API_URL; // Upewnij się, że ta zmienna jest zdefiniowana w .env
+    const api = import.meta.env.VITE_API_URL;
     const token = localStorage.getItem('token');
 
     useEffect(() => {
-        // Poprawiony fetch z użyciem backticków (`)
         axios.get(`${api}/admin/roles`, {
             headers: { Authorization: `Bearer ${token}` },
         })
             .then(res => {
                 const data = res.data;
-                // Poprawiona logika do obsługi formatu odpowiedzi z API
                 if (data && Array.isArray((data as any).$values)) {
                     setRoles((data as any).$values);
                 } else if (Array.isArray(data)) {
@@ -43,7 +39,7 @@ export function AddUserPage() {
             })
             .catch(() => setError('Błąd ładowania ról'));
 
-    }, [api, token]); // Dodajemy zależności
+    }, [api, token]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -66,7 +62,6 @@ export function AddUserPage() {
         setError(null);
         setSuccess(null);
         try {
-            // Poprawiony POST z użyciem backticków (`)
             await axios.post(`${api}/admin/users`, {
                 username: formData.username,
                 email: formData.email,

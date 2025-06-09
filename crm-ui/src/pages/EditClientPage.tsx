@@ -1,11 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-// Plik: crm-ui/src/pages/EditClientPage.tsx
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useModal } from '../context/ModalContext';
 
-// Ten interfejs definiuje, jakie pola ma formularz
 interface CustomerFormData {
     name: string;
     email: string;
@@ -14,10 +12,9 @@ interface CustomerFormData {
 }
 
 export function EditClientPage() {
-    // Używamy Partial, bo początkowo stan jest pusty, zanim załadujemy dane
     const [formData, setFormData] = useState<Partial<CustomerFormData>>({});
     const [loading, setLoading] = useState(true);
-    const { id } = useParams<{ id: string }>(); // Pobieramy ID klienta z adresu URL
+    const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { openModal } = useModal();
     const api = import.meta.env.VITE_API_URL;
@@ -25,13 +22,12 @@ export function EditClientPage() {
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (!id) {
-            navigate('/klienci'); // Jeśli nie ma ID, wróć do listy
+            navigate('/klienci');
             return;
         }
 
         axios.get(`${api}/customers/${id}`, { headers: { Authorization: `Bearer ${token}` } })
             .then(res => {
-                // Poprawnie przypisujemy dane klienta do stanu formularza
                 const clientData = res.data;
                 setFormData({
                     name: clientData.name,
@@ -45,7 +41,7 @@ export function EditClientPage() {
                 console.error(err);
             })
             .finally(() => setLoading(false));
-    }, [api, id, navigate, openModal]); // Dodajemy zależności do hooka
+    }, [api, id, navigate, openModal]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;

@@ -14,14 +14,12 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ data }: AdminDashboardProps) {
-    // Poprawiona logika do "rozpakowania" danych
     const tasks = (data.taskPerUser && !Array.isArray(data.taskPerUser) && (data.taskPerUser as any).$values)
         ? (data.taskPerUser as any).$values
         : (Array.isArray(data.taskPerUser) ? data.taskPerUser : []);
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {/* ... DashboardWidget pozostają bez zmian ... */}
             <DashboardWidget title="Umowy" count={data.contractsCount} to="/kontrakty" />
             <DashboardWidget title="Faktury" count={data.invoicesCount} to="/faktury" />
             <DashboardWidget title="Płatności" count={data.paymentsCount} to="/platnosci" />
@@ -34,7 +32,6 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
                     Zadania wg użytkownika
                 </h3>
 
-                {/* Zmiana tutaj: używamy nowej zmiennej `tasks` */}
                 {tasks.length > 0 ? (
                     <ul className="divide-y divide-gray-700 border border-gray-700 rounded-md overflow-hidden">
                         {tasks.map((entry: any, index: any) => (

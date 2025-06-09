@@ -1,4 +1,3 @@
-// Plik: crm-mobile/app/add-task.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
@@ -51,7 +50,7 @@ export default function AddTaskScreen() {
             }, { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } });
 
             Alert.alert("Sukces", "Zadanie zostało pomyślnie dodane.");
-            router.back(); // Powrót do poprzedniego ekranu
+            router.back();
         } catch {
             Alert.alert("Błąd", "Nie udało się dodać zadania.");
         }

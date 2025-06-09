@@ -1,4 +1,3 @@
-// In: CRM.Data/Models/InvoiceItem.cs
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CRM.Data.Models
@@ -12,7 +11,7 @@ namespace CRM.Data.Models
         public int Quantity { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal UnitPrice { get; set; } // Cena jednostkowa netto
+        public decimal UnitPrice { get; set; }
 
         [Column(TypeName = "decimal(5,2)")]
         public decimal TaxRate { get; set; } // np. 0.23 dla 23%
@@ -26,7 +25,6 @@ namespace CRM.Data.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal GrossAmount { get; set; }
 
-        // Relacje
         public virtual Invoice Invoice { get; set; } = null!;
         public virtual Service Service { get; set; } = null!;
     }

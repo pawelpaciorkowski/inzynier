@@ -1,6 +1,5 @@
-// src/App.tsx
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext"; // Importujemy AuthProvider
+import { AuthProvider } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import ClientsPage from "./pages/ClientsPage";
@@ -35,7 +34,6 @@ import { ModalProvider } from './context/ModalContext';
 import { AddContractPage } from './pages/AddContractPage';
 import { EditContractPage } from './pages/EditContractPage';
 import { EditClientPage } from './pages/EditClientPage';
-
 import './index.css';
 
 function App() {
@@ -46,7 +44,6 @@ function App() {
           <Routes>
             <Route path="/" element={<LoginPage />} />
 
-            {/* Wszystkie trasy chronione przez PrivateRoute i Layout */}
             <Route
               element={
                 <PrivateRoute>

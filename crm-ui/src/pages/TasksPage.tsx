@@ -26,13 +26,11 @@ export default function TasksPage() {
     const [error, setError] = useState("");
     const api = import.meta.env.VITE_API_URL;
 
-    // Stany dla nowego zadania
     const [newTaskTitle, setNewTaskTitle] = useState("");
     const [newTaskDescription, setNewTaskDescription] = useState("");
     const [newTaskDueDate, setNewTaskDueDate] = useState("");
     const [selectedCustomerId, setSelectedCustomerId] = useState("");
 
-    // Stan dla edytowanego zadania
     const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
 
     const fetchInitialData = useCallback(async () => {
@@ -83,7 +81,7 @@ export default function TasksPage() {
                 customerId: parseInt(selectedCustomerId),
             }, { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } });
 
-            await fetchInitialData(); // Odśwież całą listę
+            await fetchInitialData();
             setNewTaskTitle("");
             setNewTaskDescription("");
             setNewTaskDueDate("");
@@ -106,7 +104,6 @@ export default function TasksPage() {
         };
 
         try {
-            // POPRAWIONY URL
             await axios.put(`${api}/user/tasks/${editingTask.id}`, updateDto, {
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
             });

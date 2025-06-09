@@ -99,7 +99,6 @@ namespace CRM.BusinessLogic.Auth
             return user;
         }
 
-        // (opcjonalnie) jeśli będziesz robić rejestrację:
         public string HashPassword(string password)
         {
             using var sha256 = SHA256.Create();

@@ -1,17 +1,15 @@
-// Plik: crm-mobile/app/login.tsx
 import { useState } from 'react';
 import { View, TextInput, Button, StyleSheet, Text, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen() {
-    const [username, setUsername] = useState('user'); // Domyślne wartości dla ułatwienia testowania
+    const [username, setUsername] = useState('user');
     const [password, setPassword] = useState('user123');
     const { login } = useAuth();
 
     const onLoginPress = async () => {
         try {
             await login(username, password);
-            // Nawigacja odbędzie się automatycznie w _layout.tsx
         } catch (e) {
             Alert.alert("Błąd logowania", "Nieprawidłowa nazwa użytkownika lub hasło.");
         }

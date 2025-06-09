@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-// Plik: crm-ui/src/pages/AddClientPage.tsx
 import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -27,7 +26,7 @@ export function AddClientPage() {
                 type: 'success',
                 title: 'Sukces!',
                 message: 'Nowy klient został pomyślnie dodany.',
-                onConfirm: () => navigate('/klienci') // Użyj poprawnej ścieżki
+                onConfirm: () => navigate('/klienci')
             });
         } catch (err) {
             openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się dodać klienta.' });

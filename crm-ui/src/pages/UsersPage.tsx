@@ -26,7 +26,6 @@ export default function UsersPage() {
     const token = localStorage.getItem('token');
     const [roles, setRoles] = useState<Role[]>([]);
 
-    // Dodaj do useEffect (obok ładowania użytkowników)
     useEffect(() => {
         axios.get('${api}/admin/roles', {
             headers: { Authorization: `Bearer ${token}` },
@@ -43,13 +42,9 @@ export default function UsersPage() {
                 console.log("users response:", res.data);
                 const data = res.data;
 
-                // POPRAWKA TUTAJ:
-                // Sprawdzamy, czy dane mają format z $values
                 if (data && Array.isArray((data as any).$values)) {
-                    // Jeśli tak, bierzemy tablicę z tego pola
                     setUsers((data as any).$values);
                 } else if (Array.isArray(data)) {
-                    // Jeśli nie, a są tablicą, używamy ich bezpośrednio
                     setUsers(data);
                 } else {
                     console.error("Niepoprawny format users:", data);
@@ -90,7 +85,7 @@ export default function UsersPage() {
                 {
                     username: formData.username,
                     email: formData.email,
-                    roleId: formData.role?.id, // KLUCZOWA ZMIANA
+                    roleId: formData.role?.id,
                 },
                 {
                     headers: { Authorization: `Bearer ${token}` },

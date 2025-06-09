@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Plik: crm-ui/src/pages/AddContractPage.tsx
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
@@ -12,7 +11,6 @@ interface Customer {
 }
 
 export function AddContractPage() {
-    // Stany dla formularza - rozbudowane o nowe pola
     const [formData, setFormData] = useState({
         title: '',
         customerId: '',
@@ -64,7 +62,6 @@ export function AddContractPage() {
         }
 
         const token = localStorage.getItem('token');
-        // Przygotowujemy obiekt do wysłania, dbając o typy danych
         const newContract = {
             ...formData,
             customerId: parseInt(formData.customerId),
@@ -95,7 +92,6 @@ export function AddContractPage() {
             <h1 className="text-3xl font-bold text-white mb-6">➕ Dodaj nowy kontrakt</h1>
             <form onSubmit={handleSubmit} className="bg-gray-800 p-8 rounded-lg shadow-md space-y-4">
 
-                {/* --- Podstawowe informacje --- */}
                 <div className="grid md:grid-cols-2 gap-4">
                     <div>
                         <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1">Tytuł kontraktu</label>
@@ -110,7 +106,6 @@ export function AddContractPage() {
                     </div>
                 </div>
 
-                {/* --- Szczegóły umowy --- */}
                 <div className="grid md:grid-cols-2 gap-4">
                     <div>
                         <label htmlFor="contractNumber" className="block text-sm font-medium text-gray-300 mb-1">Numer umowy</label>
@@ -122,13 +117,11 @@ export function AddContractPage() {
                     </div>
                 </div>
 
-                {/* --- Zakres usług --- */}
                 <div>
                     <label htmlFor="scopeOfServices" className="block text-sm font-medium text-gray-300 mb-1">Szczegółowy zakres usług</label>
                     <textarea id="scopeOfServices" name="scopeOfServices" value={formData.scopeOfServices} onChange={handleChange} rows={4} className="w-full p-2 rounded bg-gray-700 text-white resize-y" />
                 </div>
 
-                {/* --- Daty --- */}
                 <div className="grid md:grid-cols-3 gap-4">
                     <div>
                         <label htmlFor="signedAt" className="block text-sm font-medium text-gray-300 mb-1">Data podpisania</label>
@@ -144,7 +137,6 @@ export function AddContractPage() {
                     </div>
                 </div>
 
-                {/* --- Finanse --- */}
                 <div className="grid md:grid-cols-2 gap-4">
                     <div>
                         <label htmlFor="netAmount" className="block text-sm font-medium text-gray-300 mb-1">Wartość netto (PLN)</label>

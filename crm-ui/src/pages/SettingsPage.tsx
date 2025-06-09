@@ -3,12 +3,10 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useModal } from '../context/ModalContext';
 
-// Interfejs dla obiektu z ustawieniami
 interface SettingsData {
     [key: string]: string;
 }
 
-// --- Główny komponent strony ---
 export function SettingsPage() {
     const { user } = useAuth();
     const { openModal } = useModal();
@@ -16,7 +14,6 @@ export function SettingsPage() {
     const [loading, setLoading] = useState(true);
     const api = import.meta.env.VITE_API_URL;
 
-    // Pobieranie ustawień systemowych (tylko dla admina)
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (user?.role === 'Admin') {
@@ -27,7 +24,7 @@ export function SettingsPage() {
                 .catch(() => openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się pobrać ustawień.' }))
                 .finally(() => setLoading(false));
         } else {
-            setLoading(false); // Zwykły user nie ma ustawień systemowych do załadowania
+            setLoading(false);
         }
     }, [api, user, openModal]);
 
@@ -76,7 +73,6 @@ export function SettingsPage() {
     );
 }
 
-// --- Komponent formularza zmiany hasła ---
 function ChangePasswordForm() {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -126,7 +122,6 @@ function ChangePasswordForm() {
     );
 }
 
-// --- Komponent pomocniczy ---
 const InputField = ({ label, name, value, onChange, type = 'text', required = false }: { label: string, name?: string, value: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, type?: string, required?: boolean }) => (
     <div>
         <label htmlFor={name || label} className="block text-sm font-medium text-gray-300 mb-1">{label}</label>

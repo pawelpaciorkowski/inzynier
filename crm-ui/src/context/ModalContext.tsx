@@ -30,7 +30,6 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
 
     const closeModal = () => {
         setIsOpen(false);
-        // Krótkie opóźnienie, aby modal zdążył zniknąć przed wyczyszczeniem opcji
         setTimeout(() => setOptions(null), 300);
     };
 

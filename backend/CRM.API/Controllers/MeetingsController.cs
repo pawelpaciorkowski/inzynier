@@ -24,7 +24,6 @@ public class MeetingsController : ControllerBase
         _context = context;
     }
 
-    // GET: api/meetings
     [HttpGet]
     public async Task<ActionResult<IEnumerable<MeetingListItemDto>>> GetMeetings()
     {

@@ -20,7 +20,6 @@ namespace CRM.BusinessLogic.Services
 
         public async Task<byte[]> GenerateContractDocumentAsync(int contractId, int templateId)
         {
-            // Krok 1: Pobierz wszystkie potrzebne dane (szablon, kontrakt, ustawienia)
             var template = await _context.Templates.FindAsync(templateId);
             var contract = await _context.Contracts.Include(c => c.Customer).FirstOrDefaultAsync(c => c.Id == contractId);
             var settings = await _context.Settings.ToDictionaryAsync(s => s.Key, s => s.Value);
@@ -39,10 +38,8 @@ namespace CRM.BusinessLogic.Services
 
                 using (var document = DocX.Load(tempFilePath))
                 {
-                    // Krok 2: Stwórz mapę znaczników, używając danych z bazy i ustawień
                     var placeholders = new Dictionary<string, string>
                     {
-                        // Dane z Kontraktu
                         { "{TYTUL_UMOWY}", contract.Title ?? "" },
                         { "{NUMER_UMOWY}", contract.ContractNumber ?? "" },
                         { "{MIEJSCE_ZAWARCIA}", contract.PlaceOfSigning ?? "" },
@@ -53,19 +50,16 @@ namespace CRM.BusinessLogic.Services
                         { "{TERMIN_PLATNOSCI}", contract.PaymentTermDays?.ToString() ?? "" },
                         { "{SZCZEGOLOWY_ZAKRES_USLUG}", contract.ScopeOfServices ?? "" },
 
-                        // Dane z powiązanego Klienta
                         { "{NAZWA_KLIENTA}", contract.Customer.Name ?? "" },
-                        { "{ADRES_KLIENTA}", "Brak adresu w bazie" }, // Do dodania w przyszłości
-                        { "{NIP_KLIENTA}", "Brak NIP w bazie" },     // Do dodania w przyszłości
+                        { "{ADRES_KLIENTA}", "Brak adresu w bazie" },
+                        { "{NIP_KLIENTA}", "Brak NIP w bazie" },
 
-                        // Dane Wykonawcy (Twojej firmy) pobrane z Ustawień
                         { "{NAZWA_WYKONAWCY}", settings.GetValueOrDefault("CompanyName", "TWOJA FIRMA") },
                         { "{ADRES_WYKONAWCY}", settings.GetValueOrDefault("CompanyAddress", "TWÓJ ADRES") },
                         { "{NIP_WYKONAWCY}", settings.GetValueOrDefault("CompanyNIP", "TWÓJ NIP") },
                         { "{NUMER_KONTA_BANKOWEGO_WYKONAWCY}", settings.GetValueOrDefault("CompanyBankAccount", "TWÓJ NUMER KONTA") }
                     };
 
-                    // Krok 3: Wykonaj podmianę
                     foreach (var p in document.Paragraphs)
                     {
                         foreach (var placeholder in placeholders)

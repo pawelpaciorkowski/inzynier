@@ -8,7 +8,7 @@ namespace CRM.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // Dostępny tylko dla zalogowanych użytkowników
+    [Authorize]
     public class ProfileController : ControllerBase
     {
         private readonly IUserService _userService;
@@ -18,7 +18,6 @@ namespace CRM.API.Controllers
             _userService = userService;
         }
 
-        // PUT: api/profile/change-password
         [HttpPut("change-password")]
         public async Task<IActionResult> ChangePassword(ChangePasswordDto dto)
         {

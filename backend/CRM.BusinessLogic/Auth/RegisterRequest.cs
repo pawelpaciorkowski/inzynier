@@ -5,6 +5,6 @@ namespace CRM.BusinessLogic.Auth
         public string Username { get; set; } = default!;
         public string Email { get; set; } = default!;
         public string Password { get; set; } = default!;
-        public int RoleId { get; set; } // np. 1 = Admin, 2 = User itd.
+        public int RoleId { get; set; }
     }
 }

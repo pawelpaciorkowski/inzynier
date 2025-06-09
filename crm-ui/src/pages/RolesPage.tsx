@@ -36,7 +36,6 @@ export function RolesPage() {
         loadRoles();
     }, []);
 
-    // Zamień funkcję loadRoles na tę wersję:
     const loadRoles = () => {
         setLoading(true);
         axios.get(`${api}/admin/roles`, {
@@ -44,7 +43,6 @@ export function RolesPage() {
         })
             .then(res => {
                 const data = res.data;
-                // POPRAWKA TUTAJ:
                 if (data && Array.isArray((data as any).$values)) {
                     setRoles((data as any).$values);
                 } else if (Array.isArray(data)) {
@@ -58,7 +56,6 @@ export function RolesPage() {
             .finally(() => setLoading(false));
     };
 
-    // Zamień funkcję showUsers na tę wersję:
     const showUsers = (roleId: number) => {
         setLoading(true);
         axios.get(`${api}/admin/roles/${roleId}/users`, {
@@ -66,7 +63,6 @@ export function RolesPage() {
         })
             .then(res => {
                 const data = res.data;
-                // POPRAWKA TUTAJ:
                 if (data && Array.isArray((data as any).$values)) {
                     setUsersInRole((data as any).$values);
                 } else if (Array.isArray(data)) {
@@ -84,7 +80,7 @@ export function RolesPage() {
         e.preventDefault();
         setError(null);
         try {
-            await axios.post(`${api}/admin/roles`, {   // <-- backtick i interpolacja
+            await axios.post(`${api}/admin/roles`, {
                 name: newRoleName,
                 description: newRoleDesc,
             }, {
@@ -110,7 +106,7 @@ export function RolesPage() {
         if (!editRole) return;
         setError(null);
         try {
-            await axios.put(`${api}/admin/roles/${editRole.id}`, {  // <-- backtick i interpolacja
+            await axios.put(`${api}/admin/roles/${editRole.id}`, {
                 name: editRoleName,
                 description: editRoleDesc,
             }, {
@@ -128,7 +124,7 @@ export function RolesPage() {
         if (!deleteRole) return;
         setError(null);
         try {
-            await axios.delete(`${api}/admin/roles/${deleteRole.id}`, {  // <-- backtick i interpolacja
+            await axios.delete(`${api}/admin/roles/${deleteRole.id}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setSuccess('Usunięto rolę');
@@ -205,7 +201,6 @@ export function RolesPage() {
                 </tbody>
             </table>
 
-            {/* Modal z użytkownikami roli */}
             {showUsersModal !== null && (
                 <div className="fixed inset-0 backdrop-blur-md bg-white/10 flex items-center justify-center z-90">
                     <div className="bg-gray-900 text-white p-8 rounded shadow max-w-md w-full">
@@ -256,7 +251,6 @@ export function RolesPage() {
                 </div>
             )}
 
-            {/* Modal potwierdzenia usuwania */}
             {deleteRole && (
                 <div className="fixed inset-0 backdrop-blur-md bg-white/10 flex items-center justify-center z-90">
                     <div className="bg-gray-900 text-white p-8 rounded shadow max-w-md w-full">

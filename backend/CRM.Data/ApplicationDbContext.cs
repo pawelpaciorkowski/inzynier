@@ -45,7 +45,6 @@ namespace CRM.Data
         public DbSet<TaxRate> TaxRates { get; set; }
 
 
-        // 👇 Dodajemy mapowanie nazw kolumn z bazy na właściwości w C#
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

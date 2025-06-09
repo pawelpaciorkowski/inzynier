@@ -8,7 +8,7 @@ namespace CRM.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")] // Dostęp tylko dla admina
+    [Authorize(Roles = "Admin")]
     public class SettingsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -18,7 +18,6 @@ namespace CRM.API.Controllers
             _context = context;
         }
 
-        // GET: api/settings
         [HttpGet]
         public async Task<ActionResult<Dictionary<string, string>>> GetSettings()
         {
@@ -26,7 +25,6 @@ namespace CRM.API.Controllers
             return settings.ToDictionary(s => s.Key, s => s.Value);
         }
 
-        // POST: api/settings
         [HttpPost]
         public async Task<IActionResult> UpdateSettings(Dictionary<string, string> newSettings)
         {
@@ -35,11 +33,10 @@ namespace CRM.API.Controllers
                 var existingSetting = await _context.Settings.FirstOrDefaultAsync(s => s.Key == setting.Key);
                 if (existingSetting != null)
                 {
-                    existingSetting.Value = setting.Value; // Aktualizuj istniejący
+                    existingSetting.Value = setting.Value;
                 }
                 else
                 {
-                    // Dodaj nowy, jeśli nie istnieje
                     _context.Settings.Add(new Setting { Key = setting.Key, Value = setting.Value });
                 }
             }

@@ -1,11 +1,10 @@
-// Plik: crm-mobile/context/AuthContext.tsx
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
-import { jwtDecode } from 'jwt-decode'; // Upewnij się, że masz `jwt-decode` w package.json
+import { jwtDecode } from 'jwt-decode';
 
 const TOKEN_KEY = 'my-jwt';
-const API_URL = 'http://10.0.2.2:5167'; // Użyj tego adresu, aby emulator Androida "zobaczył" Twoje API na localhost
+const API_URL = 'http://10.0.2.2:5167';
 
 interface AuthState {
     token: string | null;

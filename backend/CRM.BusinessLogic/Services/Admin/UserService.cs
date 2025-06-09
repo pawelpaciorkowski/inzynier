@@ -92,13 +92,11 @@ namespace CRM.BusinessLogic.Services.Admin
                 return false;
             }
 
-            // Weryfikacja bieżącego hasła
             if (!BCrypt.Net.BCrypt.Verify(currentPassword, user.PasswordHash))
             {
-                return false; // Bieżące hasło się nie zgadza
+                return false;
             }
 
-            // Hashowanie i zapis nowego hasła
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
             await _context.SaveChangesAsync();
 

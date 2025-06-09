@@ -23,7 +23,6 @@ public class NotesController : ControllerBase
         _context = context;
     }
 
-    // GET: api/notes
     [HttpGet]
     public async Task<ActionResult<IEnumerable<NoteListItemDto>>> GetNotes()
     {

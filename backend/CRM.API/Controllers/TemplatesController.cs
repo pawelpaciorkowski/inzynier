@@ -8,7 +8,7 @@ namespace CRM.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")] // Dostęp tylko dla admina
+    [Authorize(Roles = "Admin")]
     public class TemplatesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -20,14 +20,12 @@ namespace CRM.API.Controllers
             _env = env;
         }
 
-        // GET: api/templates
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Template>>> GetTemplates()
         {
             return await _context.Templates.OrderBy(t => t.Name).ToListAsync();
         }
 
-        // POST: api/templates/upload
         [HttpPost("upload")]
         public async Task<IActionResult> UploadTemplate(IFormFile file, [FromForm] string templateName)
         {
@@ -62,14 +60,12 @@ namespace CRM.API.Controllers
             return Ok(template);
         }
 
-        // DELETE: api/templates/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTemplate(int id)
         {
             var template = await _context.Templates.FindAsync(id);
             if (template == null) return NotFound();
 
-            // Usuń fizyczny plik
             if (System.IO.File.Exists(template.FilePath))
             {
                 System.IO.File.Delete(template.FilePath);

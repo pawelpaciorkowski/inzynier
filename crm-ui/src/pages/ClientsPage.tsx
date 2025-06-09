@@ -11,7 +11,7 @@ type Customer = { id: number; name: string; email: string; phone: string; compan
 export default function ClientsPage() {
     const [clients, setClients] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isDownloading, setIsDownloading] = useState(false); // Stan dla pobierania raportu
+    const [isDownloading, setIsDownloading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const api = import.meta.env.VITE_API_URL;
     const { openModal } = useModal();
@@ -40,8 +40,6 @@ export default function ClientsPage() {
         fetchClients();
     }, []);
 
-    // To jest Twoja funkcja handleDelete
-    // To jest Twoja funkcja handleDelete
     const handleDelete = (customer: Customer) => {
         openModal({
             type: 'confirm',
@@ -63,24 +61,22 @@ export default function ClientsPage() {
         });
     };
 
-    // Nowa funkcja do pobierania raportu
     const handleDownloadReport = async () => {
         const token = localStorage.getItem('token');
         setIsDownloading(true);
         try {
             const response = await axios.get(`${api}/reports/clients`, {
                 headers: { Authorization: `Bearer ${token}` },
-                responseType: 'blob', // WAŻNE: Oczekujemy danych binarnych (pliku)
+                responseType: 'blob',
             });
 
-            // Tworzymy link w pamięci i symulujemy kliknięcie, aby pobrać plik
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
             link.setAttribute('download', 'raport-klientow.pdf');
             document.body.appendChild(link);
             link.click();
-            link.remove(); // Czyścimy po sobie
+            link.remove();
 
         } catch (err) {
             openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się pobrać raportu.' });

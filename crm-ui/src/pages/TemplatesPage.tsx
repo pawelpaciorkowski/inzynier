@@ -78,12 +78,11 @@ export function TemplatesPage() {
             onConfirm: async () => {
                 const token = localStorage.getItem('token');
                 try {
-                    // ✅ POPRAWNA WERSJA z użyciem backticków (`) i składni ${...}
                     await axios.delete(`${api}/templates/${template.id}`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
 
-                    fetchTemplates(); // Odśwież listę po usunięciu
+                    fetchTemplates();
                 } catch (err) {
                     openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się usunąć szablonu.' });
                 }

@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
 
-// DTO dla pojedynczej pozycji na liście faktur
 public class InvoiceListItemDto
 {
     public int Id { get; set; }
@@ -14,10 +13,8 @@ public class InvoiceListItemDto
     public DateTime IssuedAt { get; set; }
     public decimal TotalAmount { get; set; }
     public string CustomerName { get; set; } = null!;
-    // Możesz dodać tu status, jeśli go zaimplementujesz w modelu Invoice
 }
 
-// DTO dla pojedynczej pozycji na fakturze
 public class InvoiceItemDto
 {
     public int Id { get; set; }
@@ -28,7 +25,6 @@ public class InvoiceItemDto
     public decimal GrossAmount { get; set; }
 }
 
-// DTO dla szczegółów faktury
 public class InvoiceDetailDto : InvoiceListItemDto
 {
     public ICollection<InvoiceItemDto> Items { get; set; } = new List<InvoiceItemDto>();
@@ -37,7 +33,7 @@ public class InvoiceDetailDto : InvoiceListItemDto
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // Kontroler dostępny tylko dla zalogowanych użytkowników
+[Authorize]
 public class InvoicesController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
@@ -47,7 +43,6 @@ public class InvoicesController : ControllerBase
         _context = context;
     }
 
-    // GET: api/invoices
     [HttpGet]
     public async Task<ActionResult<IEnumerable<InvoiceListItemDto>>> GetInvoices()
     {
@@ -67,14 +62,13 @@ public class InvoicesController : ControllerBase
         return Ok(invoices);
     }
 
-    // GET: api/invoices/5
     [HttpGet("{id}")]
     public async Task<ActionResult<InvoiceDetailDto>> GetInvoice(int id)
     {
         var invoice = await _context.Invoices
             .Include(i => i.Customer)
-            .Include(i => i.Items)       // Dołączamy pozycje faktury
-                .ThenInclude(item => item.Service) // Dołączamy dane o usłudze dla każdej pozycji
+            .Include(i => i.Items)
+                .ThenInclude(item => item.Service)
             .Where(i => i.Id == id)
             .Select(i => new InvoiceDetailDto
             {
@@ -103,7 +97,6 @@ public class InvoicesController : ControllerBase
         return Ok(invoice);
     }
 
-    // Wklej tę metodę wewnątrz klasy InvoicesController
     [HttpPost]
     public async Task<IActionResult> CreateInvoice([FromBody] CreateInvoiceDto dto)
     {
@@ -117,7 +110,7 @@ public class InvoicesController : ControllerBase
             Number = dto.InvoiceNumber,
             CustomerId = dto.CustomerId,
             IssuedAt = DateTime.UtcNow,
-            TotalAmount = 0 // Obliczymy ją poniżej
+            TotalAmount = 0
         };
 
         decimal total = 0;
@@ -137,13 +130,11 @@ public class InvoicesController : ControllerBase
                 Description = service.Name,
                 Quantity = itemDto.Quantity,
                 UnitPrice = service.Price,
-                // Na razie upraszczamy: Netto = Brutto. W przyszłości można dodać logikę podatkową.
                 NetAmount = service.Price * itemDto.Quantity,
-                TaxAmount = 0, // Uproszczenie
+                TaxAmount = 0,
                 GrossAmount = service.Price * itemDto.Quantity
             };
 
-            // EF Core automatycznie doda `invoiceItem` do kontekstu, gdy dodamy `newInvoice`
             newInvoice.Items.Add(invoiceItem);
             total += invoiceItem.GrossAmount;
         }
@@ -153,14 +144,12 @@ public class InvoicesController : ControllerBase
         _context.Invoices.Add(newInvoice);
         await _context.SaveChangesAsync();
 
-        // Używamy GetInvoice, aby zwrócić pełne dane nowo utworzonej faktury
         return CreatedAtAction(nameof(GetInvoice), new { id = newInvoice.Id }, newInvoice);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteInvoice(int id)
     {
-        // Znajdujemy fakturę wraz z jej pozycjami, aby usunąć je razem
         var invoice = await _context.Invoices
             .Include(i => i.Items)
             .FirstOrDefaultAsync(i => i.Id == id);
@@ -170,11 +159,9 @@ public class InvoicesController : ControllerBase
             return NotFound();
         }
 
-        // Usunięcie faktury spowoduje kaskadowe usunięcie powiązanych z nią pozycji (InvoiceItems)
-        // dzięki poprawnie skonfigurowanym relacjom w EF Core.
         _context.Invoices.Remove(invoice);
         await _context.SaveChangesAsync();
 
-        return NoContent(); // Standardowa odpowiedź dla pomyślnego usunięcia (204 No Content)
+        return NoContent();
     }
 }

@@ -7,7 +7,6 @@ import { Picker } from '@react-native-picker/picker';
 
 interface Customer { id: number; name: string; }
 
-// DTO do aktualizacji, zgodne z backendem
 interface UpdateTaskDto {
     title: string;
     description?: string;
@@ -23,11 +22,10 @@ export default function EditTaskScreen() {
     const router = useRouter();
     const { taskId } = useLocalSearchParams<{ taskId: string }>();
 
-    // Stany dla formularza
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [dueDate, setDueDate] = useState('');
-    const [completed, setCompleted] = useState(false); // Musimy przechowywać ten stan
+    const [completed, setCompleted] = useState(false);
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
 
     const [customers, setCustomers] = useState<Customer[]>([]);
@@ -67,7 +65,6 @@ export default function EditTaskScreen() {
             return;
         }
 
-        // Tworzymy obiekt DTO na podstawie stanów komponentu
         const updateDto: UpdateTaskDto = {
             title,
             description,
@@ -77,7 +74,6 @@ export default function EditTaskScreen() {
         };
 
         try {
-            // Używamy `taskId` z parametrów i `updateDto` z naszego stanu
             await axios.put(`${API_URL}/api/user/tasks/${taskId}`, updateDto, {
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             });

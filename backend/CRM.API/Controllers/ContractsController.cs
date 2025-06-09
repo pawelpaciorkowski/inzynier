@@ -65,7 +65,6 @@ public class ContractsController : ControllerBase
                 SignedAt = c.SignedAt,
                 CustomerName = c.Customer != null ? c.Customer.Name : "Brak klienta",
 
-                // Wypełniamy nowe pola
                 ContractNumber = c.ContractNumber,
                 EndDate = c.EndDate,
                 NetAmount = c.NetAmount

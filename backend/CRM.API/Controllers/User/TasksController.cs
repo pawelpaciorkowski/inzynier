@@ -26,7 +26,6 @@ namespace CRM.API.Controllers.User
             return int.TryParse(id, out var userId) ? userId : 0;
         }
 
-        // ✅ GET: lista zadań
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TaskItem>>> GetTasks()
         {
@@ -37,7 +36,6 @@ namespace CRM.API.Controllers.User
             return Ok(tasks);
         }
 
-        // ✅ GET: jedno zadanie
         [HttpGet("{id}")]
         public async Task<ActionResult<TaskItem>> GetTask(int id)
         {
@@ -51,14 +49,13 @@ namespace CRM.API.Controllers.User
             return Ok(task);
         }
 
-        // ✅ POST: dodaj nowe zadanie
         [HttpPost]
         public async Task<ActionResult<TaskItem>> CreateTask([FromBody] CreateTaskDto dto)
         {
             var userId = GetUserId();
             if (userId == 0)
             {
-                return Unauthorized(); // Użytkownik nie jest zalogowany
+                return Unauthorized();
             }
 
             var newTask = new TaskItem
@@ -67,8 +64,8 @@ namespace CRM.API.Controllers.User
                 Description = dto.Description,
                 DueDate = dto.DueDate,
                 Completed = false,
-                UserId = userId, // Przypisujemy ID zalogowanego użytkownika
-                CustomerId = 1 // Tymczasowo przypisujemy stałe CustomerId, do zmiany w przyszłości
+                UserId = userId,
+                CustomerId = 1
             };
 
             _context.Tasks.Add(newTask);
@@ -77,7 +74,6 @@ namespace CRM.API.Controllers.User
             return CreatedAtAction(nameof(GetTask), new { id = newTask.Id }, newTask);
         }
 
-        // ✅ PUT: aktualizuj zadanie
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTask(int id, [FromBody] UpdateTaskDto dto)
         {
@@ -90,7 +86,6 @@ namespace CRM.API.Controllers.User
                 return NotFound();
             }
 
-            // Aktualizujemy tylko te pola, które przyszły z DTO
             existingTask.Title = dto.Title;
             existingTask.Description = dto.Description;
             existingTask.DueDate = dto.DueDate;
@@ -100,7 +95,6 @@ namespace CRM.API.Controllers.User
             return NoContent();
         }
 
-        // ✅ DELETE: usuń zadanie
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(int id)
         {
