@@ -8,7 +8,6 @@ namespace CRM.Data.Models
         public int CustomerId { get; set; }
         public virtual Customer Customer { get; set; } = null!;
 
-        // Pola specyficzne dla kontraktu
         public string? ContractNumber { get; set; }
         public string? PlaceOfSigning { get; set; }
         public string? ScopeOfServices { get; set; }

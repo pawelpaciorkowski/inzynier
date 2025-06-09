@@ -1,13 +1,9 @@
+// Plik: crm-mobile/app/(tabs)/_layout.tsx
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link, Tabs } from 'expo-router';
 import { Pressable } from 'react-native';
 
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
-
-// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
   color: string;
@@ -16,29 +12,34 @@ function TabBarIcon(props: {
 }
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
-        headerShown: useClientOnlyValue(false, true),
+        // Poprawione opcje dla spójnego, ciemnego wyglądu
+        tabBarActiveTintColor: '#fff', // Aktywna ikona będzie biała
+        tabBarInactiveTintColor: '#6b7280', // Nieaktywna ikona będzie szara
+        tabBarStyle: {
+          backgroundColor: '#1f2937', // Ciemne tło dla paska zakładek
+          borderTopColor: '#374151', // Kolor górnej krawędzi
+        },
+        headerStyle: {
+          backgroundColor: '#1f2937', // Ciemne tło dla nagłówka
+        },
+        headerTintColor: '#fff', // Kolor tekstu w nagłówku
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Tab One',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
+          title: 'Moje Zadania',
+          tabBarIcon: ({ color }) => <TabBarIcon name="tasks" color={color} />,
           headerRight: () => (
-            <Link href="/modal" asChild>
+            <Link href="/add-task" asChild>
               <Pressable>
                 {({ pressed }) => (
                   <FontAwesome
-                    name="info-circle"
+                    name="plus-circle"
                     size={25}
-                    color={Colors[colorScheme ?? 'light'].text}
+                    color="white"
                     style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
                   />
                 )}
@@ -50,8 +51,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="two"
         options={{
-          title: 'Tab Two',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
+          title: 'Profil',
+          tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
         }}
       />
     </Tabs>
