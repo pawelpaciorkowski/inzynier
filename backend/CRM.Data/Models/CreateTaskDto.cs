@@ -5,5 +5,6 @@ namespace CRM.Data.Models
         public string Title { get; set; } = null!;
         public string? Description { get; set; }
         public DateTime? DueDate { get; set; }
+        public int CustomerId { get; set; }
     }
 }

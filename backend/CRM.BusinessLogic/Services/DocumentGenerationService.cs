@@ -1,8 +1,6 @@
 using CRM.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System.IO;
-using System.Threading.Tasks;
 using Xceed.Words.NET;
 
 namespace CRM.BusinessLogic.Services

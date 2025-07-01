@@ -30,30 +30,27 @@ namespace CRM.BusinessLogic.Auth
 
             if (user == null)
             {
-                Console.WriteLine($"[LOGIN] Username: {username}, Found user: False");
                 return null;
-            }
-
-            Console.WriteLine($"[LOGIN] Raw password: '{password}' (len={password.Length})");
-            Console.WriteLine($"[LOGIN] Hash from DB: '{user.PasswordHash}' (len={user.PasswordHash.Length})");
-
-            for (int i = 0; i < password.Length; i++)
-            {
-                Console.WriteLine($"char[{i}] = {(int)password[i]}");
             }
 
             var passwordMatch = BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
 
-            Console.WriteLine($"[LOGIN] PasswordHash from DB: {user.PasswordHash}");
-            Console.WriteLine($"[LOGIN] Password Match: {passwordMatch}");
-
             if (!passwordMatch)
+            {
                 return null;
+            }
+
+            var loginHistory = new LoginHistory
+            {
+                UserId = user.Id,
+                LoggedInAt = DateTime.UtcNow,
+                IpAddress = "::1"
+            };
+            _context.LoginHistories.Add(loginHistory);
+            await _context.SaveChangesAsync();
 
             return user;
         }
-
-
 
         public string GenerateJwtToken(User user)
         {
@@ -77,8 +74,6 @@ namespace CRM.BusinessLogic.Auth
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-
-
         public async Task<User?> RegisterAsync(RegisterRequest request)
         {
             var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
@@ -97,13 +92,6 @@ namespace CRM.BusinessLogic.Auth
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
             return user;
-        }
-
-        public string HashPassword(string password)
-        {
-            using var sha256 = SHA256.Create();
-            var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-            return Convert.ToBase64String(hashBytes);
         }
     }
 }
