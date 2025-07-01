@@ -167,10 +167,24 @@ namespace CRM.Data.Models
         public DateTime LoggedAt { get; set; }
     }
 
-    public class UserGroup
+    public class Group
     {
         public int Id { get; set; }
-        public string Name { get; set; } = default!;
+
+        public string Name { get; set; }
+
+        public string? Description { get; set; }
+
+        public virtual ICollection<UserGroup> UserGroups { get; set; } = new List<UserGroup>();
+    }
+
+    public class UserGroup
+    {
+        public int UserId { get; set; }
+        public User User { get; set; }
+
+        public int GroupId { get; set; }
+        public Group Group { get; set; }
     }
 
     public class UserGroupAssignment

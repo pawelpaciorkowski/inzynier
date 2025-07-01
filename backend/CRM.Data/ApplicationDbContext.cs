@@ -35,6 +35,7 @@ namespace CRM.Data
         public DbSet<Note> Notes { get; set; }
         public DbSet<Setting> Settings { get; set; }
         public DbSet<SystemLog> SystemLogs { get; set; }
+        public DbSet<Group> Groups { get; set; }
         public DbSet<UserGroup> UserGroups { get; set; }
         public DbSet<UserGroupAssignment> UserGroupAssignments { get; set; }
         public DbSet<Tag> Tags { get; set; }
@@ -72,6 +73,11 @@ namespace CRM.Data
                 entity.Property(r => r.Id).HasColumnName("id");
                 entity.Property(r => r.Name).HasColumnName("name");
             });
+
+
+
+            modelBuilder.Entity<UserGroup>()
+        .HasKey(ug => new { ug.UserId, ug.GroupId });
         }
 
 

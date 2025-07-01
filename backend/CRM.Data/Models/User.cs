@@ -9,6 +9,9 @@ namespace CRM.Data.Models
         public int RoleId { get; set; }
 
         public Role Role { get; set; }
+
+
+        public virtual ICollection<UserGroup> UserGroups { get; set; } = new List<UserGroup>();
     }
 
 }
