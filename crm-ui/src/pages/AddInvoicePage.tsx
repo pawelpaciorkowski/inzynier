@@ -26,21 +26,19 @@ export function AddInvoicePage() {
 
     const navigate = useNavigate();
     const { openModal } = useModal();
-    const api = import.meta.env.VITE_API_URL; // Definicja `api`
+    const api = import.meta.env.VITE_API_URL;
 
     useEffect(() => {
         const fetchData = async () => {
             const token = localStorage.getItem("token");
-            if (!token) return; // Zabezpieczenie
+            if (!token) return;
             const headers = { Authorization: `Bearer ${token}` };
             try {
-                // ✅ POPRAWKA: Użycie zmiennej `api` do budowania pełnego adresu URL
                 const [customersRes, servicesRes] = await Promise.all([
                     axios.get(`${api}/customers`, { headers }),
                     axios.get(`${api}/services`, { headers }),
                 ]);
 
-                // ✅ POPRAWKA: Logika "rozpakowująca" dane z $values
                 const customerData = customersRes.data;
                 if (customerData && Array.isArray((customerData as any).$values)) {
                     setCustomers((customerData as any).$values);
@@ -62,7 +60,7 @@ export function AddInvoicePage() {
             }
         };
         fetchData();
-    }, [api]); // ✅ POPRAWKA: Dodanie `api` do tablicy zależności
+    }, [api]);
 
     const handleAddItem = () => {
         if (!selectedServiceId) {
@@ -125,7 +123,6 @@ export function AddInvoicePage() {
         }
     };
 
-    // Reszta kodu JSX (return) pozostaje bez zmian
     if (isLoading) return <div className="p-6"><h1 className="text-3xl font-bold text-white mb-6">➕ Dodaj nową fakturę</h1><p>Ładowanie danych...</p></div>;
     return (
         <div className="p-6">
