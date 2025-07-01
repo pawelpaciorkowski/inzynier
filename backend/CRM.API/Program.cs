@@ -106,7 +106,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseCors(); // Ważne: CORS przed Authentication/Authorization
+app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -116,5 +116,6 @@ app.MapControllers();
 // Przykładowy endpoint
 app.MapGet("/weatherforecast", () => "This is a sample endpoint.")
 .WithName("GetWeatherForecast");
+
 
 app.Run();

@@ -65,7 +65,7 @@ namespace CRM.API.Controllers.User
                 DueDate = dto.DueDate,
                 Completed = false,
                 UserId = userId,
-                CustomerId = 1
+                CustomerId = dto.CustomerId
             };
 
             _context.Tasks.Add(newTask);

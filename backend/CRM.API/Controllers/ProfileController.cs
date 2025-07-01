@@ -1,7 +1,9 @@
 using CRM.BusinessLogic.Services.Admin;
+using CRM.Data; // 👈 DODAJ USING DLA ApplicationDbContext
 using CRM.Data.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace CRM.API.Controllers
@@ -12,10 +14,13 @@ namespace CRM.API.Controllers
     public class ProfileController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly ApplicationDbContext _context;
 
-        public ProfileController(IUserService userService)
+        // 👇 2. ZMODYFIKUJ KONSTRUKTOR
+        public ProfileController(IUserService userService, ApplicationDbContext context)
         {
             _userService = userService;
+            _context = context;
         }
 
         [HttpPut("change-password")]
@@ -35,6 +40,24 @@ namespace CRM.API.Controllers
             }
 
             return Ok("Hasło zostało pomyślnie zmienione.");
+        }
+
+        [HttpGet("login-history")]
+        public async Task<IActionResult> GetLoginHistory()
+        {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdString, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var history = await _context.LoginHistories
+                .Where(h => h.UserId == userId)
+                .OrderByDescending(h => h.LoggedInAt)
+                .Take(20)
+                .ToListAsync();
+
+            return Ok(history);
         }
     }
 }
