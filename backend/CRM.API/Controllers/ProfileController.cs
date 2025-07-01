@@ -1,5 +1,5 @@
 using CRM.BusinessLogic.Services.Admin;
-using CRM.Data; // 👈 DODAJ USING DLA ApplicationDbContext
+using CRM.Data;
 using CRM.Data.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +16,6 @@ namespace CRM.API.Controllers
         private readonly IUserService _userService;
         private readonly ApplicationDbContext _context;
 
-        // 👇 2. ZMODYFIKUJ KONSTRUKTOR
         public ProfileController(IUserService userService, ApplicationDbContext context)
         {
             _userService = userService;
@@ -46,7 +45,7 @@ namespace CRM.API.Controllers
         public async Task<IActionResult> GetLoginHistory()
         {
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(userIdString, out var userId))
+            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId))
             {
                 return Unauthorized();
             }
@@ -54,7 +53,13 @@ namespace CRM.API.Controllers
             var history = await _context.LoginHistories
                 .Where(h => h.UserId == userId)
                 .OrderByDescending(h => h.LoggedInAt)
-                .Take(20)
+                .Take(20) // Ograniczamy do 20 ostatnich wpisów
+                .Select(h => new
+                {
+                    h.Id,
+                    h.LoggedInAt,
+                    h.IpAddress
+                })
                 .ToListAsync();
 
             return Ok(history);
