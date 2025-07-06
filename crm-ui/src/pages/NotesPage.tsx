@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
 import { format } from 'date-fns';
