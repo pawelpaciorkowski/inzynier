@@ -17,14 +17,21 @@ namespace CRM.Data.Models
         public int? PaymentTermDays { get; set; }
     }
 
+    // Plik: backend/CRM.Data/Models/FullModels.cs
+
     public class Invoice
     {
         public int Id { get; set; }
-        public string Number { get; set; } = default!;
-        public DateTime IssuedAt { get; set; }
-        public decimal TotalAmount { get; set; }
+        public string Number { get; set; } = null!;
         public int CustomerId { get; set; }
         public virtual Customer Customer { get; set; } = null!;
+        public DateTime IssuedAt { get; set; }
+
+        // ✅ DODAJ TE DWIE LINIE
+        public DateTime DueDate { get; set; }
+        public bool IsPaid { get; set; }
+
+        public decimal TotalAmount { get; set; }
         public virtual ICollection<InvoiceItem> Items { get; set; } = new List<InvoiceItem>();
     }
 

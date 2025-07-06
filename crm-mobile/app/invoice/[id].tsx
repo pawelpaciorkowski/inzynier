@@ -1,5 +1,3 @@
-// Plik: crm-mobile/app/invoice/[id].tsx
-
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, ScrollView, Text, Alert, Platform, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
@@ -8,7 +6,16 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
-// Definicja typów dla szczegółów faktury
+// ✅ INTERFEJSY W PEŁNI ZGODNE Z TWOIM KODEM C#
+interface InvoiceItemDetails {
+    id: number;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    netAmount: number;
+    grossAmount: number;
+}
+
 interface InvoiceDetails {
     id: number;
     invoiceNumber: string;
@@ -20,20 +27,10 @@ interface InvoiceDetails {
     dueDate: string;
     isPaid: boolean;
     items: {
-        $values: {
-            id: number;
-            productName: string;
-            quantity: number;
-            unitPrice: number;
-            netValue: number;
-            taxRate: number;
-            taxValue: number;
-            grossValue: number;
-        }[];
+        $values: InvoiceItemDetails[];
     };
 }
 
-// Komponent pomocniczy do wyświetlania wiersza informacji
 const InfoRow = ({ label, value }: { label: string, value: string | number | null | undefined }) => {
     if (value === null || value === undefined) return null;
     return (
@@ -60,7 +57,7 @@ export default function InvoiceDetailScreen() {
                 const response = await fetch(`http://10.0.2.2:5167/api/Invoices/${id}`, {
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
-                if (!response.ok) throw new Error('Nie udało się pobrać danych faktury.');
+                if (!response.ok) throw new Error(`Nie udało się pobrać danych faktury (status: ${response.status})`);
                 const data = await response.json();
                 setInvoice(data);
             } catch (err: any) {
@@ -76,33 +73,24 @@ export default function InvoiceDetailScreen() {
         if (!token || !id || !invoice) return;
         setIsDownloading(true);
         try {
-            // Nazwa pliku PDF, zamieniamy "/" na "_", żeby uniknąć problemów
             const fileName = `${invoice.invoiceNumber.replace(/\//g, '_')}.pdf`;
             const fileUri = FileSystem.documentDirectory + fileName;
 
             const response = await FileSystem.downloadAsync(
                 `http://10.0.2.2:5167/api/Invoices/${id}/pdf`,
                 fileUri,
-                { headers: { 'Authorization': `Bearer ${token}` } }
+                { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            if (response.status !== 200) {
-                throw new Error('Błąd serwera podczas generowania PDF.');
-            }
-
-            if (await Sharing.isAvailableAsync()) {
-                await Sharing.shareAsync(response.uri);
-            } else {
-                Alert.alert("Błąd", "Udostępnianie nie jest dostępne na tym urządzeniu.");
-            }
-
+            if (response.status !== 200) throw new Error('Błąd serwera podczas generowania PDF.');
+            if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(response.uri);
+            else Alert.alert("Błąd", "Udostępnianie nie jest dostępne na tym urządzeniu.");
         } catch (err: any) {
-            Alert.alert("Błąd pobierania", "Nie udało się pobrać pliku PDF. Sprawdź, czy backend obsługuje ten endpoint.");
+            Alert.alert("Błąd pobierania", "Nie udało się pobrać pliku PDF.");
         } finally {
             setIsDownloading(false);
         }
     };
-
 
     if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color="#fff" /></View>;
     if (error || !invoice) return <View style={styles.centered}><Text style={styles.errorText}>{error || 'Nie znaleziono faktury.'}</Text></View>;
@@ -116,21 +104,24 @@ export default function InvoiceDetailScreen() {
                     <InfoRow label="Klient" value={invoice.customerName} />
                     <InfoRow label="Data wystawienia" value={new Date(invoice.issueDate).toLocaleDateString('pl-PL')} />
                     <InfoRow label="Termin płatności" value={new Date(invoice.dueDate).toLocaleDateString('pl-PL')} />
-                    <InfoRow label="Status" value={invoice.isPaid ? 'Zapłacona' : 'Oczekuje na płatność'} />
+                    <InfoRow label="Status" value={invoice.isPaid ? 'Zapłacona' : 'Oczekuje'} />
                 </View>
 
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>Pozycje na fakturze</Text>
                     {invoice.items?.$values.map(item => (
                         <View key={item.id} style={styles.item}>
-                            <Text style={styles.itemName}>{item.productName}</Text>
-                            <Text style={styles.itemDetails}>{item.quantity} x {item.unitPrice.toFixed(2)} PLN = {item.grossValue.toFixed(2)} PLN</Text>
+                            <Text style={styles.itemName}>{item.description}</Text>
+                            <Text style={styles.itemDetails}>
+                                {item.quantity} x {item.unitPrice.toFixed(2)} PLN = {item.grossAmount.toFixed(2)} PLN
+                            </Text>
                         </View>
                     ))}
                 </View>
 
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>Podsumowanie</Text>
+                    {/* Te wartości będą teraz dostępne dzięki poprawce w backendzie */}
                     <InfoRow label="Wartość netto" value={`${invoice.netAmount.toFixed(2)} PLN`} />
                     <InfoRow label="Podatek VAT" value={`${invoice.taxAmount.toFixed(2)} PLN`} />
                     <Text style={styles.totalAmountLabel}>Do zapłaty (brutto)</Text>
@@ -138,14 +129,7 @@ export default function InvoiceDetailScreen() {
                 </View>
 
                 <TouchableOpacity style={[styles.downloadButton, isDownloading && styles.disabledButton]} onPress={handleDownloadPdf} disabled={isDownloading}>
-                    {isDownloading ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <>
-                            <FontAwesome name="download" size={20} color="#fff" />
-                            <Text style={styles.downloadButtonText}>Pobierz PDF</Text>
-                        </>
-                    )}
+                    {isDownloading ? <ActivityIndicator color="#fff" /> : <><FontAwesome name="download" size={20} color="#fff" /><Text style={styles.downloadButtonText}>Pobierz PDF</Text></>}
                 </TouchableOpacity>
             </ScrollView>
         </>
