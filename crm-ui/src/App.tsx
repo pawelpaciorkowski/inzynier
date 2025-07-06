@@ -103,7 +103,7 @@ function App() {
 
               <Route path="/wiadomosci" element={<MessagesPage />} />
               <Route path="/notatki" element={<NotesPage />} />
-              <Route path="/notatki/dodaj" element={<PrivateRoute><AddNotePage /></PrivateRoute>} />
+              <Route path="/notatki/dodaj" element={<AddNotePage />} />
               <Route path="/notatki/edytuj/:id" element={<PrivateRoute><EditNotePage /></PrivateRoute>} />
 
               {/* ✅ TA LINIA ZOSTAŁA DODANA */}

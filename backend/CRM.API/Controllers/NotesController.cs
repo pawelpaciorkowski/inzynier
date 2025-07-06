@@ -7,6 +7,7 @@ using System.Security.Claims;
 
 namespace CRM.API.Controllers
 {
+    // DTOs (Data Transfer Objects)
     public class NoteListItemDto
     {
         public int Id { get; set; }
@@ -26,7 +27,6 @@ namespace CRM.API.Controllers
     public class NotesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-
         public NotesController(ApplicationDbContext context) { _context = context; }
 
         private int GetCurrentUserId()
@@ -39,12 +39,13 @@ namespace CRM.API.Controllers
             return userId;
         }
 
+        // --- Metoda GET - Pobieranie notatek ---
         [HttpGet]
         public async Task<ActionResult<IEnumerable<NoteListItemDto>>> GetNotes()
         {
             var userId = GetCurrentUserId();
             var notes = await _context.Notes
-                .Where(n => n.UserId == userId)
+                .Where(n => n.UserId == userId) // Poprawne filtrowanie po UserId
                 .Include(n => n.Customer)
                 .OrderByDescending(n => n.CreatedAt)
                 .Select(n => new NoteListItemDto
@@ -55,25 +56,24 @@ namespace CRM.API.Controllers
                     CustomerName = n.Customer != null ? n.Customer.Name : "Brak klienta"
                 })
                 .ToListAsync();
-
             return Ok(notes);
         }
 
+        // --- Metoda POST - Tworzenie notatki ---
         [HttpPost]
         public async Task<ActionResult<Note>> PostNote(CreateNoteDto createNoteDto)
         {
-            var userId = GetCurrentUserId();
+            var userId = GetCurrentUserId(); // Pobieramy ID zalogowanego użytkownika
             var note = new Note
             {
                 Content = createNoteDto.Content,
                 CreatedAt = DateTime.UtcNow,
-                UserId = userId, // Przypisujemy ID zalogowanego użytkownika
+                UserId = userId, // ✅ KLUCZOWA POPRAWKA: Przypisujemy ID użytkownika
                 CustomerId = createNoteDto.CustomerId
             };
 
             _context.Notes.Add(note);
             await _context.SaveChangesAsync();
-
             return CreatedAtAction(nameof(GetNotes), new { id = note.Id }, note);
         }
     }

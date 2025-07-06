@@ -27,7 +27,6 @@ export function NotesPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { openModal } = useModal();
-    const navigate = useNavigate();
 
     const fetchNotes = useCallback(async () => {
         setLoading(true);
