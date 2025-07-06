@@ -33,7 +33,10 @@
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.10.0",
     "react-native-web": "~0.20.0",
-    "@react-native-picker/picker": "2.11.0"
+    "@react-native-picker/picker": "2.11.0",
+    "expo-file-system": "~18.1.11",
+    "expo-sharing": "~13.1.5",
+    "react-native-gesture-handler": "~2.24.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

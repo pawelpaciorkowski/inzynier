@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useContext } from 'react';
-import { StyleSheet, FlatList, ActivityIndicator, View, Text } from 'react-native';
-import { useAuth } from '../../context/AuthContext'; // Upewnij się, że ścieżka jest poprawna
-import { Text as ThemedText, View as ThemedView } from '../../components/Themed'; // Zakładam, że masz Themed komponenty
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, FlatList, ActivityIndicator, Text, View } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
+import { Stack } from 'expo-router';
 
+// Interfejs dla aktywności
 interface Activity {
-  id: string;
+  id: number;
   note: string;
   createdAt: string;
   userName: string;
@@ -12,6 +13,7 @@ interface Activity {
 }
 
 export default function ActivitiesScreen() {
+  // POPRAWKA: Używamy 'token' zamiast 'authToken' dla spójności
   const { token } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,20 +28,25 @@ export default function ActivitiesScreen() {
       }
 
       try {
-        const response = await fetch('http://10.0.2.2:5167/api/Activities', { // Zmieniono na adres dla emulatora Androida z poprawnym portem
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+        const response = await fetch('http://10.0.2.2:5167/api/Activities', {
+          headers: { 'Authorization': `Bearer ${token}` },
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Nie udało się pobrać aktywności.');
+          throw new Error('Nie udało się pobrać aktywności.');
         }
 
-        const data: Activity[] = await response.json();
-        setActivities(data);
+        // POPRAWKA: Przetwarzamy JSON tylko raz
+        const responseData = await response.json();
+
+        // Sprawdzamy, czy dane są 'opakowane' i wyciągamy tablicę z pola $values
+        if (responseData && Array.isArray((responseData as any).$values)) {
+          setActivities((responseData as any).$values);
+        } else if (Array.isArray(responseData)) {
+          setActivities(responseData);
+        } else {
+          setActivities([]);
+        }
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -52,89 +59,87 @@ export default function ActivitiesScreen() {
 
   if (loading) {
     return (
-      <ThemedView style={styles.centered}>
-        <ActivityIndicator size="large" />
-        <ThemedText>Ładowanie aktywności...</ThemedText>
-      </ThemedView>
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#fff" />
+      </View>
     );
   }
 
   if (error) {
     return (
-      <ThemedView style={styles.centered}>
-        <ThemedText style={styles.errorText}>Błąd: {error}</ThemedText>
-      </ThemedView>
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.errorText}>Błąd: {error}</Text>
+      </View>
     );
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <ThemedText style={styles.title}>Ostatnie Aktywności</ThemedText>
-      {activities.length === 0 ? (
-        <ThemedText style={styles.noActivitiesText}>Brak aktywności do wyświetlenia.</ThemedText>
-      ) : (
+    <>
+      <Stack.Screen options={{ title: 'Aktywności' }} />
+      <View style={styles.container}>
         <FlatList
           data={activities}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
             <View style={styles.activityItem}>
-              <ThemedText style={styles.activityNote}>{item.note}</ThemedText>
-              <ThemedText style={styles.activityDetails}>
-                Klient: {item.customerName || 'N/A'} | Użytkownik: {item.userName || 'N/A'}
-              </ThemedText>
-              <ThemedText style={styles.activityDate}>
-                {new Date(item.createdAt).toLocaleString()}
-              </ThemedText>
+              <Text style={styles.activityNote}>{item.note}</Text>
+              <Text style={styles.activityDetails}>
+                Klient: {item.customerName || 'Brak'} | Użytkownik: {item.userName || 'Brak'}
+              </Text>
+              <Text style={styles.activityDate}>
+                {new Date(item.createdAt).toLocaleString('pl-PL')}
+              </Text>
             </View>
           )}
+          ListEmptyComponent={<Text style={styles.noResultsText}>Brak aktywności</Text>}
         />
-      )}
-    </ThemedView>
+      </View>
+    </>
   );
 }
 
+// Style dopasowane do ciemnego motywu
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    backgroundColor: '#111827',
   },
   centered: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
   activityItem: {
-    backgroundColor: '#f0f0f0', // Możesz użyć ThemedView dla tła
+    backgroundColor: '#1f2937',
     padding: 15,
+    marginVertical: 8,
+    marginHorizontal: 16,
     borderRadius: 8,
-    marginBottom: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f59e0b', // Żółty akcent
   },
   activityNote: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 5,
+    color: '#fff',
   },
   activityDetails: {
     fontSize: 14,
-    color: '#555', // Możesz użyć ThemedText dla koloru
-    marginBottom: 3,
+    color: '#9ca3af',
+    marginVertical: 5,
   },
   activityDate: {
     fontSize: 12,
-    color: '#888', // Możesz użyć ThemedText dla koloru
+    color: '#6b7280',
+    textAlign: 'right',
   },
   errorText: {
-    color: 'red',
+    color: '#ef4444',
     fontSize: 16,
   },
-  noActivitiesText: {
-    fontSize: 16,
+  noResultsText: {
     textAlign: 'center',
-    marginTop: 50,
-  },
+    marginTop: 20,
+    fontSize: 16,
+    color: '#6b7280',
+  }
 });

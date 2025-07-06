@@ -1,4 +1,5 @@
 // Plik: crm-mobile/app/(tabs)/_layout.tsx
+
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link, Tabs } from 'expo-router';
@@ -15,17 +16,16 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        // Poprawione opcje dla spójnego, ciemnego wyglądu
-        tabBarActiveTintColor: '#fff', // Aktywna ikona będzie biała
-        tabBarInactiveTintColor: '#6b7280', // Nieaktywna ikona będzie szara
+        tabBarActiveTintColor: '#fff',
+        tabBarInactiveTintColor: '#6b7280',
         tabBarStyle: {
-          backgroundColor: '#1f2937', // Ciemne tło dla paska zakładek
-          borderTopColor: '#374151', // Kolor górnej krawędzi
+          backgroundColor: '#1f2937',
+          borderTopColor: '#374151',
         },
         headerStyle: {
-          backgroundColor: '#1f2937', // Ciemne tło dla nagłówka
+          backgroundColor: '#1f2937',
         },
-        headerTintColor: '#fff', // Kolor tekstu w nagłówku
+        headerTintColor: '#fff',
       }}>
       <Tabs.Screen
         name="index"
@@ -49,17 +49,27 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="activities"
+        name="customers"
         options={{
-          title: 'Aktywności',
-          tabBarIcon: ({ color }) => <TabBarIcon name="list" color={color} />,
+          title: 'Klienci',
+          headerShown: false,
+          tabBarIcon: ({ color }) => <TabBarIcon name="briefcase" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="two"
+        name="invoices"
         options={{
-          title: 'Profil',
-          tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
+          title: 'Faktury',
+          headerShown: false,
+          tabBarIcon: ({ color }) => <TabBarIcon name="file-text-o" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="activities"
+        options={{
+          title: 'Aktywności',
+          headerShown: false,
+          tabBarIcon: ({ color }) => <TabBarIcon name="list-alt" color={color} />,
         }}
       />
     </Tabs>
