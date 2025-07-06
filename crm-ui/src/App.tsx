@@ -27,7 +27,7 @@ import { ReportsPage } from "./pages/ReportsPage";
 import { ExportsPage } from "./pages/ExportsPage";
 import { MessagesPage } from "./pages/MessagesPage";
 import { NotesPage } from "./pages/NotesPage";
-import { NotificationsPage } from "./pages/NotificationsPage";
+import { NotificationsPage } from "./pages/NotificationsPage"; // Upewnij się, że ten import istnieje
 import { LoginHistoryPage } from "./pages/LoginHistoryPage";
 import { SystemLogsPage } from "./pages/SystemLogsPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -49,71 +49,68 @@ function App() {
   return (
     <ModalProvider>
       <AuthProvider>
-        <ModalProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<LoginPage />} />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<LoginPage />} />
 
-              <Route
-                element={
-                  <PrivateRoute>
-                    <Layout />
-                  </PrivateRoute>
-                }
-              >
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/klienci" element={<ClientsPage />} />
-                <Route path="/uzytkownicy" element={<UsersPage />} />
-                <Route path="/zadania" element={<TasksPage />} />
-                <Route path="/aktywnosci" element={<ActivitiesPage />} />
-                <Route path="/klienci/tagi" element={<ClientTagsPage />} />
-                <Route path="/klienci/dodaj" element={<AddClientPage />} />
-                <Route path="/klienci/edytuj/:id" element={<PrivateRoute><EditClientPage /></PrivateRoute>} />
+            <Route
+              element={
+                <PrivateRoute>
+                  <Layout />
+                </PrivateRoute>
+              }
+            >
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/klienci" element={<ClientsPage />} />
+              <Route path="/uzytkownicy" element={<UsersPage />} />
+              <Route path="/zadania" element={<TasksPage />} />
+              <Route path="/aktywnosci" element={<ActivitiesPage />} />
+              <Route path="/klienci/tagi" element={<ClientTagsPage />} />
+              <Route path="/klienci/dodaj" element={<AddClientPage />} />
+              <Route path="/klienci/edytuj/:id" element={<PrivateRoute><EditClientPage /></PrivateRoute>} />
 
-                <Route path="/uzytkownicy/dodaj" element={<AddUserPage />} />
-                <Route path="/uzytkownicy/edytuj/:id" element={<EditUserPage />} />
-                <Route path="/role" element={<RolesPage />} />
-                <Route path="/grupy" element={<GroupsPage />} />
+              <Route path="/uzytkownicy/dodaj" element={<AddUserPage />} />
+              <Route path="/uzytkownicy/edytuj/:id" element={<EditUserPage />} />
+              <Route path="/role" element={<RolesPage />} />
+              <Route path="/grupy" element={<GroupsPage />} />
 
-                <Route path="/zadania/wszystkie" element={<AllTasksPage />} />
+              <Route path="/zadania/wszystkie" element={<AllTasksPage />} />
 
-                <Route path="/kontrakty" element={<ContractsPage />} />
-                <Route path="/kontrakty/dodaj" element={<PrivateRoute><AddContractPage /></PrivateRoute>} />
-                <Route path="/kontrakty/edytuj/:id" element={<PrivateRoute><EditContractPage /></PrivateRoute>} />
+              <Route path="/kontrakty" element={<ContractsPage />} />
+              <Route path="/kontrakty/dodaj" element={<PrivateRoute><AddContractPage /></PrivateRoute>} />
+              <Route path="/kontrakty/edytuj/:id" element={<PrivateRoute><EditContractPage /></PrivateRoute>} />
 
-                <Route path="/faktury" element={<InvoicesPage />} />
-                <Route path="/faktury/dodaj" element={<AddInvoicePage />} />
-                {/* --- DODANA BRAKUJĄCA ŚCIEŻKA --- */}
-                <Route path="/faktury/:id" element={<InvoiceDetailsPage />} />
-                {/* --------------------------------- */}
-                <Route path="/platnosci" element={<PaymentsPage />} />
-                <Route path="/platnosci/dodaj" element={<PrivateRoute><AddPaymentPage /></PrivateRoute>} />
-                <Route path="/platnosci/edytuj/:id" element={<PrivateRoute><EditPaymentPage /></PrivateRoute>} />
+              <Route path="/faktury" element={<InvoicesPage />} />
+              <Route path="/faktury/dodaj" element={<AddInvoicePage />} />
+              <Route path="/faktury/:id" element={<InvoiceDetailsPage />} />
+              <Route path="/platnosci" element={<PaymentsPage />} />
+              <Route path="/platnosci/dodaj" element={<PrivateRoute><AddPaymentPage /></PrivateRoute>} />
+              <Route path="/platnosci/edytuj/:id" element={<PrivateRoute><EditPaymentPage /></PrivateRoute>} />
 
-                <Route path="/wydarzenia" element={<CalendarEventsPage />} />
-                <Route path="/wydarzenia/dodaj" element={<PrivateRoute><AddCalendarEventPage /></PrivateRoute>} />
-                <Route path="/wydarzenia/edytuj/:id" element={<PrivateRoute><EditCalendarEventPage /></PrivateRoute>} />
-                <Route path="/spotkania" element={<MeetingsPage />} />
-                <Route path="/spotkania/dodaj" element={<PrivateRoute><AddMeetingPage /></PrivateRoute>} />
-                <Route path="/spotkania/edytuj/:id" element={<PrivateRoute><EditMeetingPage /></PrivateRoute>} />
-                <Route path="/przypomnienia" element={<RemindersPage />} />
+              <Route path="/wydarzenia" element={<CalendarEventsPage />} />
+              <Route path="/wydarzenia/dodaj" element={<PrivateRoute><AddCalendarEventPage /></PrivateRoute>} />
+              <Route path="/wydarzenia/edytuj/:id" element={<PrivateRoute><EditCalendarEventPage /></PrivateRoute>} />
+              <Route path="/spotkania" element={<MeetingsPage />} />
+              <Route path="/spotkania/dodaj" element={<PrivateRoute><AddMeetingPage /></PrivateRoute>} />
+              <Route path="/spotkania/edytuj/:id" element={<PrivateRoute><EditMeetingPage /></PrivateRoute>} />
+              <Route path="/przypomnienia" element={<RemindersPage />} />
 
-                <Route path="/szablony" element={<TemplatesPage />} />
-                <Route path="/raporty" element={<ReportsPage />} />
-                <Route path="/eksporty" element={<ExportsPage />} />
+              <Route path="/szablony" element={<TemplatesPage />} />
+              <Route path="/raporty" element={<ReportsPage />} />
+              <Route path="/eksporty" element={<ExportsPage />} />
 
-                <Route path="/wiadomosci" element={<MessagesPage />} />
-                <Route path="/notatki" element={<NotesPage />} />
-                <Route path="/powiadomienia" element={<NotificationsPage />} />
+              <Route path="/wiadomosci" element={<MessagesPage />} />
+              <Route path="/notatki" element={<NotesPage />} />
 
-                <Route path="/logowania" element={<LoginHistoryPage />} />
-                <Route path="/logi" element={<SystemLogsPage />} />
-                <Route path="/ustawienia" element={<SettingsPage />} />
+              {/* ✅ TA LINIA ZOSTAŁA DODANA */}
+              <Route path="/powiadomienia" element={<NotificationsPage />} />
 
-              </Route>
-            </Routes>
-          </BrowserRouter>
-        </ModalProvider>
+              <Route path="/logowania" element={<LoginHistoryPage />} />
+              <Route path="/logi" element={<SystemLogsPage />} />
+              <Route path="/ustawienia" element={<SettingsPage />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
       </AuthProvider>
     </ModalProvider>
   );
