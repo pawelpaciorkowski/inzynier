@@ -3,14 +3,23 @@ using CRM.Data.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace CRM.API.Controllers
 {
+    public class NoteListItemDto
+    {
+        public int Id { get; set; }
+        public string Content { get; set; } = null!;
+        public string CustomerName { get; set; } = null!;
+        public DateTime CreatedAt { get; set; }
+    }
+    public class CreateNoteDto
+    {
+        public string Content { get; set; } = null!;
+        public int CustomerId { get; set; }
+    }
+
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
@@ -18,51 +27,38 @@ namespace CRM.API.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        public NotesController(ApplicationDbContext context)
-        {
-            _context = context;
-        }
+        public NotesController(ApplicationDbContext context) { _context = context; }
 
         private int GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
             {
-                throw new System.InvalidOperationException("User ID not found in token.");
+                throw new InvalidOperationException("User ID not found in token.");
             }
             return userId;
         }
 
-        // GET: api/Notes
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Note>>> GetNotes()
+        public async Task<ActionResult<IEnumerable<NoteListItemDto>>> GetNotes()
         {
             var userId = GetCurrentUserId();
             var notes = await _context.Notes
                 .Where(n => n.UserId == userId)
-                .Include(n => n.User)
                 .Include(n => n.Customer)
                 .OrderByDescending(n => n.CreatedAt)
+                .Select(n => new NoteListItemDto
+                {
+                    Id = n.Id,
+                    Content = n.Content.Length > 100 ? n.Content.Substring(0, 100) + "..." : n.Content,
+                    CreatedAt = n.CreatedAt,
+                    CustomerName = n.Customer != null ? n.Customer.Name : "Brak klienta"
+                })
                 .ToListAsync();
+
             return Ok(notes);
         }
 
-        // GET: api/Notes/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Note>> GetNote(int id)
-        {
-            var userId = GetCurrentUserId();
-            var note = await _context.Notes.FindAsync(id);
-
-            if (note == null || note.UserId != userId)
-            {
-                return NotFound();
-            }
-
-            return Ok(note);
-        }
-
-        // POST: api/Notes
         [HttpPost]
         public async Task<ActionResult<Note>> PostNote(CreateNoteDto createNoteDto)
         {
@@ -71,77 +67,14 @@ namespace CRM.API.Controllers
             {
                 Content = createNoteDto.Content,
                 CreatedAt = DateTime.UtcNow,
-                UserId = userId,
+                UserId = userId, // Przypisujemy ID zalogowanego użytkownika
                 CustomerId = createNoteDto.CustomerId
             };
 
             _context.Notes.Add(note);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetNote", new { id = note.Id }, note);
-        }
-
-        // PUT: api/Notes/5
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutNote(int id, UpdateNoteDto updateNoteDto)
-        {
-            if (id != updateNoteDto.Id)
-            {
-                return BadRequest();
-            }
-
-            var userId = GetCurrentUserId();
-            var note = await _context.Notes.FindAsync(id);
-
-            if (note == null || note.UserId != userId)
-            {
-                return NotFound();
-            }
-
-            note.Content = updateNoteDto.Content;
-            note.CustomerId = updateNoteDto.CustomerId;
-
-            _context.Entry(note).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!NoteExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
-        }
-
-        // DELETE: api/Notes/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteNote(int id)
-        {
-            var userId = GetCurrentUserId();
-            var note = await _context.Notes.FindAsync(id);
-            if (note == null || note.UserId != userId)
-            {
-                return NotFound();
-            }
-
-            _context.Notes.Remove(note);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-
-        private bool NoteExists(int id)
-        {
-            return _context.Notes.Any(e => e.Id == id);
+            return CreatedAtAction(nameof(GetNotes), new { id = note.Id }, note);
         }
     }
 }

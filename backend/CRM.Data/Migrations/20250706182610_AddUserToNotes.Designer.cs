@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRM.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250706180338_UpdateNoteModel")]
-    partial class UpdateNoteModel
+    [Migration("20250706182610_AddUserToNotes")]
+    partial class AddUserToNotes
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -441,7 +441,7 @@ namespace CRM.Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<int?>("CustomerId")
+                    b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
                     b.Property<int>("UserId")
@@ -939,7 +939,9 @@ namespace CRM.Data.Migrations
                 {
                     b.HasOne("CRM.Data.Models.Customer", "Customer")
                         .WithMany()
-                        .HasForeignKey("CustomerId");
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("CRM.Data.Models.User", "User")
                         .WithMany()

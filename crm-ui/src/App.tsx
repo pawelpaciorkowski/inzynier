@@ -27,6 +27,8 @@ import { ReportsPage } from "./pages/ReportsPage";
 import { ExportsPage } from "./pages/ExportsPage";
 import { MessagesPage } from "./pages/MessagesPage";
 import { NotesPage } from "./pages/NotesPage";
+import { AddNotePage } from "./pages/AddNotePage";
+import { EditNotePage } from "./pages/EditNotePage";
 import { NotificationsPage } from "./pages/NotificationsPage"; // Upewnij się, że ten import istnieje
 import { LoginHistoryPage } from "./pages/LoginHistoryPage";
 import { SystemLogsPage } from "./pages/SystemLogsPage";
@@ -101,6 +103,8 @@ function App() {
 
               <Route path="/wiadomosci" element={<MessagesPage />} />
               <Route path="/notatki" element={<NotesPage />} />
+              <Route path="/notatki/dodaj" element={<PrivateRoute><AddNotePage /></PrivateRoute>} />
+              <Route path="/notatki/edytuj/:id" element={<PrivateRoute><EditNotePage /></PrivateRoute>} />
 
               {/* ✅ TA LINIA ZOSTAŁA DODANA */}
               <Route path="/powiadomienia" element={<NotificationsPage />} />

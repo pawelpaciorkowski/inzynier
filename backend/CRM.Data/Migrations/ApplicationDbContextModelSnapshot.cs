@@ -438,7 +438,7 @@ namespace CRM.Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<int?>("CustomerId")
+                    b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
                     b.Property<int>("UserId")
@@ -936,7 +936,9 @@ namespace CRM.Data.Migrations
                 {
                     b.HasOne("CRM.Data.Models.Customer", "Customer")
                         .WithMany()
-                        .HasForeignKey("CustomerId");
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("CRM.Data.Models.User", "User")
                         .WithMany()

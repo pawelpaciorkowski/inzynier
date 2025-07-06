@@ -151,15 +151,21 @@ namespace CRM.Data.Models
         public DateTime SentAt { get; set; }
     }
 
+    // Plik: backend/CRM.Data/Models/FullModels.cs
+
     public class Note
     {
         public int Id { get; set; }
-        public string Content { get; set; } = default!;
-        public DateTime CreatedAt { get; set; }
+        public string Content { get; set; } = null!;
+        public DateTime CreatedAt { get; set; } // Dodaj to pole, jeśli go brakuje
+
+        // Klucz obcy dla klienta
+        public int CustomerId { get; set; }
+        public virtual Customer Customer { get; set; } = null!;
+
+        // ✅ DODAJ TE DWA POLA DO RELACJI Z UŻYTKOWNIKIEM
         public int UserId { get; set; }
         public virtual User User { get; set; } = null!;
-        public int? CustomerId { get; set; }
-        public virtual Customer Customer { get; set; } = null!;
     }
 
     public class Setting
