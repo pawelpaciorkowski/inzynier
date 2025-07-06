@@ -46,8 +46,10 @@ export function AddCalendarEventPage() {
             });
             openModal({ type: 'success', title: 'Sukces', message: 'Wydarzenie zostało pomyślnie dodane.' });
             navigate('/wydarzenia');
-        } catch (err: any) {
+        } catch {
             // Błąd zostanie obsłużony przez interceptor Axios
+            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się dodać wydarzenia.' });
+            setLoading(false);
         } finally {
             setLoading(false);
         }

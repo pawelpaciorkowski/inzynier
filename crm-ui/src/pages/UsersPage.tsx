@@ -1,103 +1,107 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom'; // <--- Krok 1: Import Link
+import { useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { useModal } from '../context/ModalContext'; // Import useModal
+import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
-type Role = {
-    id: number;
-    name: string;
-};
-
+// Define clear types for your data
 type User = {
     id: number;
     username: string;
     email: string;
-    role: Role;
+    role: { name: string; }; // Assuming role is an object with a name property
 };
+
+type ApiResponse = {
+    $values: User[];
+}
 
 export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
-    const [userToDelete, setUserToDelete] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
+    const { openModal } = useModal(); // Use the global modal context
     const api = import.meta.env.VITE_API_URL;
-    const token = localStorage.getItem('token');
+
+    const fetchUsers = useCallback(async () => {
+        const token = localStorage.getItem('token');
+        setLoading(true);
+        try {
+            const res = await axios.get<ApiResponse | User[]>(`${api}/admin/users`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = '$values' in res.data ? res.data.$values : res.data;
+            setUsers(data);
+        } catch (err) {
+            console.error('❌ Błąd ładowania użytkowników:', err);
+            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się załadować użytkowników.' });
+        } finally {
+            setLoading(false);
+        }
+    }, [api, openModal]);
 
     useEffect(() => {
-        axios.get(`${api}/admin/users`, {
-            headers: { Authorization: `Bearer ${token}` }
-        })
-            .then(res => {
-                const data = res.data;
-                if (data && Array.isArray((data as any).$values)) {
-                    setUsers((data as any).$values);
-                } else if (Array.isArray(data)) {
-                    setUsers(data);
-                } else {
-                    console.error("Niepoprawny format users:", data);
-                    setUsers([]);
-                }
-            })
-            .catch(err => {
-                console.error('❌ Błąd ładowania użytkowników:', err);
-                setUsers([]);
-            });
-    }, [api, token]); // Dodano zależności do hooka
+        fetchUsers();
+    }, [fetchUsers]);
 
-    const handleDelete = async () => {
-        if (!userToDelete) return;
-        try {
-            await axios.delete(`${api}/admin/users/${userToDelete.id}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
-            setUserToDelete(null);
-        } catch (err) {
-            console.error('❌ Błąd usuwania użytkownika:', err);
-        }
+    // ✅ This is the corrected delete handler
+    const handleDelete = (user: User) => {
+        openModal({
+            type: 'confirm',
+            title: 'Potwierdź usunięcie',
+            message: `Czy na pewno chcesz usunąć użytkownika "${user.username}"?`,
+            confirmText: 'Usuń',
+            onConfirm: async () => {
+                const token = localStorage.getItem('token');
+                try {
+                    await axios.delete(`${api}/admin/users/${user.id}`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+                    openModal({ type: 'success', title: 'Sukces', message: 'Użytkownik usunięty.' });
+                    fetchUsers(); // Refresh the list after deleting
+                } catch (err) {
+                    console.error('❌ Błąd usuwania użytkownika:', err);
+                    openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się usunąć użytkownika.' });
+                }
+            },
+        });
     };
+
+    if (loading) {
+        return <p className="p-6 text-center text-gray-400">Ładowanie...</p>
+    }
 
     return (
         <div className="p-6">
-            <h1 className="text-3xl font-bold mb-4">👤 Użytkownicy</h1>
+            <h1 className="text-3xl font-bold mb-4 text-white">👤 Użytkownicy</h1>
 
             <ul className="space-y-4">
                 {users.map(user => (
-                    <li key={user.id} className="bg-gray-800 p-4 rounded-md text-white shadow">
-                        <strong className="text-xl">{user.username}</strong><br />
-                        📧 {user.email}<br />
-                        🎭 <span className="italic">{user.role.name}</span><br />
+                    <li key={user.id} className="bg-gray-800 p-4 rounded-md text-white shadow flex justify-between items-center">
+                        <div>
+                            <strong className="text-xl">{user.username}</strong><br />
+                            <span className="text-gray-400">📧 {user.email}</span><br />
+                            <span className="italic text-indigo-400">🎭 {user.role?.name || 'Brak roli'}</span>
+                        </div>
 
-                        <div className="mt-2 flex gap-2">
-                            {/* Krok 2: Zamiana <button> na <Link> */}
+                        <div className="flex gap-4">
                             <Link
                                 to={`/uzytkownicy/edytuj/${user.id}`}
-                                className="bg-yellow-400 text-black px-3 py-1 rounded inline-block text-center"
+                                className="p-2 hover:bg-gray-700 rounded-full transition-colors"
+                                title="Edytuj"
                             >
-                                ✏️ Edytuj
+                                <PencilIcon className="h-5 w-5 text-yellow-400" />
                             </Link>
                             <button
-                                onClick={() => setUserToDelete(user)}
-                                className="bg-red-600 text-white px-3 py-1 rounded"
+                                onClick={() => handleDelete(user)}
+                                className="p-2 hover:bg-gray-700 rounded-full transition-colors"
+                                title="Usuń"
                             >
-                                🗑 Usuń
+                                <TrashIcon className="h-5 w-5 text-red-500" />
                             </button>
                         </div>
                     </li>
                 ))}
             </ul>
-
-            {/* Modal do usuwania pozostaje bez zmian */}
-            {userToDelete && (
-                <div className="fixed inset-0 backdrop-blur-md bg-white/10 flex items-center justify-center z-50">
-                    <div className="bg-gray-800 text-white p-6 rounded-md shadow-lg max-w-md w-full">
-                        <h2 className="text-xl font-bold mb-2">🗑 Potwierdź usunięcie</h2>
-                        <p>Czy na pewno chcesz usunąć użytkownika <strong>{userToDelete.username}</strong>?</p>
-                        <div className="mt-4 flex justify-end gap-2">
-                            <button className="bg-gray-600 px-4 py-2 rounded" onClick={() => setUserToDelete(null)}>Anuluj</button>
-                            <button className="bg-red-600 px-4 py-2 rounded" onClick={handleDelete}>Usuń</button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

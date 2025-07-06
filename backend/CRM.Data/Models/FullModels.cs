@@ -155,7 +155,10 @@ namespace CRM.Data.Models
     {
         public int Id { get; set; }
         public string Content { get; set; } = default!;
-        public int CustomerId { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public int UserId { get; set; }
+        public virtual User User { get; set; } = null!;
+        public int? CustomerId { get; set; }
         public virtual Customer Customer { get; set; } = null!;
     }
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Plik: crm-ui/src/pages/RemindersPage.tsx
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -7,7 +8,7 @@ import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 
-// Definicja typu dla pojedynczego przypomnienia (zgodna z API)
+// Definicja typu dla pojedynczego przypomnienia
 interface Reminder {
     id: number;
     note: string;
@@ -15,7 +16,7 @@ interface Reminder {
     userId: number;
 }
 
-// Typ dla opakowanej odpowiedzi z API (częsty wzorzec w Twoim projekcie)
+// Typ dla opakowanej odpowiedzi z API
 interface ApiResponse<T> {
     $values: T[];
 }
@@ -28,32 +29,21 @@ export function RemindersPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const { openModal } = useModal();
 
-    // Stany dla modala formularza
+    // --- Logika Modala ---
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [currentReminder, setCurrentReminder] = useState<Reminder | null>(null);
     const [note, setNote] = useState('');
     const [remindAt, setRemindAt] = useState('');
 
-    // Nowe stany dla modala przypomnienia
-    const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
-    const [reminderToShow, setReminderToShow] = useState<Reminder | null>(null);
-
-    // Funkcja do pobierania danych z lepszą obsługą błędów
     const fetchReminders = useCallback(async () => {
         setLoading(true);
-        setError(null);
         try {
             const response = await axios.get<ApiResponse<Reminder> | Reminder[]>('/api/Reminders');
-            // Poprawnie obsługuje oba formaty odpowiedzi API
             const data = '$values' in response.data ? response.data.$values : response.data;
             setReminders(data);
             setFilteredReminders(data);
-        } catch (err: unknown) { // Używamy 'unknown' dla bezpieczeństwa typów
-            let errorMessage = 'Nie udało się pobrać przypomnień.';
-            if (axios.isAxiosError(err) && err.response) {
-                errorMessage = err.response.data?.message || err.message;
-            }
-            setError(errorMessage);
+        } catch {
+            setError('Nie udało się pobrać przypomnień. Sprawdź, czy backend jest uruchomiony i czy konfiguracja proxy w vite.config.ts jest poprawna.');
         } finally {
             setLoading(false);
         }
@@ -63,25 +53,6 @@ export function RemindersPage() {
         fetchReminders();
     }, [fetchReminders]);
 
-    // Logika wyświetlania modala przypomnienia
-    useEffect(() => {
-        const interval = setInterval(() => {
-            const now = new Date();
-            reminders.forEach(reminder => {
-                const remindAtDate = new Date(reminder.remindAt);
-                // Sprawdź, czy przypomnienie jest w przyszłości i czy jeszcze nie zostało wyświetlone
-                if (remindAtDate <= now && !localStorage.getItem(`reminder-${reminder.id}-shown`)) {
-                    setReminderToShow(reminder);
-                    setIsReminderModalOpen(true);
-                    localStorage.setItem(`reminder-${reminder.id}-shown`, 'true'); // Oznacz jako wyświetlone
-                }
-            });
-        }, 1000); // Sprawdzaj co sekundę
-
-        return () => clearInterval(interval); // Czyść interwał przy odmontowaniu komponentu
-    }, [reminders]);
-
-    // Filtrowanie listy (bez zmian, działa poprawnie)
     useEffect(() => {
         const filtered = reminders.filter(r =>
             r.note.toLowerCase().includes(searchQuery.toLowerCase())
@@ -89,24 +60,23 @@ export function RemindersPage() {
         setFilteredReminders(filtered);
     }, [searchQuery, reminders]);
 
-    // Otwieranie modala formularza
+    // ✅ POPRAWKA: Ta funkcja jest kluczowa do otwierania modala
     const handleOpenFormModal = (reminder: Reminder | null) => {
         setCurrentReminder(reminder);
         if (reminder) {
             setNote(reminder.note);
             setRemindAt(format(new Date(reminder.remindAt), "yyyy-MM-dd'T'HH:mm"));
         } else {
-            // Resetowanie formularza przy dodawaniu nowego
             setNote('');
             setRemindAt('');
         }
+        // Ta linia zmienia stan i powoduje wyświetlenie modala
         setIsFormModalOpen(true);
     };
 
-    // Zapisywanie (dodawanie/edycja)
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!note.trim() || !remindAt) {
+        if (!note || !remindAt) {
             openModal({ type: 'error', title: 'Błąd walidacji', message: 'Wszystkie pola są wymagane.' });
             return;
         }
@@ -114,7 +84,7 @@ export function RemindersPage() {
         const reminderData = {
             id: currentReminder?.id ?? 0,
             note,
-            remindAt: new Date(remindAt + ':00Z').toISOString(),
+            remindAt: new Date(remindAt).toISOString(),
         };
 
         try {
@@ -126,17 +96,12 @@ export function RemindersPage() {
                 openModal({ type: 'success', title: 'Sukces', message: 'Przypomnienie dodane.' });
             }
             setIsFormModalOpen(false);
-            await fetchReminders(); // Ponowne pobranie danych po sukcesie
-        } catch (err: unknown) {
-            let errorMessage = 'Wystąpił nieoczekiwany błąd.';
-            if (axios.isAxiosError(err) && err.response) {
-                errorMessage = err.response.data?.message || err.message;
-            }
-            openModal({ type: 'error', title: 'Błąd zapisu', message: errorMessage });
+            fetchReminders();
+        } catch (err: any) {
+            openModal({ type: 'error', title: 'Błąd zapisu', message: err.response?.data?.message || 'Wystąpił błąd.' });
         }
     };
 
-    // Usuwanie
     const handleDelete = (id: number) => {
         openModal({
             type: 'confirm',
@@ -146,13 +111,9 @@ export function RemindersPage() {
                 try {
                     await axios.delete(`/api/Reminders/${id}`);
                     openModal({ type: 'success', title: 'Usunięto', message: 'Przypomnienie zostało usunięte.' });
-                    await fetchReminders(); // Ponowne pobranie danych
-                } catch (err: unknown) {
-                    let errorMessage = 'Nie udało się usunąć przypomnienia.';
-                    if (axios.isAxiosError(err) && err.response) {
-                        errorMessage = err.response.data?.message || err.message;
-                    }
-                    openModal({ type: 'error', title: 'Błąd', message: errorMessage });
+                    fetchReminders();
+                } catch (err: any) {
+                    openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się usunąć przypomnienia.' });
                 }
             }
         });
@@ -165,6 +126,7 @@ export function RemindersPage() {
         <div className="p-6 text-white">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold">⏰ Przypomnienia</h1>
+                {/* Przycisk, który wywołuje funkcję otwierającą modal */}
                 <button
                     onClick={() => handleOpenFormModal(null)}
                     className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center transition-colors"
@@ -204,12 +166,12 @@ export function RemindersPage() {
                             </div>
                         </li>
                     )) : (
-                        <li className="p-4 text-center text-gray-500">Brak przypomnień do wyświetlenia.</li>
+                        <li className="p-4 text-center text-gray-500">Brak przypomnień. Dodaj swoje pierwsze!</li>
                     )}
                 </ul>
             </div>
 
-            {/* Modal do dodawania/edycji przypomnienia */}
+            {/* ✅ POPRAWKA: Ten warunek renderuje modal, gdy isFormModalOpen jest true */}
             {isFormModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 animate-fade-in">
                     <div className="bg-gray-800 rounded-lg p-8 w-full max-w-md shadow-2xl">
@@ -249,29 +211,6 @@ export function RemindersPage() {
                     </div>
                 </div>
             )}
-
-            {/* Modal wyświetlający przypomnienie */}
-            {isReminderModalOpen && reminderToShow && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 animate-fade-in">
-                    <div className="bg-gray-800 rounded-lg p-8 w-full max-w-md shadow-2xl text-white">
-                        <h2 className="text-2xl font-bold mb-4">🔔 Przypomnienie!</h2>
-                        <p className="text-lg mb-6">{reminderToShow.note}</p>
-                        <p className="text-gray-400 text-sm mb-6">
-                            Ustawiono na: {format(new Date(reminderToShow.remindAt), "d MMMM yyyy, HH:mm", { locale: pl })}
-                        </p>
-                        <div className="flex justify-end">
-                            <button
-                                onClick={() => setIsReminderModalOpen(false)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
-                            >
-                                Zamknij
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
-
-export default RemindersPage; // Dobra praktyka, aby dodać default export
