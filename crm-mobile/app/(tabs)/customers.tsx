@@ -1,7 +1,7 @@
 // Plik: crm-mobile/app/(tabs)/customers.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, Text, View, TouchableOpacity } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, Text, View, TouchableOpacity, Pressable } from 'react-native';
+import { Link, Stack, useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
@@ -99,7 +99,22 @@ export default function CustomersScreen() {
 
     return (
         <>
-            <Stack.Screen options={{ title: 'Klienci' }} />
+            <Stack.Screen options={{
+                title: 'Klienci', headerRight: () => (
+                    <Link href="/add-customer" asChild>
+                        <Pressable>
+                            {({ pressed }) => (
+                                <FontAwesome
+                                    name="plus-circle"
+                                    size={25}
+                                    color="white"
+                                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
+                                />
+                            )}
+                        </Pressable>
+                    </Link>
+                ),
+            }} />
             <View style={styles.container}>
                 <View style={styles.searchContainer}>
                     <FontAwesome name="search" size={20} color="#9ca3af" style={styles.searchIcon} />

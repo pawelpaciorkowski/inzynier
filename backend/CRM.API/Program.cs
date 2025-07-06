@@ -27,6 +27,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<DocumentGenerationService>();
+builder.Services.AddScoped<InvoicePdfService>();
 
 // 4. Autentykacja i Autoryzacja (JWT)
 builder.Services.AddAuthentication("Bearer")

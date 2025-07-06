@@ -11,17 +11,7 @@ namespace CRM.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_Services_TaxRates_TaxRateId",
-                table: "Services");
-
-            migrationBuilder.DropIndex(
-                name: "IX_Services_TaxRateId",
-                table: "Services");
-
-            migrationBuilder.DropColumn(
-                name: "TaxRateId",
-                table: "Services");
+            
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "DueDate",

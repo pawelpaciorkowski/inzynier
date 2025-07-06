@@ -113,7 +113,7 @@ export default function InvoiceDetailScreen() {
                         <View key={item.id} style={styles.item}>
                             <Text style={styles.itemName}>{item.description}</Text>
                             <Text style={styles.itemDetails}>
-                                {item.quantity} x {item.unitPrice.toFixed(2)} PLN = {item.grossAmount.toFixed(2)} PLN
+                                {item.quantity} x {item.unitPrice !== undefined && item.unitPrice !== null ? item.unitPrice.toFixed(2) : 'N/A'} PLN = {item.grossAmount !== undefined && item.grossAmount !== null ? item.grossAmount.toFixed(2) : 'N/A'} PLN
                             </Text>
                         </View>
                     ))}
@@ -122,10 +122,10 @@ export default function InvoiceDetailScreen() {
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>Podsumowanie</Text>
                     {/* Te wartości będą teraz dostępne dzięki poprawce w backendzie */}
-                    <InfoRow label="Wartość netto" value={`${invoice.netAmount.toFixed(2)} PLN`} />
-                    <InfoRow label="Podatek VAT" value={`${invoice.taxAmount.toFixed(2)} PLN`} />
+                    <InfoRow label="Wartość netto" value={invoice.netAmount !== undefined && invoice.netAmount !== null ? `${invoice.netAmount.toFixed(2)} PLN` : 'N/A'} />
+                    <InfoRow label="Podatek VAT" value={invoice.taxAmount !== undefined && invoice.taxAmount !== null ? `${invoice.taxAmount.toFixed(2)} PLN` : 'N/A'} />
                     <Text style={styles.totalAmountLabel}>Do zapłaty (brutto)</Text>
-                    <Text style={styles.totalAmountValue}>{invoice.totalAmount.toFixed(2)} PLN</Text>
+                    <Text style={styles.totalAmountValue}>{invoice.totalAmount !== undefined && invoice.totalAmount !== null ? `${invoice.totalAmount.toFixed(2)} PLN` : 'N/A'}</Text>
                 </View>
 
                 <TouchableOpacity style={[styles.downloadButton, isDownloading && styles.disabledButton]} onPress={handleDownloadPdf} disabled={isDownloading}>

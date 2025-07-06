@@ -1,3 +1,4 @@
+using CRM.BusinessLogic.Services;
 using CRM.Data;
 using CRM.Data.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -66,10 +67,26 @@ public class CreateInvoiceItemDto
 public class InvoicesController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly InvoicePdfService _invoicePdfService;
 
-    public InvoicesController(ApplicationDbContext context)
+    public InvoicesController(ApplicationDbContext context, InvoicePdfService invoicePdfService)
     {
         _context = context;
+        _invoicePdfService = invoicePdfService;
+    }
+
+    [HttpGet("{id}/pdf")]
+    public async Task<IActionResult> GetInvoicePdf(int id)
+    {
+        try
+        {
+            var pdfBytes = await _invoicePdfService.GenerateInvoicePdfAsync(id);
+            return File(pdfBytes, "application/pdf", $"invoice_{id}.pdf");
+        }
+        catch (Exception ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 
     // --- Pobieranie listy wszystkich faktur ---

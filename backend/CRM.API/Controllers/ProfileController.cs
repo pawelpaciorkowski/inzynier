@@ -8,6 +8,14 @@ using System.Security.Claims;
 
 namespace CRM.API.Controllers
 {
+    public class UserProfileDto
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = default!;
+        public string Email { get; set; } = default!;
+        public string RoleName { get; set; } = default!;
+    }
+
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
@@ -20,6 +28,35 @@ namespace CRM.API.Controllers
         {
             _userService = userService;
             _context = context;
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<UserProfileDto>> GetUserProfile()
+        {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var user = await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var userProfile = new UserProfileDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                RoleName = user.Role?.Name ?? "Brak roli"
+            };
+
+            return Ok(userProfile);
         }
 
         [HttpPut("change-password")]

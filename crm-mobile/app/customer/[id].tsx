@@ -7,32 +7,19 @@ import * as Sharing from 'expo-sharing';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 
-interface InvoiceDetails {
+interface CustomerDetails {
     id: number;
-    invoiceNumber: string;
-    customerName: string;
-    totalAmount: number;
-    netAmount: number;
-    taxAmount: number;
-    issueDate: string;
-    dueDate: string;
-    isPaid: boolean;
-    items: {
-        $values: {
-            id: number;
-            productName: string;
-            quantity: number;
-            unitPrice: number;
-            netValue: number;
-            taxRate: number;
-            taxValue: number;
-            grossValue: number;
-        }[];
-    };
+    name: string;
+    email: string;
+    phoneNumber: string;
+    address: string;
+    city: string;
+    postalCode: string;
+    country: string;
 }
 
 const InfoRow = ({ label, value }: { label: string, value: string | number | null | undefined }) => {
-    if (value === null || value === undefined) return null;
+    if (value === null || value === undefined || value === "") return null;
     return (
         <View style={styles.infoRow}>
             <Text style={styles.label}>{label}</Text>
@@ -41,112 +28,51 @@ const InfoRow = ({ label, value }: { label: string, value: string | number | nul
     );
 };
 
-export default function InvoiceDetailScreen() {
+export default function CustomerDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const { token } = useAuth();
-    const [invoice, setInvoice] = useState<InvoiceDetails | null>(null);
+    const [customer, setCustomer] = useState<CustomerDetails | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [isDownloading, setIsDownloading] = useState(false);
 
     useEffect(() => {
-        const fetchInvoiceDetails = async () => {
+        const fetchCustomerDetails = async () => {
             if (!id || !token) {
                 setLoading(false);
                 return;
             }
             try {
-                const response = await fetch(`http://10.0.2.2:5167/api/Invoices/${id}`, {
+                const response = await fetch(`http://10.0.2.2:5167/api/Customers/${id}`, {
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
-                if (!response.ok) throw new Error('Nie udało się pobrać danych faktury.');
+                if (!response.ok) throw new Error('Nie udało się pobrać danych klienta.');
                 const data = await response.json();
-                setInvoice(data);
+                setCustomer(data);
             } catch (err: any) {
                 setError(err.message);
             } finally {
                 setLoading(false);
             }
         };
-        fetchInvoiceDetails();
+        fetchCustomerDetails();
     }, [id, token]);
 
-    const handleDownloadPdf = async () => {
-        if (!token || !id) return;
-        setIsDownloading(true);
-        try {
-            const response = await fetch(`http://10.0.2.2:5167/api/Invoices/${id}/pdf`, {
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-            if (!response.ok) throw new Error('Błąd podczas generowania PDF.');
-
-            const blob = await response.blob();
-            const fileReader = new FileReader();
-            fileReader.onload = async (e) => {
-                const fileUri = FileSystem.documentDirectory + `${invoice?.invoiceNumber || 'faktura'}.pdf`;
-                await FileSystem.writeAsStringAsync(fileUri, (e.target?.result as string).split(',')[1], {
-                    encoding: FileSystem.EncodingType.Base64
-                });
-
-                if (await Sharing.isAvailableAsync()) {
-                    await Sharing.shareAsync(fileUri);
-                } else {
-                    Alert.alert("Błąd", "Udostępnianie nie jest dostępne na tym urządzeniu.");
-                }
-            };
-            fileReader.readAsDataURL(blob);
-
-        } catch (err: any) {
-            Alert.alert("Błąd pobierania", err.message);
-        } finally {
-            setIsDownloading(false);
-        }
-    };
-
-
     if (loading) return <ActivityIndicator size="large" color="#fff" style={styles.centered} />;
-    if (error || !invoice) return <View style={styles.centered}><Text style={styles.errorText}>{error || 'Nie znaleziono faktury.'}</Text></View>;
+    if (error || !customer) return <View style={styles.centered}><Text style={styles.errorText}>{error || 'Nie znaleziono klienta.'}</Text></View>;
 
     return (
         <>
-            <Stack.Screen options={{ title: invoice.invoiceNumber, headerStyle: { backgroundColor: '#1f2937' }, headerTintColor: '#fff' }} />
+            <Stack.Screen options={{ title: customer.name, headerStyle: { backgroundColor: '#1f2937' }, headerTintColor: '#fff' }} />
             <ScrollView style={styles.container}>
                 <View style={styles.card}>
-                    <InfoRow label="Numer faktury" value={invoice.invoiceNumber} />
-                    <InfoRow label="Klient" value={invoice.customerName} />
-                    <InfoRow label="Data wystawienia" value={new Date(invoice.issueDate).toLocaleDateString('pl-PL')} />
-                    <InfoRow label="Termin płatności" value={new Date(invoice.dueDate).toLocaleDateString('pl-PL')} />
-                    <InfoRow label="Status" value={invoice.isPaid ? 'Zapłacona' : 'Oczekuje na płatność'} />
+                    <InfoRow label="Nazwa" value={customer.name} />
+                    <InfoRow label="Email" value={customer.email} />
+                    <InfoRow label="Numer telefonu" value={customer.phoneNumber} />
+                    <InfoRow label="Adres" value={customer.address} />
+                    <InfoRow label="Miasto" value={customer.city} />
+                    <InfoRow label="Kod pocztowy" value={customer.postalCode} />
+                    <InfoRow label="Kraj" value={customer.country} />
                 </View>
-
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Pozycje na fakturze</Text>
-                    {invoice.items?.$values.map(item => (
-                        <View key={item.id} style={styles.item}>
-                            <Text style={styles.itemName}>{item.productName}</Text>
-                            <Text style={styles.itemDetails}>{item.quantity} x {item.unitPrice.toFixed(2)} PLN = {item.grossValue.toFixed(2)} PLN</Text>
-                        </View>
-                    ))}
-                </View>
-
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Podsumowanie</Text>
-                    <InfoRow label="Wartość netto" value={`${invoice.netAmount.toFixed(2)} PLN`} />
-                    <InfoRow label="Podatek VAT" value={`${invoice.taxAmount.toFixed(2)} PLN`} />
-                    <Text style={styles.totalAmountLabel}>Do zapłaty (brutto)</Text>
-                    <Text style={styles.totalAmountValue}>{invoice.totalAmount.toFixed(2)} PLN</Text>
-                </View>
-
-                <TouchableOpacity style={styles.downloadButton} onPress={handleDownloadPdf} disabled={isDownloading}>
-                    {isDownloading ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <>
-                            <FontAwesome name="download" size={20} color="#fff" />
-                            <Text style={styles.downloadButtonText}>Pobierz PDF</Text>
-                        </>
-                    )}
-                </TouchableOpacity>
             </ScrollView>
         </>
     );

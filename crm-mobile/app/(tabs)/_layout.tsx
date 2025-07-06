@@ -51,7 +51,6 @@ export default function TabLayout() {
         name="customers"
         options={{
           title: 'Klienci',
-          headerShown: false,
           tabBarIcon: ({ color }) => <TabBarIcon name="briefcase" color={color} />,
         }}
       />
@@ -59,7 +58,6 @@ export default function TabLayout() {
         name="invoices"
         options={{
           title: 'Faktury',
-          headerShown: false,
           tabBarIcon: ({ color }) => <TabBarIcon name="file-text-o" color={color} />,
         }}
       />
@@ -69,6 +67,13 @@ export default function TabLayout() {
           title: 'Aktywności',
           headerShown: false,
           tabBarIcon: ({ color }) => <TabBarIcon name="list-alt" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="two"
+        options={{
+          title: 'Profil',
+          tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
         }}
       />
     </Tabs>
