@@ -101,8 +101,6 @@ namespace CRM.Data.Models
         public int Id { get; set; }
         public string Name { get; set; } = default!;
         public decimal Price { get; set; }
-        public int TaxRateId { get; set; }
-        public virtual TaxRate TaxRate { get; set; } = null!;
     }
 
     public class Order

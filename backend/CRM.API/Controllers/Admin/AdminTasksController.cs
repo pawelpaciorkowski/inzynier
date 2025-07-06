@@ -1,5 +1,4 @@
 using CRM.Data;
-using CRM.Data.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,10 +18,22 @@ namespace CRM.API.Controllers.Admin
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<TaskItem>>> GetAllTasks()
+        public async Task<IActionResult> GetAllTasks()
         {
+            // Używamy poprawnych nazw z Twojego kodu: _context.Tasks i t.Completed
             var tasks = await _context.Tasks
                 .Include(t => t.User)
+                .Include(t => t.Customer)
+                .Select(t => new
+                {
+                    t.Id,
+                    t.Title,
+                    t.Description,
+                    t.DueDate,
+                    Completed = t.Completed,
+                    User = new { t.User.Username },
+                    Customer = t.Customer != null ? new { t.Customer.Name } : null
+                })
                 .ToListAsync();
 
             return Ok(tasks);

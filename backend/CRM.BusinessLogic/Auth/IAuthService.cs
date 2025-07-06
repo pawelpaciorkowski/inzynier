@@ -1,3 +1,4 @@
+using CRM.BusinessLogic.Auth.Requests;
 using CRM.Data.Models;
 
 namespace CRM.BusinessLogic.Auth
@@ -7,5 +8,7 @@ namespace CRM.BusinessLogic.Auth
         Task<User?> AuthenticateAsync(string username, string password);
         string GenerateJwtToken(User user);
         Task<User?> RegisterAsync(RegisterRequest request);
+        Task<User?> GetUserByIdAsync(int userId);
+        Task<User?> UpdateUserAsync(int userId, UpdateUserRequest request);
     }
 }

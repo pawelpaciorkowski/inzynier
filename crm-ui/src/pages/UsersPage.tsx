@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom'; // <--- Krok 1: Import Link
 import axios from 'axios';
 
 type Role = {
@@ -12,36 +13,20 @@ type User = {
     username: string;
     email: string;
     role: Role;
-
 };
-
 
 export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
-    const [editingUser, setEditingUser] = useState<User | null>(null);
-    const [formData, setFormData] = useState<Partial<User>>({});
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
     const api = import.meta.env.VITE_API_URL;
-
     const token = localStorage.getItem('token');
-    const [roles, setRoles] = useState<Role[]>([]);
-
-    useEffect(() => {
-        axios.get('${api}/admin/roles', {
-            headers: { Authorization: `Bearer ${token}` },
-        })
-            .then(res => setRoles(res.data))
-            .catch(err => console.error('❌ Błąd ładowania ról:', err));
-    }, []);
 
     useEffect(() => {
         axios.get(`${api}/admin/users`, {
             headers: { Authorization: `Bearer ${token}` }
         })
             .then(res => {
-                console.log("users response:", res.data);
                 const data = res.data;
-
                 if (data && Array.isArray((data as any).$values)) {
                     setUsers((data as any).$values);
                 } else if (Array.isArray(data)) {
@@ -55,49 +40,18 @@ export default function UsersPage() {
                 console.error('❌ Błąd ładowania użytkowników:', err);
                 setUsers([]);
             });
-    }, []);
-
-    const handleEdit = (user: User) => {
-        setEditingUser(user);
-        setFormData(user);
-    };
+    }, [api, token]); // Dodano zależności do hooka
 
     const handleDelete = async () => {
         if (!userToDelete) return;
         try {
-            await axios.delete('${api}/admin/users/${userToDelete.id}', {
+            await axios.delete(`${api}/admin/users/${userToDelete.id}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
             setUserToDelete(null);
         } catch (err) {
             console.error('❌ Błąd usuwania użytkownika:', err);
-        }
-    };
-
-    const handleUpdate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!editingUser) return;
-
-        try {
-            await axios.put(
-                `${api}/admin/users/${editingUser.id}`,
-                {
-                    username: formData.username,
-                    email: formData.email,
-                    roleId: formData.role?.id,
-                },
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                }
-            );
-
-            setUsers(prev =>
-                prev.map(u => (u.id === editingUser.id ? { ...u, ...formData } : u))
-            );
-            setEditingUser(null);
-        } catch (err) {
-            console.error('❌ Błąd edycji użytkownika:', err);
         }
     };
 
@@ -113,12 +67,13 @@ export default function UsersPage() {
                         🎭 <span className="italic">{user.role.name}</span><br />
 
                         <div className="mt-2 flex gap-2">
-                            <button
-                                onClick={() => handleEdit(user)}
-                                className="bg-yellow-400 text-black px-3 py-1 rounded"
+                            {/* Krok 2: Zamiana <button> na <Link> */}
+                            <Link
+                                to={`/uzytkownicy/edytuj/${user.id}`}
+                                className="bg-yellow-400 text-black px-3 py-1 rounded inline-block text-center"
                             >
                                 ✏️ Edytuj
-                            </button>
+                            </Link>
                             <button
                                 onClick={() => setUserToDelete(user)}
                                 className="bg-red-600 text-white px-3 py-1 rounded"
@@ -126,50 +81,13 @@ export default function UsersPage() {
                                 🗑 Usuń
                             </button>
                         </div>
-
-                        {editingUser?.id === user.id && (
-                            <form onSubmit={handleUpdate} className="mt-4 grid gap-2">
-                                <input
-                                    className="p-2 rounded bg-gray-700 text-white"
-                                    value={formData.username || ''}
-                                    onChange={e => setFormData({ ...formData, username: e.target.value })}
-                                    placeholder="Nazwa użytkownika"
-                                />
-                                <input
-                                    className="p-2 rounded bg-gray-700 text-white"
-                                    value={formData.email || ''}
-                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                    placeholder="Email"
-                                />
-                                <select
-                                    className="p-2 rounded bg-gray-700 text-white"
-                                    value={formData.role?.id || ''}
-                                    onChange={e => {
-                                        const selected = roles.find(r => r.id === Number(e.target.value));
-                                        if (selected) {
-                                            setFormData({ ...formData, role: selected });
-                                        }
-                                    }}
-
-                                >
-                                    <option value="">-- Wybierz rolę --</option>
-                                    {roles.map(r => (
-                                        <option key={r.id} value={r.id}>{r.name}</option>
-
-                                    ))}
-                                </select>
-                                <div className="flex gap-2">
-                                    <button type="submit" className="bg-green-600 px-4 py-1 rounded">💾 Zapisz</button>
-                                    <button type="button" onClick={() => setEditingUser(null)} className="bg-gray-500 px-4 py-1 rounded">❌ Anuluj</button>
-                                </div>
-                            </form>
-                        )}
                     </li>
                 ))}
             </ul>
 
+            {/* Modal do usuwania pozostaje bez zmian */}
             {userToDelete && (
-                <div className="fixed inset-0 backdrop-blur-md bg-white/10 flex items-center justify-center z-90">
+                <div className="fixed inset-0 backdrop-blur-md bg-white/10 flex items-center justify-center z-50">
                     <div className="bg-gray-800 text-white p-6 rounded-md shadow-lg max-w-md w-full">
                         <h2 className="text-xl font-bold mb-2">🗑 Potwierdź usunięcie</h2>
                         <p>Czy na pewno chcesz usunąć użytkownika <strong>{userToDelete.username}</strong>?</p>

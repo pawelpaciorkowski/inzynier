@@ -10,12 +10,12 @@ namespace CRM.Data.Models
         public string? Note { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Klucze obce
-        public int UserId { get; set; }
-        public int CustomerId { get; set; }
+        // Klucze obce - ZMIANA TUTAJ
+        public int? UserId { get; set; }      // Pozwól na NULL
+        public int? CustomerId { get; set; }  // Pozwól na NULL
 
-        // Właściwości nawigacyjne (tego brakowało)
-        public virtual User User { get; set; }
-        public virtual Customer Customer { get; set; }
+        // Właściwości nawigacyjne
+        public virtual User? User { get; set; } // Zezwól też na NULL tutaj
+        public virtual Customer? Customer { get; set; }
     }
 }

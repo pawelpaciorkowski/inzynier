@@ -9,8 +9,6 @@ using CRM.BusinessLogic.Services.Admin;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- Konfiguracja serwisów (Dependency Injection) ---
-
 // 1. Baza Danych i Kontekst
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -19,7 +17,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // 2. Kontrolery i Serializator JSON
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
-    // Obsługa cyklicznych referencji w odpowiedziach API
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
 });
 
@@ -49,12 +46,13 @@ builder.Services.AddAuthentication("Bearer")
     });
 builder.Services.AddAuthorization();
 
-// 5. CORS (Cross-Origin Resource Sharing)
+// 5. CORS (Cross-Origin Resource Sharing) - UPROSZCZONA WERSJA
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
+        // Zezwalaj na zapytania z adresu deweloperskiego frontendu
+        policy.WithOrigins("http://localhost:5173")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -106,16 +104,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Użyj skonfigurowanej domyślnej polityki CORS
 app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-// Przykładowy endpoint
-app.MapGet("/weatherforecast", () => "This is a sample endpoint.")
-.WithName("GetWeatherForecast");
-
 
 app.Run();

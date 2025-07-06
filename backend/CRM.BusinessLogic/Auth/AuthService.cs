@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using BCrypt.Net;
+using CRM.BusinessLogic.Auth.Requests;
 
 namespace CRM.BusinessLogic.Auth
 {
@@ -76,37 +77,77 @@ namespace CRM.BusinessLogic.Auth
 
         public async Task<User?> RegisterAsync(RegisterRequest request)
         {
-            // Sprawdź, czy użytkownik o podanej nazwie już istnieje
-            if (await _context.Users.AnyAsync(u => u.Username == request.Username))
+            // Sprawdzamy, czy rola, którą próbujemy przypisać, w ogóle istnieje
+            var roleExists = await _context.Roles.AnyAsync(r => r.Id == request.RoleId);
+            if (!roleExists)
             {
-                return null; // Zwróć null, jeśli użytkownik istnieje
+                // Jeśli nie, nie możemy utworzyć użytkownika. To ważne zabezpieczenie.
+                throw new InvalidOperationException($"Rola o ID {request.RoleId} nie istnieje.");
             }
 
-            // NAJWAŻNIEJSZA ZMIANA: Szukamy roli o nazwie "User" bezpośrednio w bazie.
-            var userRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "User");
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
+            if (existingUser != null) return null;
 
-            // Zabezpieczenie, gdyby rola "User" nie istniała w bazie.
-            if (userRole == null)
-            {
-                throw new InvalidOperationException("Nie można znaleźć domyślnej roli 'User'. Upewnij się, że tabela 'roles' jest poprawnie wypełniona.");
-            }
-
-            // Tworzymy hash hasła
             var hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-            // Tworzymy nowego użytkownika
             var user = new User
             {
                 Username = request.Username,
                 Email = request.Email,
                 PasswordHash = hashedPassword,
-                // PRZYPISUJEMY ID ZNALEZIONEJ ROLI, a nie to, co przyszło w zapytaniu.
-                RoleId = userRole.Id
+                RoleId = request.RoleId
             };
 
+            // 1. Dodajemy nowego użytkownika do "kolejki" zmian
             _context.Users.Add(user);
+
+            // 👇 TUTAJ ZACZYNA SIĘ LOGIKA ZAPISU AKTYWNOŚCI
+            // Po dodaniu użytkownika do kontekstu, ale przed zapisaniem zmian, tworzymy nowy wpis aktywności.
+            // EF Core jest na tyle inteligentny, że zapisze oba obiekty (User i Activity) w jednej transakcji.
+            var activity = new Activity
+            {
+                Note = $"Zarejestrowano nowego użytkownika: {user.Username}",
+                // W tym przypadku nie wiemy, który zalogowany użytkownik to robi,
+                // więc zostawiamy UserId puste lub przypisujemy ID systemowe, np. admina.
+                // Dla uproszczenia, na razie zostawmy to puste, jeśli model na to pozwala.
+                // Jeśli Twoja tabela `Activities` wymaga UserId, przypisz np. ID admina.
+                // UserId = 1, 
+            };
+            _context.Activities.Add(activity);
+
+            // 3. Zapisujemy WSZYSTKIE zmiany (użytkownika i aktywność) do bazy w jednej transakcji.
             await _context.SaveChangesAsync();
 
+            // Zwracamy nowo utworzonego użytkownika (teraz już z poprawnym ID z bazy)
+            return user;
+        }
+
+        public async Task<User?> GetUserByIdAsync(int userId)
+        {
+            return await _context.Users
+                                 .Include(u => u.Role)
+                                 .FirstOrDefaultAsync(u => u.Id == userId);
+        }
+
+        public async Task<User?> UpdateUserAsync(int userId, UpdateUserRequest request)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return null;
+            }
+
+            var roleExists = await _context.Roles.AnyAsync(r => r.Id == request.RoleId);
+            if (!roleExists)
+            {
+                throw new InvalidOperationException($"Rola o ID {request.RoleId} nie istnieje.");
+            }
+
+            user.Username = request.Username;
+            user.Email = request.Email;
+            user.RoleId = request.RoleId;
+
+            await _context.SaveChangesAsync();
             return user;
         }
     }

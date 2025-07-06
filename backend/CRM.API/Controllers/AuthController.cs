@@ -1,4 +1,5 @@
 using CRM.BusinessLogic.Auth;
+using CRM.BusinessLogic.Auth.Requests;
 using CRM.BusinessLogic.Services;
 using CRM.Data.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -61,6 +62,30 @@ namespace CRM.API.Controllers
         {
             public string Username { get; set; } = default!;
             public string Password { get; set; } = default!;
+        }
+
+        [HttpPut("users/{id}")]
+        public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserRequest request)
+        {
+            // Kontroler wywołuje serwis - tak jak powinno być.
+            var updatedUser = await _authService.UpdateUserAsync(id, request);
+            if (updatedUser == null)
+            {
+                return NotFound(new { message = "User not found" });
+            }
+            return Ok(new { message = "User updated successfully", user = updatedUser });
+        }
+
+        [HttpGet("users/{id}")]
+        public async Task<IActionResult> GetUser(int id)
+        {
+            // Kontroler wywołuje serwis, a nie _context.
+            var user = await _authService.GetUserByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound(new { message = "User not found" });
+            }
+            return Ok(user);
         }
     }
 }

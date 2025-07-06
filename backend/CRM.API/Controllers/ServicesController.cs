@@ -1,24 +1,28 @@
 using CRM.Data;
-using CRM.Data.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-[ApiController]
-[Route("api/[controller]")]
-[Authorize]
-public class ServicesController : ControllerBase
+namespace CRM.API.Controllers
 {
-    private readonly ApplicationDbContext _context;
-
-    public ServicesController(ApplicationDbContext context)
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
+    public class ServicesController : ControllerBase
     {
-        _context = context;
-    }
+        private readonly ApplicationDbContext _context;
 
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<Service>>> GetServices()
-    {
-        return await _context.Services.ToListAsync();
+        public ServicesController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetServices()
+        {
+            // Pobieramy wszystkie serwisy bez dołączania nieistniejących relacji
+            var services = await _context.Services.ToListAsync();
+            return Ok(services);
+        }
     }
 }

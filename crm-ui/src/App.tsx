@@ -34,6 +34,9 @@ import { ModalProvider } from './context/ModalContext';
 import { AddContractPage } from './pages/AddContractPage';
 import { EditContractPage } from './pages/EditContractPage';
 import { EditClientPage } from './pages/EditClientPage';
+import { EditUserPage } from "./pages/EditUserPage";
+import { InvoiceDetailsPage } from "./pages/InvoiceDetailsPage"; // <--- DODANY IMPORT
+
 import './index.css';
 
 function App() {
@@ -51,6 +54,7 @@ function App() {
                 </PrivateRoute>
               }
             >
+              {/* ... (wszystkie inne ścieżki bez zmian) ... */}
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/klienci" element={<ClientsPage />} />
               <Route path="/uzytkownicy" element={<UsersPage />} />
@@ -61,6 +65,7 @@ function App() {
               <Route path="/klienci/edytuj/:id" element={<PrivateRoute><EditClientPage /></PrivateRoute>} />
 
               <Route path="/uzytkownicy/dodaj" element={<AddUserPage />} />
+              <Route path="/uzytkownicy/edytuj/:id" element={<EditUserPage />} />
               <Route path="/role" element={<RolesPage />} />
               <Route path="/grupy" element={<GroupsPage />} />
 
@@ -69,8 +74,12 @@ function App() {
               <Route path="/kontrakty" element={<ContractsPage />} />
               <Route path="/kontrakty/dodaj" element={<PrivateRoute><AddContractPage /></PrivateRoute>} />
               <Route path="/kontrakty/edytuj/:id" element={<PrivateRoute><EditContractPage /></PrivateRoute>} />
+
               <Route path="/faktury" element={<InvoicesPage />} />
               <Route path="/faktury/dodaj" element={<AddInvoicePage />} />
+              {/* --- DODANA BRAKUJĄCA ŚCIEŻKA --- */}
+              <Route path="/faktury/:id" element={<InvoiceDetailsPage />} />
+              {/* --------------------------------- */}
               <Route path="/platnosci" element={<PaymentsPage />} />
 
               <Route path="/wydarzenia" element={<CalendarEventsPage />} />
