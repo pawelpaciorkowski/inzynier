@@ -49,6 +49,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="activities"
+        options={{
+          title: 'Aktywności',
+          tabBarIcon: ({ color }) => <TabBarIcon name="list" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="two"
         options={{
           title: 'Profil',

@@ -35,7 +35,7 @@ import { AddContractPage } from './pages/AddContractPage';
 import { EditContractPage } from './pages/EditContractPage';
 import { EditClientPage } from './pages/EditClientPage';
 import { EditUserPage } from "./pages/EditUserPage";
-import { InvoiceDetailsPage } from "./pages/InvoiceDetailsPage"; // <--- DODANY IMPORT
+import { InvoiceDetailsPage } from './pages/InvoiceDetailsPage';
 
 import './index.css';
 
@@ -54,7 +54,6 @@ function App() {
                 </PrivateRoute>
               }
             >
-              {/* ... (wszystkie inne ścieżki bez zmian) ... */}
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/klienci" element={<ClientsPage />} />
               <Route path="/uzytkownicy" element={<UsersPage />} />

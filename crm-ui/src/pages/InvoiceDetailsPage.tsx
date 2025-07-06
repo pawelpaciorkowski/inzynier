@@ -92,3 +92,5 @@ export function InvoiceDetailsPage() {
         </div>
     );
 }
+
+export default InvoiceDetailsPage;
