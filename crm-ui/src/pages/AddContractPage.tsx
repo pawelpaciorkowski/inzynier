@@ -42,7 +42,8 @@ export function AddContractPage() {
                 } else if (Array.isArray(data)) {
                     setCustomers(data);
                 }
-            } catch (err) {
+            } catch (err: any) {
+                openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się pobrać klientów.' });
                 console.error('Błąd pobierania klientów', err);
             }
         };
@@ -82,8 +83,8 @@ export function AddContractPage() {
                 message: 'Nowy kontrakt został pomyślnie dodany.',
                 onConfirm: () => navigate('/kontrakty')
             });
-        } catch (err) {
-            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się dodać kontraktu.' });
+        } catch (err: any) {
+            openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się dodać kontraktu.' });
         }
     };
 

@@ -28,8 +28,8 @@ export function AddClientPage() {
                 message: 'Nowy klient został pomyślnie dodany.',
                 onConfirm: () => navigate('/klienci')
             });
-        } catch (err) {
-            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się dodać klienta.' });
+        } catch (err: any) {
+            openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się dodać klienta.' });
         }
     };
 

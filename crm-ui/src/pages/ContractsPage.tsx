@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
@@ -40,12 +39,29 @@ export function ContractsPage() {
             const templatesData = templatesRes.data;
             setTemplates(templatesData?.$values || (Array.isArray(templatesData) ? templatesData : []));
 
-        } catch (err) { setError('Nie udało się pobrać danych.'); } finally { setLoading(false); }
+        } catch { setError('Nie udało się pobrać danych.'); } finally { setLoading(false); }
     }, [api]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
-    // const handleDelete = (contract: Contract) => { /* ... bez zmian ... */ };
+    const handleDeleteContract = async (id: number) => {
+        openModal({
+            type: 'confirm',
+            title: 'Potwierdź usunięcie',
+            message: 'Czy na pewno chcesz usunąć ten kontrakt? Tej operacji nie można cofnąć.',
+            confirmText: 'Usuń',
+            onConfirm: async () => {
+                try {
+                    await axios.delete(`/api/Contracts/${id}`);
+                    // Odśwież listę po usunięciu
+                    setContracts(prevContracts => prevContracts.filter(contract => contract.id !== id));
+                } catch (err) {
+                    alert('Nie udało się usunąć kontraktu.');
+                    console.error('Błąd usuwania kontraktu:', err);
+                }
+            },
+        });
+    };
 
     const handleGenerate = async (contractId: number) => {
         if (!selectedTemplateId) {
@@ -119,12 +135,20 @@ export function ContractsPage() {
                                         <td className="px-5 py-4 border-b border-gray-700 text-right font-semibold">
                                             {contract.netAmount ? `${contract.netAmount.toFixed(2)} PLN` : '-'}
                                         </td>
-
+                                        <td className="px-5 py-4 border-b border-gray-700 text-center">
+                                            <div className="flex justify-center gap-4">
+                                                <button onClick={() => handleGenerate(contract.id)} title="Generuj dokument" className="text-blue-400 hover:text-blue-500">
+                                                    <DocumentArrowDownIcon className="w-5 h-5 inline" />
+                                                </button>
+                                                <Link to={`/kontrakty/edytuj/${contract.id}`} title="Edytuj"><PencilIcon className="w-5 h-5 text-gray-400 hover:text-yellow-400" /></Link>
+                                                <button onClick={() => handleDeleteContract(contract.id)} title="Usuń"><TrashIcon className="w-5 h-5 text-gray-400 hover:text-red-500" /></button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={4} className="text-center py-10 text-gray-500">
+                                    <td colSpan={5} className="text-center py-10 text-gray-500">
                                         Brak kontraktów do wyświetlenia.
                                     </td>
                                 </tr>

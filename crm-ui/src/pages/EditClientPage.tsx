@@ -37,8 +37,7 @@ export function EditClientPage() {
                 });
             })
             .catch(err => {
-                openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się załadować danych klienta.' });
-                console.error(err);
+                openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się załadować danych klienta.' });
             })
             .finally(() => setLoading(false));
     }, [api, id, navigate, openModal]);
@@ -61,8 +60,8 @@ export function EditClientPage() {
                 message: 'Dane klienta zostały pomyślnie zaktualizowane.',
                 onConfirm: () => navigate('/klienci')
             });
-        } catch (err) {
-            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się zaktualizować danych.' });
+        } catch (err: any) {
+            openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się zaktualizować danych.' });
         }
     };
 

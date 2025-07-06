@@ -21,6 +21,7 @@ export interface InvoiceItemDto {
 }
 
 export interface InvoiceDetailsDto extends InvoiceListItemDto {
+    dueDate: string;
     items: {
         $values: InvoiceItemDto[];
     };

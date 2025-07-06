@@ -52,8 +52,8 @@ export function AddInvoicePage() {
                 } else if (Array.isArray(servicesData)) {
                     setServices(servicesData);
                 }
-            } catch (err) {
-                setError("Nie udało się załadować danych potrzebnych do utworzenia faktury.");
+            } catch (err: any) {
+                openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || "Nie udało się załadować danych potrzebnych do utworzenia faktury." });
                 console.error(err);
             } finally {
                 setIsLoading(false);
@@ -92,7 +92,7 @@ export function AddInvoicePage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedCustomerId || invoiceItems.length === 0) {
-            setError('Proszę wybrać klienta i dodać co najmniej jedną pozycję.');
+            openModal({ type: 'error', title: 'Błąd Walidacji', message: 'Proszę wybrać klienta i dodać co najmniej jedną pozycję.' });
             return;
         }
 
@@ -116,8 +116,8 @@ export function AddInvoicePage() {
                 message: 'Faktura została pomyślnie utworzona.',
                 onConfirm: () => navigate('/faktury')
             });
-        } catch (err) {
-            setError('Wystąpił błąd podczas zapisywania faktury.');
+        } catch (err: any) {
+            openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Wystąpił błąd podczas zapisywania faktury.' });
         } finally {
             setIsSubmitting(false);
         }

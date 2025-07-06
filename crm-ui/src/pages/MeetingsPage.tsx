@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { useModal } from '../context/ModalContext';
 
 interface Meeting {
     id: number;
@@ -16,12 +16,13 @@ export function MeetingsPage() {
     const [meetings, setMeetings] = useState<Meeting[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const { openModal } = useModal();
 
     useEffect(() => {
         const fetchMeetings = async () => {
             const token = localStorage.getItem('token');
             try {
-                const res = await axios.get('/api/meetings', {
+                const res = await axios.get<any>('/api/meetings', {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 const data = res.data;
@@ -30,7 +31,7 @@ export function MeetingsPage() {
                 } else if (Array.isArray(data)) {
                     setMeetings(data);
                 }
-            } catch (err) {
+            } catch {
                 setError('Nie udało się pobrać spotkań.');
             } finally {
                 setLoading(false);
@@ -38,6 +39,25 @@ export function MeetingsPage() {
         };
         fetchMeetings();
     }, []);
+
+    const handleDeleteMeeting = async (id: number) => {
+        openModal({
+            type: 'confirm',
+            title: 'Potwierdź usunięcie',
+            message: 'Czy na pewno chcesz usunąć to spotkanie? Tej operacji nie można cofnąć.',
+            confirmText: 'Usuń',
+            onConfirm: async () => {
+                try {
+                    await axios.delete(`/api/Meetings/${id}`);
+                    // Odśwież listę po usunięciu
+                    setMeetings(prevMeetings => prevMeetings.filter(meeting => meeting.id !== id));
+                } catch (err) {
+                    alert('Nie udało się usunąć spotkania.');
+                    console.error('Błąd usuwania spotkania:', err);
+                }
+            },
+        });
+    };
 
     return (
         <div className="p-6">
@@ -73,8 +93,8 @@ export function MeetingsPage() {
                                         <td className="px-5 py-4 border-b border-gray-700">{new Date(meeting.scheduledAt).toLocaleString()}</td>
                                         <td className="px-5 py-4 border-b border-gray-700 text-center">
                                             <div className="flex justify-center gap-4">
-                                                <button title="Edytuj"><PencilIcon className="w-5 h-5 text-gray-400 hover:text-yellow-400" /></button>
-                                                <button title="Usuń"><TrashIcon className="w-5 h-5 text-gray-400 hover:text-red-500" /></button>
+                                                <Link to={`/spotkania/edytuj/${meeting.id}`} title="Edytuj"><PencilIcon className="w-5 h-5 text-gray-400 hover:text-yellow-400" /></Link>
+                                                <button onClick={() => handleDeleteMeeting(meeting.id)} title="Usuń"><TrashIcon className="w-5 h-5 text-gray-400 hover:text-red-500" /></button>
                                             </div>
                                         </td>
                                     </tr>

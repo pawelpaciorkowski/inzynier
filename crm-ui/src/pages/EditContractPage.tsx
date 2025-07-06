@@ -1,158 +1,251 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { format } from 'date-fns';
 import { useModal } from '../context/ModalContext';
 
-interface Customer { id: number; name: string; }
-interface ContractFormData {
+interface Customer {
+    id: number;
+    name: string;
+}
+
+interface Contract {
+    id: number;
     title: string;
-    customerId: number;
     contractNumber: string;
     placeOfSigning: string;
     signedAt: string;
     startDate: string;
     endDate: string;
-    scopeOfServices: string;
     netAmount: number;
     paymentTermDays: number;
+    scopeOfServices: string;
+    customerId: number;
 }
 
-
 export function EditContractPage() {
-    const [formData, setFormData] = useState<Partial<ContractFormData>>({});
-    const [customers, setCustomers] = useState<Customer[]>([]);
-    const [loading, setLoading] = useState(true);
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [title, setTitle] = useState('');
+    const [contractNumber, setContractNumber] = useState('');
+    const [placeOfSigning, setPlaceOfSigning] = useState('');
+    const [signedAt, setSignedAt] = useState<string>(format(new Date(), 'yyyy-MM-ddTHH:mm'));
+    const [startDate, setStartDate] = useState<string>('');
+    const [endDate, setEndDate] = useState<string>('');
+    const [netAmount, setNetAmount] = useState<string>('');
+    const [paymentTermDays, setPaymentTermDays] = useState<string>('');
+    const [scopeOfServices, setScopeOfServices] = useState('');
+    const [customerId, setCustomerId] = useState<number | string>('');
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [loading, setLoading] = useState(true);
     const { openModal } = useModal();
-    const api = import.meta.env.VITE_API_URL;
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        const fetchCustomers = axios.get(`${api}/customers`, { headers: { Authorization: `Bearer ${token}` } });
-        const fetchContract = axios.get(`${api}/contracts/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+        const fetchData = async () => {
+            try {
+                const [contractRes, customersRes] = await Promise.all([
+                    axios.get<Contract>(`/api/Contracts/${id}`),
+                    axios.get<any>('/api/Customers'),
+                ]);
 
-        Promise.all([fetchCustomers, fetchContract]).then(([customersRes, contractRes]) => {
-            const customerData = customersRes.data;
-            if (customerData && Array.isArray((customerData as any).$values)) {
-                setCustomers((customerData as any).$values);
-            } else if (Array.isArray(customerData)) {
-                setCustomers(customerData);
+                setTitle(contractRes.data.title);
+                setContractNumber(contractRes.data.contractNumber);
+                setPlaceOfSigning(contractRes.data.placeOfSigning);
+                setSignedAt(format(new Date(contractRes.data.signedAt), 'yyyy-MM-ddTHH:mm'));
+                setStartDate(contractRes.data.startDate ? format(new Date(contractRes.data.startDate), 'yyyy-MM-ddTHH:mm') : '');
+                setEndDate(contractRes.data.endDate ? format(new Date(contractRes.data.endDate), 'yyyy-MM-ddTHH:mm') : '');
+                setNetAmount(contractRes.data.netAmount ? contractRes.data.netAmount.toString() : '');
+                setPaymentTermDays(contractRes.data.paymentTermDays ? contractRes.data.paymentTermDays.toString() : '');
+                setScopeOfServices(contractRes.data.scopeOfServices);
+                setCustomerId(contractRes.data.customerId);
+
+                const customersData = customersRes.data.$values || customersRes.data;
+                setCustomers(customersData);
+            } catch (err: any) {
+                openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || `Nie udało się pobrać danych: ${err.message}` });
+                console.error('Błąd pobierania danych:', err);
+            } finally {
+                setLoading(false);
             }
-
-            const contractData = contractRes.data;
-            setFormData({
-                ...contractData,
-                signedAt: contractData.signedAt ? new Date(contractData.signedAt).toISOString().split('T')[0] : '',
-                startDate: contractData.startDate ? new Date(contractData.startDate).toISOString().split('T')[0] : '',
-                endDate: contractData.endDate ? new Date(contractData.endDate).toISOString().split('T')[0] : '',
-            });
-
-        }).catch(() => {
-            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się załadować danych.' });
-        }).finally(() => setLoading(false));
-    }, [api, id, openModal]);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
+        };
+        fetchData();
+    }, [id]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const token = localStorage.getItem('token');
-        const updatedContract = {
-            ...formData,
-            customerId: parseInt(String(formData.customerId)),
-            netAmount: parseFloat(String(formData.netAmount)),
-            paymentTermDays: parseInt(String(formData.paymentTermDays)),
-            signedAt: new Date(formData.signedAt!),
-            startDate: formData.startDate ? new Date(formData.startDate) : null,
-            endDate: formData.endDate ? new Date(formData.endDate) : null,
-        };
+        setLoading(true);
+
+        if (!title.trim() || !customerId || !signedAt) {
+            openModal({ type: 'error', title: 'Błąd walidacji', message: 'Tytuł, klient i data podpisania są wymagane.' });
+            setLoading(false);
+            return;
+        }
 
         try {
-            await axios.put(`${api}/contracts/${id}`, updatedContract, {
-                headers: { Authorization: `Bearer ${token}` }
+            await axios.put(`/api/Contracts/${id}`, {
+                id: parseInt(id as string),
+                title,
+                contractNumber,
+                placeOfSigning,
+                signedAt: new Date(signedAt).toISOString(),
+                startDate: startDate ? new Date(startDate).toISOString() : null,
+                endDate: endDate ? new Date(endDate).toISOString() : null,
+                netAmount: netAmount ? parseFloat(netAmount) : null,
+                paymentTermDays: paymentTermDays ? parseInt(paymentTermDays) : null,
+                scopeOfServices,
+                customerId: parseInt(customerId as string),
             });
-            openModal({
-                type: 'success',
-                title: 'Sukces!',
-                message: 'Kontrakt został pomyślnie zaktualizowany.',
-                onConfirm: () => navigate('/kontrakty')
-            });
-        } catch (err) {
-            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się zaktualizować kontraktu.' });
+            openModal({ type: 'success', title: 'Sukces', message: 'Kontrakt został pomyślnie zaktualizowany.' });
+            navigate('/kontrakty');
+        } catch (err: any) {
+            // Błąd zostanie obsłużony przez interceptor Axios
+        } finally {
+            setLoading(false);
         }
     };
 
-    if (loading) return <div className="p-6 text-center text-gray-400">Ładowanie danych...</div>;
+    if (loading) {
+        return (
+            <div className="p-6 text-white flex justify-center items-center h-screen">
+                <p>Ładowanie...</p>
+            </div>
+        );
+    }
 
+    if (error) {
+        return (
+            <div className="p-6 text-white flex justify-center items-center h-screen">
+                <p className="text-red-500">Błąd: {error}</p>
+            </div>
+        );
+    }
 
     return (
-        <div className="p-6 max-w-2xl mx-auto">
-            <h1 className="text-3xl font-bold text-white mb-6">✏️ Edytuj kontrakt</h1>
-            <form onSubmit={handleSubmit} className="bg-gray-800 p-8 rounded-lg shadow-md space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                        <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1">Tytuł kontraktu</label>
-                        <input id="title" name="title" type="text" value={formData.title || ''} onChange={handleChange} required className="w-full p-2 rounded bg-gray-700 text-white" />
+        <div className="p-6 text-white">
+            <h1 className="text-3xl font-bold mb-6">Edytuj Kontrakt</h1>
+            <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <form onSubmit={handleSubmit}>
+                    <div className="mb-4">
+                        <label htmlFor="title" className="block text-gray-300 text-sm font-bold mb-2">Tytuł:</label>
+                        <input
+                            type="text"
+                            id="title"
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600 placeholder-gray-400"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            required
+                        />
                     </div>
-                    <div>
-                        <label htmlFor="customerId" className="block text-sm font-medium text-gray-300 mb-1">Klient</label>
-                        <select id="customerId" name="customerId" value={formData.customerId || ''} onChange={handleChange} required className="w-full p-2 rounded bg-gray-700 text-white">
+                    <div className="mb-4">
+                        <label htmlFor="contractNumber" className="block text-gray-300 text-sm font-bold mb-2">Numer Kontraktu:</label>
+                        <input
+                            type="text"
+                            id="contractNumber"
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600 placeholder-gray-400"
+                            value={contractNumber}
+                            onChange={(e) => setContractNumber(e.target.value)}
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="placeOfSigning" className="block text-gray-300 text-sm font-bold mb-2">Miejsce Zawarcia:</label>
+                        <input
+                            type="text"
+                            id="placeOfSigning"
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600 placeholder-gray-400"
+                            value={placeOfSigning}
+                            onChange={(e) => setPlaceOfSigning(e.target.value)}
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="signedAt" className="block text-gray-300 text-sm font-bold mb-2">Data Podpisania:</label>
+                        <input
+                            type="datetime-local"
+                            id="signedAt"
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600 placeholder-gray-400"
+                            value={signedAt}
+                            onChange={(e) => setSignedAt(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="startDate" className="block text-gray-300 text-sm font-bold mb-2">Data Rozpoczęcia:</label>
+                        <input
+                            type="datetime-local"
+                            id="startDate"
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600 placeholder-gray-400"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="endDate" className="block text-gray-300 text-sm font-bold mb-2">Data Zakończenia:</label>
+                        <input
+                            type="datetime-local"
+                            id="endDate"
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600 placeholder-gray-400"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="netAmount" className="block text-gray-300 text-sm font-bold mb-2">Kwota Netto:</label>
+                        <input
+                            type="number"
+                            id="netAmount"
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600 placeholder-gray-400"
+                            value={netAmount}
+                            onChange={(e) => setNetAmount(e.target.value)}
+                            step="0.01"
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="paymentTermDays" className="block text-gray-300 text-sm font-bold mb-2">Termin Płatności (dni):</label>
+                        <input
+                            type="number"
+                            id="paymentTermDays"
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600 placeholder-gray-400"
+                            value={paymentTermDays}
+                            onChange={(e) => setPaymentTermDays(e.target.value)}
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="scopeOfServices" className="block text-gray-300 text-sm font-bold mb-2">Szczegółowy Zakres Usług:</label>
+                        <textarea
+                            id="scopeOfServices"
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600 placeholder-gray-400 h-32"
+                            value={scopeOfServices}
+                            onChange={(e) => setScopeOfServices(e.target.value)}
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="customerId" className="block text-gray-300 text-sm font-bold mb-2">Klient:</label>
+                        <select
+                            id="customerId"
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
+                            value={customerId}
+                            onChange={(e) => setCustomerId(e.target.value)}
+                            required
+                        >
                             <option value="">-- Wybierz klienta --</option>
-                            {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            {customers.map(customer => (
+                                <option key={customer.id} value={customer.id}>
+                                    {customer.name}
+                                </option>
+                            ))}
                         </select>
                     </div>
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                        <label htmlFor="contractNumber" className="block text-sm font-medium text-gray-300 mb-1">Numer umowy</label>
-                        <input id="contractNumber" name="contractNumber" type="text" value={formData.contractNumber || ''} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 text-white" />
+                    {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
+                    <div className="flex items-center justify-between">
+                        <button
+                            type="submit"
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                            disabled={loading}
+                        >
+                            {loading ? 'Aktualizowanie...' : 'Zapisz Zmiany'}
+                        </button>
                     </div>
-                    <div>
-                        <label htmlFor="placeOfSigning" className="block text-sm font-medium text-gray-300 mb-1">Miejsce zawarcia</label>
-                        <input id="placeOfSigning" name="placeOfSigning" type="text" value={formData.placeOfSigning || ''} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 text-white" />
-                    </div>
-                </div>
-                <div>
-                    <label htmlFor="scopeOfServices" className="block text-sm font-medium text-gray-300 mb-1">Szczegółowy zakres usług</label>
-                    <textarea id="scopeOfServices" name="scopeOfServices" value={formData.scopeOfServices || ''} onChange={handleChange} rows={4} className="w-full p-2 rounded bg-gray-700 text-white resize-y" />
-                </div>
-                <div className="grid md:grid-cols-3 gap-4">
-                    <div>
-                        <label htmlFor="signedAt" className="block text-sm font-medium text-gray-300 mb-1">Data podpisania</label>
-                        <input id="signedAt" name="signedAt" type="date" value={formData.signedAt || ''} onChange={handleChange} required className="w-full p-2 rounded bg-gray-700 text-white" />
-                    </div>
-                    <div>
-                        <label htmlFor="startDate" className="block text-sm font-medium text-gray-300 mb-1">Data rozpoczęcia</label>
-                        <input id="startDate" name="startDate" type="date" value={formData.startDate || ''} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 text-white" />
-                    </div>
-                    <div>
-                        <label htmlFor="endDate" className="block text-sm font-medium text-gray-300 mb-1">Data zakończenia</label>
-                        <input id="endDate" name="endDate" type="date" value={formData.endDate || ''} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 text-white" />
-                    </div>
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                        <label htmlFor="netAmount" className="block text-sm font-medium text-gray-300 mb-1">Wartość netto (PLN)</label>
-                        <input id="netAmount" name="netAmount" type="number" step="0.01" value={formData.netAmount || ''} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 text-white" />
-                    </div>
-                    <div>
-                        <label htmlFor="paymentTermDays" className="block text-sm font-medium text-gray-300 mb-1">Termin płatności (dni)</label>
-                        <input id="paymentTermDays" name="paymentTermDays" type="number" value={formData.paymentTermDays || ''} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 text-white" />
-                    </div>
-                </div>
-                <div className="flex justify-end pt-4 gap-3">
-                    <Link to="/kontrakty" className="text-gray-400 hover:text-white px-6 py-2 rounded-md transition-colors">Anuluj</Link>
-                    <button type="submit" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded transition-colors">
-                        Zapisz zmiany
-                    </button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     );
 }

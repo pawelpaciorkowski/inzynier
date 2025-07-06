@@ -33,12 +33,14 @@ namespace CRM.Data.Models
 
         public decimal TotalAmount { get; set; }
         public virtual ICollection<InvoiceItem> Items { get; set; } = new List<InvoiceItem>();
+        public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
     }
 
     public class Payment
     {
         public int Id { get; set; }
         public int InvoiceId { get; set; }
+        public virtual Invoice Invoice { get; set; } = null!;
         public DateTime PaidAt { get; set; }
         public decimal Amount { get; set; }
     }
