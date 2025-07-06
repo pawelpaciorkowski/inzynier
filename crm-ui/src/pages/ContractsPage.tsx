@@ -45,7 +45,7 @@ export function ContractsPage() {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
-    const handleDelete = (contract: Contract) => { /* ... bez zmian ... */ };
+    // const handleDelete = (contract: Contract) => { /* ... bez zmian ... */ };
 
     const handleGenerate = async (contractId: number) => {
         if (!selectedTemplateId) {
@@ -119,19 +119,7 @@ export function ContractsPage() {
                                         <td className="px-5 py-4 border-b border-gray-700 text-right font-semibold">
                                             {contract.netAmount ? `${contract.netAmount.toFixed(2)} PLN` : '-'}
                                         </td>
-                                        <td className="px-5 py-4 border-b border-gray-700 text-center">
-                                            <div className="flex justify-center gap-4">
-                                                <button onClick={() => handleGenerate(contract.id)} title="Generuj dokument">
-                                                    <DocumentArrowDownIcon className="w-5 h-5 text-gray-400 hover:text-green-400" />
-                                                </button>
-                                                <Link to={`/kontrakty/edytuj/${contract.id}`} title="Edytuj">
-                                                    <PencilIcon className="w-5 h-5 text-gray-400 hover:text-yellow-400" />
-                                                </Link>
-                                                <button onClick={() => handleDelete(contract)} title="Usuń">
-                                                    <TrashIcon className="w-5 h-5 text-gray-400 hover:text-red-500" />
-                                                </button>
-                                            </div>
-                                        </td>
+
                                     </tr>
                                 ))
                             ) : (

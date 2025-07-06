@@ -28,7 +28,7 @@ namespace CRM.BusinessLogic.Services.Admin
             var role = new Role
             {
                 Name = dto.Name,
-                Description = dto.Description, 
+                Description = dto.Description,
                 Users = new List<User>()
             };
             _context.Roles.Add(role);

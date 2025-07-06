@@ -76,21 +76,37 @@ namespace CRM.BusinessLogic.Auth
 
         public async Task<User?> RegisterAsync(RegisterRequest request)
         {
-            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
-            if (existingUser != null) return null;
+            // Sprawdź, czy użytkownik o podanej nazwie już istnieje
+            if (await _context.Users.AnyAsync(u => u.Username == request.Username))
+            {
+                return null; // Zwróć null, jeśli użytkownik istnieje
+            }
 
+            // NAJWAŻNIEJSZA ZMIANA: Szukamy roli o nazwie "User" bezpośrednio w bazie.
+            var userRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "User");
+
+            // Zabezpieczenie, gdyby rola "User" nie istniała w bazie.
+            if (userRole == null)
+            {
+                throw new InvalidOperationException("Nie można znaleźć domyślnej roli 'User'. Upewnij się, że tabela 'roles' jest poprawnie wypełniona.");
+            }
+
+            // Tworzymy hash hasła
             var hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
+            // Tworzymy nowego użytkownika
             var user = new User
             {
                 Username = request.Username,
                 Email = request.Email,
                 PasswordHash = hashedPassword,
-                RoleId = request.RoleId
+                // PRZYPISUJEMY ID ZNALEZIONEJ ROLI, a nie to, co przyszło w zapytaniu.
+                RoleId = userRole.Id
             };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
+
             return user;
         }
     }
