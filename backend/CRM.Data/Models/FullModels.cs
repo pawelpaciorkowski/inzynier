@@ -85,6 +85,8 @@ namespace CRM.Data.Models
         public string Message { get; set; } = default!;
         public DateTime CreatedAt { get; set; }
         public bool IsRead { get; set; }
+        public int UserId { get; set; }
+        public virtual User User { get; set; } = null!;
     }
 
     public class Meeting

@@ -105,23 +105,50 @@ export function ReportsPage() {
                             <ChartBarIcon className="w-6 h-6 mr-3 text-green-400" />
                             Wzrost liczby klientów w czasie
                         </h2>
-                        <div className="flex justify-center items-center" style={{ height: 400 }}>
+                        <div className="w-full h-[400px]">
                             <BarChart
                                 width={700}
                                 height={400}
                                 data={customerGrowthData}
-                                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                                margin={{ top: 20, right: 30, left: 10, bottom: 60 }}
                             >
+                                <defs>
+                                    <linearGradient id="colorGrowth" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#68D391" stopOpacity={0.9} />
+                                        <stop offset="95%" stopColor="#38A169" stopOpacity={0.8} />
+                                    </linearGradient>
+                                </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
-                                <XAxis dataKey="month" stroke="#A0AEC0" />
-                                <YAxis stroke="#A0AEC0" />
-                                <Tooltip contentStyle={{ backgroundColor: '#2D3748', border: 'none' }} />
+                                <XAxis
+                                    dataKey="month"
+                                    stroke="#CBD5E0"
+                                    tick={{ fontSize: 12 }}
+                                    angle={-30}
+                                    textAnchor="end"
+                                    interval={0}
+                                    height={80}
+                                />
+                                <YAxis
+                                    stroke="#CBD5E0"
+                                    tick={{ fontSize: 12 }}
+                                    allowDecimals={false}
+                                />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: '#2D3748', border: 'none' }}
+                                    formatter={(value: number) => [`${value} klientów`, 'Wzrost']}
+                                />
                                 <Legend />
-                                <Bar dataKey="count" fill="#4299E1" name="Nowi klienci" />
+                                <Bar
+                                    dataKey="count"
+                                    name="Nowi klienci"
+                                    fill="url(#colorGrowth)"
+                                    animationDuration={800}
+                                />
                             </BarChart>
                         </div>
                     </>
                 )}
+
 
                 {!loading && !error && activeReport === 'sales' && (
                     <>
@@ -129,23 +156,52 @@ export function ReportsPage() {
                             <CurrencyDollarIcon className="w-6 h-6 mr-3 text-yellow-400" />
                             Sprzedaż według klienta
                         </h2>
-                        <div className="flex justify-center items-center" style={{ height: 400 }}>
-                            <BarChart
-                                width={700}
-                                height={400}
-                                data={salesData}
-                                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                            >
-                                <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
-                                <XAxis dataKey="customerName" stroke="#A0AEC0" />
-                                <YAxis stroke="#A0AEC0" />
-                                <Tooltip contentStyle={{ backgroundColor: '#2D3748', border: 'none' }} />
-                                <Legend />
-                                <Bar dataKey="totalAmount" fill="#F6AD55" name="Całkowita kwota" />
-                            </BarChart>
+                        <div className="overflow-x-auto">
+                            <div className="min-w-[900px] h-[450px] flex justify-center items-center">
+                                <BarChart
+                                    width={Math.max(600, salesData.length * 45)}
+                                    height={400}
+                                    data={salesData}
+                                    margin={{ top: 5, right: 30, left: 10, bottom: 40 }}
+                                >
+                                    <defs>
+                                        <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#F6AD55" stopOpacity={0.9} />
+                                            <stop offset="95%" stopColor="#ED8936" stopOpacity={0.8} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
+                                    <XAxis
+                                        dataKey="customerName"
+                                        stroke="#CBD5E0"
+                                        angle={-45}
+                                        textAnchor="end"
+                                        interval={0}
+                                        height={100}
+                                        tick={{ fontSize: 12 }}
+                                    />
+                                    <YAxis
+                                        stroke="#CBD5E0"
+                                        tick={{ fontSize: 12 }}
+                                        tickFormatter={(value) => `${value.toLocaleString('pl-PL')} zł`}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#2D3748', border: 'none' }}
+                                        formatter={(value: number) => [`${value.toLocaleString('pl-PL')} zł`, 'Sprzedaż']}
+                                    />
+                                    <Legend />
+                                    <Bar
+                                        dataKey="totalAmount"
+                                        name="Całkowita kwota"
+                                        fill="url(#colorSales)"
+                                        animationDuration={600}
+                                    />
+                                </BarChart>
+                            </div>
                         </div>
                     </>
                 )}
+
 
                 {!loading && !error && activeReport === 'invoiceStatus' && (
                     <>

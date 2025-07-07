@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react";
+import { useState, type JSX, useCallback } from "react";
 import { useRef, useEffect } from "react";
 import { Link, useNavigate, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -6,19 +6,68 @@ import HomeIcon from '@heroicons/react/24/solid/HomeIcon';
 import UsersIcon from '@heroicons/react/24/solid/UsersIcon';
 import UserCircleIcon from '@heroicons/react/24/solid/UserCircleIcon';
 import CheckCircleIcon from '@heroicons/react/24/solid/CheckCircleIcon';
-import { ClipboardDocumentListIcon, CalendarDaysIcon, DocumentDuplicateIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon } from "@heroicons/react/16/solid";
+import { ClipboardDocumentListIcon, CalendarDaysIcon, DocumentDuplicateIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, BellIcon } from "@heroicons/react/24/solid";
+import axios from 'axios';
+import { formatDistanceToNow } from 'date-fns';
+import { pl } from 'date-fns/locale';
+
+interface Notification {
+    id: number;
+    message: string;
+    createdAt: string;
+    isRead: boolean;
+}
+
 
 
 export default function Layout() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
+    const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
     const navRef = useRef<HTMLDivElement>(null);
+    const notificationsRef = useRef<HTMLDivElement>(null);
+    const api = import.meta.env.VITE_API_URL;
+
+    const fetchNotifications = useCallback(async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${api}/Notifications/user`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = response.data.$values || response.data;
+            setNotifications(data.filter((n: Notification) => !n.isRead).slice(0, 5)); // Get up to 5 unread notifications
+        } catch (err) {
+            console.error("Błąd pobierania powiadomień:", err);
+        }
+    }, [api]);
+
+    const handleMarkAsRead = async (id: number) => {
+        try {
+            const token = localStorage.getItem('token');
+            await axios.post(`${api}/Notifications/mark-as-read/${id}`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            fetchNotifications(); // Refresh notifications
+        } catch (err) {
+            console.error("Błąd oznaczania jako przeczytane:", err);
+        }
+    };
+
+    useEffect(() => {
+        fetchNotifications();
+        const interval = setInterval(fetchNotifications, 60000); // Refresh every minute
+        return () => clearInterval(interval);
+    }, [fetchNotifications]);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (navRef.current && !navRef.current.contains(e.target as Node)) {
                 setActiveMenu(null);
+            }
+            if (notificationsRef.current && !notificationsRef.current.contains(e.target as Node)) {
+                setShowNotificationsDropdown(false);
             }
         };
 
@@ -28,6 +77,10 @@ export default function Layout() {
 
     const toggleMenu = (menu: string) => {
         setActiveMenu(prev => (prev === menu ? null : menu));
+    };
+
+    const toggleNotificationsDropdown = () => {
+        setShowNotificationsDropdown(prev => !prev);
     };
 
     const renderMenu = (menu: string, icon: JSX.Element, label: string, links: { to: string, text: string }[]) => (
@@ -57,6 +110,41 @@ export default function Layout() {
                     CRM Panel
                 </h1>
                 <div className="flex items-center gap-6 text-sm">
+                    <div className="relative" ref={notificationsRef}>
+                        <button onClick={toggleNotificationsDropdown} className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white">
+                            <BellIcon className="h-6 w-6" />
+                            {notifications.length > 0 && (
+                                <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">{notifications.length}</span>
+                            )}
+                        </button>
+                        {showNotificationsDropdown && (
+                            <div className="absolute right-0 mt-2 w-80 rounded-md shadow-lg bg-gray-700 ring-1 ring-black ring-opacity-5 z-50">
+                                <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                                    {notifications.length === 0 ? (
+                                        <p className="block px-4 py-2 text-sm text-gray-300">Brak nowych powiadomień.</p>
+                                    ) : (
+                                        notifications.map((notification) => (
+                                            <div key={notification.id} className="block px-4 py-2 text-sm text-gray-300 border-b border-gray-600 last:border-b-0">
+                                                <p>{notification.message}</p>
+                                                <p className="text-xs text-gray-400">{formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: pl })}</p>
+                                                {!notification.isRead && (
+                                                    <button
+                                                        onClick={() => handleMarkAsRead(notification.id)}
+                                                        className="mt-1 text-xs text-blue-400 hover:text-blue-300"
+                                                    >
+                                                        Oznacz jako przeczytane
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))
+                                    )}
+                                    <Link to="/powiadomienia" className="block px-4 py-2 text-sm text-blue-400 hover:bg-gray-600 text-center">
+                                        Zobacz wszystkie powiadomienia
+                                    </Link>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     <span>
                         Zalogowano jako: <strong className="text-white">{user?.username}</strong> ({user?.role})
                     </span>

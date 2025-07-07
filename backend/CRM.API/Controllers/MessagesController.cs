@@ -132,6 +132,17 @@ namespace CRM.API.Controllers
             _context.Messages.Add(message);
             await _context.SaveChangesAsync();
 
+            // Create a notification for the recipient
+            var notification = new Notification
+            {
+                UserId = message.RecipientUserId,
+                Message = $"Nowa wiadomość od {recipientUser.Username}: {message.Subject}",
+                CreatedAt = DateTime.UtcNow,
+                IsRead = false
+            };
+            _context.Notifications.Add(notification);
+            await _context.SaveChangesAsync();
+
             return CreatedAtAction(nameof(GetMessage), new { id = message.Id }, message);
         }
 

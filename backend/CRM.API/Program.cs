@@ -30,6 +30,8 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<InvoicePdfService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<ILogService, LogService>();
+builder.Services.AddScoped<DocumentGenerationService>();
+builder.Services.AddScoped<ICsvExportService, CsvExportService>();
 
 // Plik: backend/CRM.API/Program.cs
 

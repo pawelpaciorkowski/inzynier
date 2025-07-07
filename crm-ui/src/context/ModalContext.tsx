@@ -1,13 +1,15 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 
-type ModalType = 'success' | 'error' | 'confirm' | 'custom';
+type ModalType = 'success' | 'error' | 'confirm' | 'custom' | 'info';
 
 interface ModalOptions {
     type: ModalType;
     title?: string;
     message?: string;
     confirmText?: string;
+    cancelText?: string;
     onConfirm?: () => void;
+    onCancel?: () => void;
     content?: ReactNode;
 }
 
@@ -56,16 +58,20 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
                                     {options.type === 'success' && '✅ Sukces'}
                                     {options.type === 'error' && '❌ Błąd'}
                                     {options.type === 'confirm' && options.title}
+                                    {options.type === 'info' && options.title}
                                 </h2>
                                 <p className="text-lg mb-6">{options.message}</p>
 
                                 {options.type === 'confirm' && (
                                     <div className="flex justify-end space-x-4">
                                         <button
-                                            onClick={closeModal}
+                                            onClick={() => {
+                                                if (options.onCancel) options.onCancel();
+                                                closeModal();
+                                            }}
                                             className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
                                         >
-                                            Anuluj
+                                            {options.cancelText || 'Anuluj'}
                                         </button>
                                         <button
                                             onClick={handleConfirm}
@@ -75,6 +81,7 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
                                         </button>
                                     </div>
                                 )}
+
 
                                 {(options.type === 'success' || options.type === 'error') && (
                                     <div className="flex justify-end">
@@ -86,6 +93,42 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
                                         </button>
                                     </div>
                                 )}
+
+                                {options.type === 'info' && (
+                                    <div className="flex justify-end space-x-4">
+                                        {options.cancelText && (
+                                            <button
+                                                onClick={() => {
+                                                    if (options.onCancel) options.onCancel();
+                                                    closeModal();
+                                                }}
+                                                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                                            >
+                                                {options.cancelText}
+                                            </button>
+                                        )}
+                                        {options.confirmText && (
+                                            <button
+                                                onClick={() => {
+                                                    if (options.onConfirm) options.onConfirm();
+                                                    closeModal();
+                                                }}
+                                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                                            >
+                                                {options.confirmText}
+                                            </button>
+                                        )}
+                                        {!(options.cancelText || options.confirmText) && (
+                                            <button
+                                                onClick={closeModal}
+                                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                                            >
+                                                OK
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
                             </>
                         )}
                     </div>

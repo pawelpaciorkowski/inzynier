@@ -1,35 +1,54 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
-import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { Link, useNavigate } from 'react-router-dom';
+import { PlusIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
-import { format } from 'date-fns';
+import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { pl } from 'date-fns/locale';
+import { Calendar, dateFnsLocalizer, Views, type View } from 'react-big-calendar';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+
+const locales = { pl };
+
+const localizer = dateFnsLocalizer({
+    format,
+    parse,
+    startOfWeek: () => startOfWeek(new Date(), { locale: pl }),
+    getDay,
+    locales,
+});
 
 interface CalendarEvent {
     id: number;
     title: string;
-    start: string;
-    end: string;
+    start: Date;
+    end: Date;
 }
 
 export function CalendarEventsPage() {
+    const navigate = useNavigate();
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [currentDate, setCurrentDate] = useState<Date>(new Date());
+    const [currentView, setCurrentView] = useState<View>(Views.MONTH);
     const { openModal } = useModal();
 
     const fetchEvents = useCallback(async () => {
-        setLoading(true);
-        setError(null);
         try {
-            const response = await axios.get<any>('/api/CalendarEvents');
-            const eventsData = response.data.$values || response.data;
-            setEvents(eventsData);
-        } catch (err: any) {
+            setLoading(true);
+            setError(null);
+            const response = await axios.get('/api/CalendarEvents');
+            const data = response.data.$values || response.data;
+            const formatted = data.map((event: any) => ({
+                ...event,
+                start: new Date(event.start),
+                end: new Date(event.end),
+            }));
+            setEvents(formatted);
+        } catch {
             setError('Nie udało się pobrać wydarzeń kalendarza.');
-            console.error('Błąd pobierania wydarzeń:', err);
         } finally {
             setLoading(false);
         }
@@ -39,90 +58,83 @@ export function CalendarEventsPage() {
         fetchEvents();
     }, [fetchEvents]);
 
-    const handleDeleteEvent = async (id: number) => {
+
+
+    const handleSelectEvent = (event: CalendarEvent) => {
         openModal({
-            type: 'confirm',
-            title: 'Potwierdź usunięcie',
-            message: 'Czy na pewno chcesz usunąć to wydarzenie? Tej operacji nie można cofnąć.',
-            confirmText: 'Usuń',
-            onConfirm: async () => {
-                try {
-                    await axios.delete(`/api/CalendarEvents/${id}`);
-                    setEvents(prevEvents => prevEvents.filter(event => event.id !== id));
-                } catch (err) {
-                    alert('Nie udało się usunąć wydarzenia.');
-                    console.error('Błąd usuwania wydarzenia:', err);
-                }
+            type: 'info',
+            title: event.title,
+            message: `Początek: ${format(new Date(event.start), 'dd.MM.yyyy HH:mm', { locale: pl })}\nKoniec: ${format(new Date(event.end), 'dd.MM.yyyy HH:mm', { locale: pl })}`,
+            confirmText: 'Edytuj',
+            onConfirm: () => navigate(`/wydarzenia/edytuj/${event.id}`),
+            cancelText: 'Usuń',
+            onCancel: async () => {
+                await axios.delete(`/api/CalendarEvents/${event.id}`);
+                fetchEvents();
             },
+
         });
     };
 
+    const handleSelectSlot = ({ start, end }: { start: Date; end: Date }) => {
+        navigate(`/wydarzenia/dodaj?start=${start.toISOString()}&end=${end.toISOString()}`);
+    };
+
     if (loading) {
-        return (
-            <div className="p-6 text-white flex justify-center items-center h-screen">
-                <p>Ładowanie wydarzeń...</p>
-            </div>
-        );
+        return <div className="p-6 text-white text-center">Ładowanie wydarzeń...</div>;
     }
 
     if (error) {
-        return (
-            <div className="p-6 text-white flex justify-center items-center h-screen">
-                <p className="text-red-500">Błąd: {error}</p>
-            </div>
-        );
+        return <div className="p-6 text-red-500 text-center">Błąd: {error}</div>;
     }
 
     return (
         <div className="p-6 text-white">
             <h1 className="text-3xl font-bold mb-6">Wydarzenia Kalendarza</h1>
+
             <div className="mb-4">
-                <Link to="/wydarzenia/dodaj" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                <Link
+                    to="/wydarzenia/dodaj"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded inline-flex items-center"
+                >
                     <PlusIcon className="w-5 h-5 mr-2" />
                     Dodaj Wydarzenie
                 </Link>
             </div>
-            {events.length === 0 ? (
-                <div className="bg-gray-800 p-10 rounded-lg text-center flex flex-col items-center shadow-lg">
-                    <img src="/vite.svg" alt="Calendar Icon" className="w-16 h-16 text-blue-400 mb-4" />
-                    <h2 className="text-2xl font-semibold mb-2">Brak Wydarzeń</h2>
-                    <p className="text-gray-400 max-w-md">
-                        Nie znaleziono żadnych wydarzeń kalendarza. Dodaj pierwsze wydarzenie, aby rozpocząć.
-                    </p>
-                </div>
-            ) : (
-                <div className="bg-gray-800 shadow-md rounded-lg overflow-hidden">
-                    <table className="min-w-full leading-normal">
-                        <thead>
-                            <tr>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Tytuł</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Początek</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Koniec</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-center text-xs font-semibold text-gray-300 uppercase tracking-wider">Akcje</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {events.map((event) => (
-                                <tr key={event.id} className="hover:bg-gray-700">
-                                    <td className="px-5 py-5 border-b border-gray-700 bg-gray-800 text-sm">{event.title}</td>
-                                    <td className="px-5 py-5 border-b border-gray-700 bg-gray-800 text-sm">{format(new Date(event.start), 'dd.MM.yyyy HH:mm', { locale: pl })}</td>
-                                    <td className="px-5 py-5 border-b border-gray-700 bg-gray-800 text-sm">{format(new Date(event.end), 'dd.MM.yyyy HH:mm', { locale: pl })}</td>
-                                    <td className="px-5 py-5 border-b border-gray-700 bg-gray-800 text-sm">
-                                        <div className="flex justify-center gap-4">
-                                            <Link to={`/wydarzenia/edytuj/${event.id}`} className="text-yellow-500 hover:text-yellow-600 mr-3">
-                                                <PencilIcon className="w-5 h-5 inline" />
-                                            </Link>
-                                            <button onClick={() => handleDeleteEvent(event.id)} className="text-red-500 hover:text-red-600">
-                                                <TrashIcon className="w-5 h-5 inline" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+
+            <div className="bg-gray-800 rounded-lg shadow-lg p-4">
+                <Calendar
+                    localizer={localizer}
+                    events={events}
+                    startAccessor="start"
+                    endAccessor="end"
+                    titleAccessor="title"
+                    views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
+                    defaultView={Views.MONTH}
+                    selectable
+                    onSelectEvent={handleSelectEvent}
+                    onSelectSlot={handleSelectSlot}
+                    culture="pl"
+                    date={currentDate}
+                    view={currentView}
+                    onNavigate={(date) => setCurrentDate(date)}
+                    onView={(view) => setCurrentView(view)}
+                    style={{ height: '700px' }}
+                    messages={{
+                        next: 'Następny',
+                        previous: 'Poprzedni',
+                        today: 'Dziś',
+                        month: 'Miesiąc',
+                        week: 'Tydzień',
+                        day: 'Dzień',
+                        agenda: 'Agenda',
+                        date: 'Data',
+                        time: 'Godzina',
+                        event: 'Wydarzenie',
+                        noEventsInRange: 'Brak wydarzeń w tym zakresie.',
+                    }}
+                />
+            </div>
         </div>
     );
 }

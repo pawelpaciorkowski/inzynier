@@ -76,5 +76,21 @@ namespace CRM.API.Controllers
 
             return NoContent();
         }
+
+        [HttpGet("{id}/download")]
+        public async Task<IActionResult> DownloadTemplate(int id)
+        {
+            var template = await _context.Templates.FindAsync(id);
+            if (template == null) return NotFound("Szablon nie znaleziony.");
+
+            var filePath = template.FilePath;
+            if (!System.IO.File.Exists(filePath))
+            {
+                return NotFound("Plik szablonu nie znaleziony na serwerze.");
+            }
+
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+            return File(fileBytes, "application/octet-stream", template.FileName);
+        }
     }
 }

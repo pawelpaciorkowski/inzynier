@@ -43,9 +43,12 @@ export function AddMeetingPage() {
         }
 
         try {
+            const adjustedScheduledAt = new Date(scheduledAt);
+            adjustedScheduledAt.setMinutes(adjustedScheduledAt.getMinutes() - adjustedScheduledAt.getTimezoneOffset());
+
             await axios.post('/api/Meetings', {
                 topic,
-                scheduledAt: new Date(scheduledAt).toISOString(),
+                scheduledAt: adjustedScheduledAt.toISOString(),
                 customerId: parseInt(customerId as string),
             });
             openModal({ type: 'success', title: 'Sukces', message: 'Spotkanie zostało pomyślnie dodane.' });

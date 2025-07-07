@@ -39,10 +39,15 @@ export function AddCalendarEventPage() {
         }
 
         try {
+            const adjustedStartDate = new Date(start);
+            adjustedStartDate.setMinutes(adjustedStartDate.getMinutes() - adjustedStartDate.getTimezoneOffset());
+            const adjustedEndDate = new Date(end);
+            adjustedEndDate.setMinutes(adjustedEndDate.getMinutes() - adjustedEndDate.getTimezoneOffset());
+
             await axios.post('/api/CalendarEvents', {
                 title,
-                start: new Date(start).toISOString(),
-                end: new Date(end).toISOString(),
+                start: adjustedStartDate.toISOString(),
+                end: adjustedEndDate.toISOString(),
             });
             openModal({ type: 'success', title: 'Sukces', message: 'Wydarzenie zostało pomyślnie dodane.' });
             navigate('/wydarzenia');

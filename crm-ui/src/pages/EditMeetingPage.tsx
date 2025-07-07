@@ -82,10 +82,13 @@ export function EditMeetingPage() {
         }
 
         try {
+            const adjustedScheduledAt = new Date(scheduledAt);
+            adjustedScheduledAt.setMinutes(adjustedScheduledAt.getMinutes() - adjustedScheduledAt.getTimezoneOffset());
+
             await axios.put(`/api/Meetings/${id}`, {
                 id: parseInt(id as string),
                 topic,
-                scheduledAt: new Date(scheduledAt).toISOString(),
+                scheduledAt: adjustedScheduledAt.toISOString(),
                 customerId: parseInt(customerId),
             });
             openModal({ type: 'success', title: 'Sukces', message: 'Spotkanie zostało pomyślnie zaktualizowane.' });

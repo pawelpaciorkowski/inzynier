@@ -71,11 +71,16 @@ export function EditCalendarEventPage() {
         }
 
         try {
+            const adjustedStartDate = new Date(start);
+            adjustedStartDate.setMinutes(adjustedStartDate.getMinutes() - adjustedStartDate.getTimezoneOffset());
+            const adjustedEndDate = new Date(end);
+            adjustedEndDate.setMinutes(adjustedEndDate.getMinutes() - adjustedEndDate.getTimezoneOffset());
+
             await axios.put(`/api/CalendarEvents/${id}`, {
                 id: parseInt(id as string),
                 title,
-                start: startDate.toISOString(),
-                end: endDate.toISOString(),
+                start: adjustedStartDate.toISOString(),
+                end: adjustedEndDate.toISOString(),
             });
             openModal({ type: 'success', title: 'Sukces', message: 'Wydarzenie zostało pomyślnie zaktualizowane.' });
             navigate('/wydarzenia');

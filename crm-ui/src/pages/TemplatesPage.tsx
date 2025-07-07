@@ -46,6 +46,7 @@ export function TemplatesPage() {
 
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('templateName', file.name);
 
         try {
             await api.post('/Templates/upload', formData, {
@@ -74,6 +75,25 @@ export function TemplatesPage() {
                 }
             },
         });
+    };
+
+    const handleDownload = async (template: Template) => {
+        try {
+            const response = await api.get(`/Templates/${template.id}/download`, {
+                responseType: 'blob', // Important for downloading files
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', template.fileName);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Błąd pobierania szablonu:', err);
+            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się pobrać szablonu.' });
+        }
     };
 
     if (loading) return <p className="text-center p-8 text-white">Ładowanie...</p>;
@@ -106,8 +126,7 @@ export function TemplatesPage() {
                                 <p className="text-sm text-gray-400">Przesłano: {format(new Date(template.uploadedAt), 'dd.MM.yyyy HH:mm')}</p>
                             </div>
                             <div className="flex items-center space-x-3">
-                                {/* Funkcja pobierania nie jest jeszcze zaimplementowana w API */}
-                                <button className="p-2 text-gray-400 hover:text-white" title="Pobierz">
+                                <button onClick={() => handleDownload(template)} className="p-2 text-gray-400 hover:text-white" title="Pobierz">
                                     <DocumentArrowDownIcon className="h-5 w-5" />
                                 </button>
                                 <button onClick={() => handleDelete(template)} className="p-2 text-gray-400 hover:text-red-500" title="Usuń">

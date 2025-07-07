@@ -95,14 +95,17 @@ namespace CRM.API.Controllers
         [HttpGet("sales-by-customer")]
         public async Task<IActionResult> GetSalesByCustomerReport()
         {
-            var salesData = await _context.Invoices
-                .Include(i => i.Customer)
-                .GroupBy(i => i.Customer.Name)
-                .Select(g => new
-                {
-                    CustomerName = g.Key,
-                    TotalAmount = g.Sum(i => i.TotalAmount)
-                })
+            var salesData = await _context.Customers
+                .GroupJoin(
+                    _context.Invoices,
+                    customer => customer.Id,
+                    invoice => invoice.CustomerId,
+                    (customer, invoices) => new
+                    {
+                        CustomerName = customer.Name,
+                        TotalAmount = invoices.Sum(i => (decimal?)i.TotalAmount) ?? 0m
+                    }
+                )
                 .OrderByDescending(x => x.TotalAmount)
                 .ToListAsync();
 
