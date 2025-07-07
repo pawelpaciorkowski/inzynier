@@ -7,9 +7,7 @@ import { jwtDecode } from 'jwt-decode';
 const TOKEN_KEY = 'my-jwt';
 
 // ✅ Ten adres będzie teraz używany wszędzie
-const API_URL = Platform.OS === 'web'
-    ? 'http://localhost:5000' // Użyj localhost dla przeglądarki
-    : 'http://10.40.13.3:5000'; // Użyj IP komputera dla telefonu/emulatora
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 // ✅ Ustawiamy bazowy URL dla wszystkich zapytań axios w całej aplikacji
 axios.defaults.baseURL = API_URL;

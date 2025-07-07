@@ -88,6 +88,17 @@ docker compose build
 # Uruchom wszystkie kontenery w tle
 docker compose up -d
 ```
+**Ważne:** Po pierwszym uruchomieniu kontenerów, upewnij się, że migracje bazy danych zostały zastosowane. Możesz to zrobić, wchodząc do kontenera backendu i uruchamiając komendę:
+```bash
+# Wejdź do kontenera backendu (nazwa serwisu z docker-compose.yml, np. 'backend')
+docker exec -it <nazwa_kontenera_backendu> bash
+
+# Wewnątrz kontenera, przejdź do katalogu projektu CRM.API i zastosuj migracje
+# (Zakładając, że projekt jest w /app/CRM.API w kontenerze)
+cd /app/CRM.API
+dotnet ef database update
+exit
+```
 Po chwili wszystkie serwisy będą dostępne pod następującymi adresami:
 
 -   **Aplikacja Webowa (Frontend):** [http://localhost:5173](http://localhost:5173)
@@ -110,10 +121,11 @@ cd backend
 dotnet build
 
 # Uruchom API (będzie działać na http://localhost:5167)
+# Ta komenda automatycznie zastosuje migracje bazy danych przy starcie.
 dotnet run --project CRM.API
 ```
 
-### 2. Frontend
+### 2. Frontend (Web)
 ```bash
 # Otwórz nowy terminal i przejdź do folderu crm-ui
 cd crm-ui
@@ -123,6 +135,24 @@ npm install
 
 # Uruchom serwer deweloperski (będzie działać na http://localhost:5173)
 npm run dev
+```
+
+### 3. Aplikacja Mobilna
+```bash
+# Otwórz nowy terminal i przejdź do folderu crm-mobile
+cd crm-mobile
+
+# Zainstaluj zależności
+npm install
+
+# Ustaw zmienną środowiskową dla adresu API
+# Utwórz plik .env w katalogu crm-mobile i dodaj do niego:
+# EXPO_PUBLIC_API_URL=http://TWOJE_IP_KOMPUTERA:5000
+# Zastąp TWOJE_IP_KOMPUTERA adresem IP, pod którym działa Twój backend (np. 192.168.1.14).
+# Upewnij się, że port 5000 jest dostępny w Twojej sieci lokalnej.
+
+# Uruchom serwer deweloperski Expo
+npx expo start
 ```
 > **Uwaga:** Przy uruchomieniu manualnym upewnij się, że masz lokalnie działającą instancję bazy danych MySQL/MariaDB i zaktualizowałeś `ConnectionString` w pliku `appsettings.json` w backendzie.
 

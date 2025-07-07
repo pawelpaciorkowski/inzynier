@@ -1,17 +1,70 @@
-// Plik: crm-mobile/app/(tabs)/_layout.tsx
-import React from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Link, Tabs } from 'expo-router';
-import { Pressable } from 'react-native';
+import { Link, Tabs, useRouter, useFocusEffect } from 'expo-router';
+import { Pressable, View, Text } from 'react-native';
+import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
   color: string;
+  unreadCount?: number; // Add unreadCount prop
 }) {
-  return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
+  return (
+    <View style={{ position: 'relative' }}>
+      <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />
+      {props.unreadCount !== undefined && props.unreadCount > 0 && (
+        <View
+          style={{
+            position: 'absolute',
+            right: -6,
+            top: -3,
+            backgroundColor: 'red',
+            borderRadius: 9,
+            width: 18,
+            height: 18,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
+            {props.unreadCount}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
 }
 
 export default function TabLayout() {
+  const router = useRouter();
+  const { token } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnreadCount = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await axios.get(`/api/Notifications/unread-count`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUnreadCount(response.data);
+    } catch (err) {
+      console.error("Błąd pobierania liczby nieprzeczytanych powiadomień:", err);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000); // Refresh every 30 seconds
+    return () => clearInterval(interval);
+  }, [fetchUnreadCount]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchUnreadCount();
+    }, [fetchUnreadCount])
+  );
+
   return (
     <Tabs
       screenOptions={{
@@ -25,6 +78,37 @@ export default function TabLayout() {
           backgroundColor: '#1f2937',
         },
         headerTintColor: '#fff',
+        headerRight: () => (
+          <Pressable
+            onPress={() => router.push('/notifications')}
+            style={{ marginRight: 15, position: 'relative' }}
+          >
+            <FontAwesome
+              name="bell"
+              size={25}
+              color="white"
+            />
+            {unreadCount > 0 && (
+              <View
+                style={{
+                  position: 'absolute',
+                  right: -6,
+                  top: -3,
+                  backgroundColor: 'red',
+                  borderRadius: 9,
+                  width: 18,
+                  height: 18,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
+                  {unreadCount}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        ),
       }}>
       <Tabs.Screen
         name="index"
@@ -72,7 +156,7 @@ export default function TabLayout() {
         name="two"
         options={{
           title: 'Profil',
-          tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
+          tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} unreadCount={unreadCount} />,
         }}
       />
     </Tabs>

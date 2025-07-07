@@ -37,6 +37,7 @@ const InitialLayout = () => {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="add-task" options={{ presentation: 'modal', title: 'Nowe Zadanie', contentStyle: { backgroundColor: '#111827' } }} />
       <Stack.Screen name="edit-task" options={{ presentation: 'modal', title: 'Edytuj Zadanie' }} />
+      <Stack.Screen name="notifications" options={{ presentation: 'modal', title: 'Powiadomienia' }} />
     </Stack>
   );
 };
