@@ -3,6 +3,7 @@ import { StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, Tex
 import { Link, Stack, useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import axios from 'axios';
 
 interface Invoice {
     id: number;
@@ -43,13 +44,9 @@ export default function InvoicesScreen() {
         setError(null);
 
         try {
-            const response = await fetch('http://10.0.2.2:5167/api/Invoices', {
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
+            const response = await axios.get('/api/Invoices');
 
-            if (!response.ok) throw new Error('Nie udało się pobrać listy faktur.');
-
-            const data = await response.json();
+            const data = response.data;
             const invoicesData = data.$values || data;
 
             setAllInvoices(invoicesData);

@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using BCrypt.Net;
 using CRM.BusinessLogic.Auth.Requests;
+using CRM.BusinessLogic.Services;
 
 namespace CRM.BusinessLogic.Auth
 {
@@ -16,11 +17,13 @@ namespace CRM.BusinessLogic.Auth
     {
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _config;
+        private readonly ILogService _logService;
 
-        public AuthService(ApplicationDbContext context, IConfiguration config)
+        public AuthService(ApplicationDbContext context, IConfiguration config, ILogService logService)
         {
             _context = context;
             _config = config;
+            _logService = logService;
         }
 
         public async Task<User?> AuthenticateAsync(string username, string password)
@@ -124,6 +127,9 @@ namespace CRM.BusinessLogic.Auth
 
             // 3. Zapisujemy WSZYSTKIE zmiany (użytkownika i aktywność) do bazy w jednej transakcji.
             await _context.SaveChangesAsync();
+
+            // Dodaj logowanie do SystemLog
+            await _logService.LogAsync("Information", $"Nowy użytkownik {user.Username} (ID: {user.Id}) zarejestrowany.", "AuthService", user.Id);
 
             // Zwracamy nowo utworzonego użytkownika (teraz już z poprawnym ID z bazy)
             return user;

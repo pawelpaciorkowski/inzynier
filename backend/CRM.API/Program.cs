@@ -27,16 +27,19 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
-// ... (reszta serwisów)
+builder.Services.AddScoped<InvoicePdfService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<ILogService, LogService>();
 
-// 4. CORS (Cross-Origin Resource Sharing) - BARDZIEJ ELASTYCZNA WERSJA
+// Plik: backend/CRM.API/Program.cs
+
+// 4. CORS (Cross-Origin Resource Sharing) - WERSJA Z HARDKODOWANIEM
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        // Pobierz dozwolone adresy z appsettings.json
-        var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? new string[0];
-        policy.WithOrigins(allowedOrigins)
+        // Bezpośrednio podajemy dozwolone adresy, omijając pliki konfiguracyjne
+        policy.WithOrigins("http://localhost:5173", "http://localhost:8081")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -100,10 +103,11 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+app.UseSwagger();
+app.UseSwaggerUI();
+
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
     app.UseDeveloperExceptionPage(); // Dodaj, aby widzieć szczegółowe błędy w trybie deweloperskim
 }
 
@@ -114,8 +118,51 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Nie ma potrzeby hardkodowania URL, jest to zarządzane przez launchSettings.json lub argumenty linii poleceń
-// app.Urls.Add("http://localhost:8082");
+// Seedowanie danych
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        context.Database.Migrate(); // Upewnij się, że migracje są zastosowane
+
+        // Seedowanie ról
+        if (!context.Roles.Any())
+        {
+            context.Roles.AddRange(
+                new CRM.Data.Models.Role { Name = "Admin", Description = "Administrator systemu", Users = new List<CRM.Data.Models.User>() },
+                new CRM.Data.Models.Role { Name = "User", Description = "Standardowy użytkownik", Users = new List<CRM.Data.Models.User>() }
+            );
+            context.SaveChanges();
+        }
+
+        // Seedowanie użytkowników
+        if (!context.Users.Any())
+        {
+            var userRole = context.Roles.FirstOrDefault(r => r.Name == "User");
+            if (userRole != null)
+            {
+                var hashedPassword = BCrypt.Net.BCrypt.HashPassword("user123");
+                context.Users.Add(new CRM.Data.Models.User
+                {
+                    Username = "user",
+                    Email = "user@example.com",
+                    PasswordHash = hashedPassword,
+                    RoleId = userRole.Id,
+                    Role = userRole
+                });
+                context.SaveChanges();
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding the database.");
+    }
+}
+
 app.Urls.Add("http://0.0.0.0:5000");
 
 app.Run();

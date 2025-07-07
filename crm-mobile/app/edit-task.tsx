@@ -15,8 +15,6 @@ interface UpdateTaskDto {
     customerId: number;
 }
 
-const API_URL = 'http://10.0.2.2:5167';
-
 export default function EditTaskScreen() {
     const { token } = useAuth();
     const router = useRouter();
@@ -36,8 +34,8 @@ export default function EditTaskScreen() {
             if (!token || !taskId) return;
             try {
                 const [customersRes, taskRes] = await Promise.all([
-                    axios.get(`${API_URL}/api/customers`, { headers: { Authorization: `Bearer ${token}` } }),
-                    axios.get(`${API_URL}/api/user/tasks/${taskId}`, { headers: { Authorization: `Bearer ${token}` } })
+                    axios.get(`/api/customers`),
+                    axios.get(`/api/user/tasks/${taskId}`)
                 ]);
 
                 const customerData = customersRes.data;
@@ -74,9 +72,7 @@ export default function EditTaskScreen() {
         };
 
         try {
-            await axios.put(`${API_URL}/api/user/tasks/${taskId}`, updateDto, {
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            });
+            await axios.put(`/api/user/tasks/${taskId}`, updateDto);
 
             Alert.alert("Sukces", "Zadanie zostało zaktualizowane.");
             router.back();

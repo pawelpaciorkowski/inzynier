@@ -20,8 +20,7 @@ namespace CRM.Data.Models
         [StringLength(255)]
         public string Source { get; set; } = string.Empty; // E.g., "CRM.API.Controllers.LogsController"
 
-        public string? Exception { get; set; }
-
-        public string? Properties { get; set; } // JSON string for additional properties
+        public int? UserId { get; set; }
+        public string? Details { get; set; } // JSON string for additional properties
     }
 }

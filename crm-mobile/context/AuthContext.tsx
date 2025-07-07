@@ -1,22 +1,54 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
 const TOKEN_KEY = 'my-jwt';
-const API_URL = 'http://10.40.13.3:5000';
 
+// ✅ Ten adres będzie teraz używany wszędzie
+const API_URL = Platform.OS === 'web'
+    ? 'http://localhost:5000' // Użyj localhost dla przeglądarki
+    : 'http://10.40.13.3:5000'; // Użyj IP komputera dla telefonu/emulatora
+
+// ✅ Ustawiamy bazowy URL dla wszystkich zapytań axios w całej aplikacji
+axios.defaults.baseURL = API_URL;
+
+// --- Helpery do przechowywania, których użyliśmy wcześniej (bez zmian) ---
+const storage = {
+    async setItem(key: string, value: string) {
+        if (Platform.OS === 'web') {
+            try { localStorage.setItem(key, value); } catch (e) { console.error('LocalStorage is unavailable', e); }
+        } else {
+            await SecureStore.setItemAsync(key, value);
+        }
+    },
+    async getItem(key: string) {
+        if (Platform.OS === 'web') {
+            try { return localStorage.getItem(key); } catch (e) { console.error('LocalStorage is unavailable', e); return null; }
+        } else {
+            return await SecureStore.getItemAsync(key);
+        }
+    },
+    async deleteItem(key: string) {
+        if (Platform.OS === 'web') {
+            try { localStorage.removeItem(key); } catch (e) { console.error('LocalStorage is unavailable', e); }
+        } else {
+            await SecureStore.deleteItemAsync(key);
+        }
+    },
+};
+
+// --- Reszta kontekstu (bez zmian) ---
 interface AuthState {
     token: string | null;
     isAuthenticated: boolean;
     isLoading: boolean;
 }
-
 interface AuthContextType extends AuthState {
     login: (username: any, password: any) => Promise<void>;
     logout: () => void;
 }
-
 const AuthContext = createContext<AuthContextType>({
     token: null,
     isAuthenticated: false,
@@ -38,22 +70,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         const loadToken = async () => {
-            const token = await SecureStore.getItemAsync(TOKEN_KEY);
+            const token = await storage.getItem(TOKEN_KEY);
             if (token) {
                 try {
                     const decodedToken: any = jwtDecode(token);
                     if (decodedToken.exp * 1000 < Date.now()) {
-                        // Token wygasł
-                        await SecureStore.deleteItemAsync(TOKEN_KEY);
+                        await storage.deleteItem(TOKEN_KEY);
                         setAuthState({ token: null, isAuthenticated: false, isLoading: false });
                     } else {
-                        // Token jest ważny
                         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
                         setAuthState({ token: token, isAuthenticated: true, isLoading: false });
                     }
                 } catch (e) {
-                    // Błąd dekodowania tokenu
-                    await SecureStore.deleteItemAsync(TOKEN_KEY);
+                    await storage.deleteItem(TOKEN_KEY);
                     setAuthState({ token: null, isAuthenticated: false, isLoading: false });
                 }
             } else {
@@ -65,10 +94,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const login = async (username: any, password: any) => {
         try {
-            const result = await axios.post(`${API_URL}/api/Auth/login`, { username, password });
+            // Teraz wystarczy podać tylko ścieżkę
+            const result = await axios.post('/api/Auth/login', { username, password });
             const token = result.data.token;
 
-            await SecureStore.setItemAsync(TOKEN_KEY, token);
+            await storage.setItem(TOKEN_KEY, token);
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
             setAuthState({
@@ -83,7 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const logout = async () => {
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        await storage.deleteItem(TOKEN_KEY);
         delete axios.defaults.headers.common['Authorization'];
         setAuthState({
             token: null,
@@ -92,11 +122,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
     };
 
-    const value = {
-        ...authState,
-        login,
-        logout,
-    };
+    const value = { ...authState, login, logout };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

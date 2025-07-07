@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
@@ -5,6 +6,7 @@ import { pl } from 'date-fns/locale';
 import { useModal } from '../context/ModalContext';
 
 interface SystemLog {
+    details: string;
     id: number;
     timestamp: string;
     level: string;
@@ -24,12 +26,11 @@ export function LogsPage() {
         const fetchLogs = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const response = await axios.get<SystemLog[]>('/api/Logs', {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
+                const response = await axios.get<any>('/api/Logs', {
+                    headers: { Authorization: `Bearer ${token}` }
                 });
-                setLogs(response.data);
+                const logsData = response.data.$values || response.data;
+                setLogs(logsData);
             } catch {
                 setError('Nie udało się załadować logów. Upewnij się, że masz uprawnienia administratora.');
                 openModal({
@@ -72,15 +73,15 @@ export function LogsPage() {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${log.level === 'Error' ? 'bg-red-100 text-red-800' :
-                                                log.level === 'Warning' ? 'bg-yellow-100 text-yellow-800' :
-                                                    'bg-green-100 text-green-800'
+                                            log.level === 'Warning' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-green-100 text-green-800'
                                             }`}>
                                             {log.level}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{log.source}</td>
                                     <td className="px-6 py-4 text-sm text-gray-400 max-w-xs truncate">{log.message}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400 max-w-xs truncate">{log.exception || '-'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400 max-w-xs truncate">{log.details || '-'}</td>
                                 </tr>
                             ))
                         ) : (

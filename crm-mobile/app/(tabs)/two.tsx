@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Button, ActivityIndicator, TextInput, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import axios from 'axios';
 
 interface UserProfile {
     id: number;
@@ -27,11 +28,9 @@ export default function TabTwoScreen() {
                 return;
             }
             try {
-                const response = await fetch('http://10.0.2.2:5167/api/Profile', {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                });
-                if (!response.ok) throw new Error('Nie udało się pobrać danych profilu.');
-                const data = await response.json();
+                const response = await axios.get('/api/Profile');
+                if (!response.data) throw new Error('Nie udało się pobrać danych profilu.');
+                const data = response.data;
                 setUserProfile(data);
             } catch (err: any) {
                 setError(err.message);
@@ -58,21 +57,13 @@ export default function TabTwoScreen() {
 
         setChangingPassword(true);
         try {
-            const response = await fetch('http://10.0.2.2:5167/api/Profile/change-password', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    currentPassword,
-                    newPassword,
-                }),
+            const response = await axios.put('/api/Profile/change-password', {
+                currentPassword,
+                newPassword,
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Nie udało się zmienić hasła.');
+            if (!response.data) {
+                throw new Error('Nie udało się zmienić hasła.');
             }
 
             Alert.alert("Sukces", "Hasło zostało pomyślnie zmienione.");

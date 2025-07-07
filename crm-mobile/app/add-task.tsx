@@ -6,8 +6,6 @@ import { useRouter } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 
 interface Customer { id: number; name: string; }
-const API_URL = 'http://10.0.2.2:5167';
-
 export default function AddTaskScreen() {
     const { token } = useAuth();
     const router = useRouter();
@@ -20,9 +18,7 @@ export default function AddTaskScreen() {
     useEffect(() => {
         const fetchCustomers = async () => {
             try {
-                const res = await axios.get(`${API_URL}/api/customers`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const res = await axios.get(`/api/customers`);
                 const data = res.data;
                 if (data && Array.isArray((data as any).$values)) {
                     setCustomers((data as any).$values);
@@ -43,11 +39,11 @@ export default function AddTaskScreen() {
         }
 
         try {
-            await axios.post(`${API_URL}/api/user/tasks`, {
+            await axios.post(`/api/user/tasks`, {
                 title,
                 description,
                 customerId: selectedCustomerId,
-            }, { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } });
+            });
 
             Alert.alert("Sukces", "Zadanie zostało pomyślnie dodane.");
             router.back();

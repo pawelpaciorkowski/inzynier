@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, FlatList, ActivityIndicator, Text, View } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { Stack } from 'expo-router';
+import axios from 'axios';
 
 // Interfejs dla aktywności
 interface Activity {
@@ -28,16 +29,14 @@ export default function ActivitiesScreen() {
       }
 
       try {
-        const response = await fetch('http://10.0.2.2:5167/api/Activities', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+        const response = await axios.get('/api/Activities');
 
-        if (!response.ok) {
+        if (!response.data) {
           throw new Error('Nie udało się pobrać aktywności.');
         }
 
         // POPRAWKA: Przetwarzamy JSON tylko raz
-        const responseData = await response.json();
+        const responseData = response.data;
 
         // Sprawdzamy, czy dane są 'opakowane' i wyciągamy tablicę z pola $values
         if (responseData && Array.isArray((responseData as any).$values)) {

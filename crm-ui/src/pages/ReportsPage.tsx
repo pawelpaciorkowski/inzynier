@@ -165,7 +165,7 @@ export function ReportsPage() {
                                     dataKey="count"
                                     nameKey="status"
                                 >
-                                    {invoiceStatusData.map((entry, index) => (
+                                    {invoiceStatusData.map((_, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>

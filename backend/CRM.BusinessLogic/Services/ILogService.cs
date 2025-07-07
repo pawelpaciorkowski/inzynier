@@ -7,5 +7,6 @@ namespace CRM.BusinessLogic.Services
     public interface ILogService
     {
         Task<IEnumerable<SystemLog>> GetSystemLogsAsync();
+        Task LogAsync(string level, string message, string source, int? userId = null, string? details = null);
     }
 }

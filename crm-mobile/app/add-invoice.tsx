@@ -14,8 +14,6 @@ interface InvoiceItem {
     quantity: string; // Używamy string, bo TextInput zwraca string
 }
 
-const API_URL = 'http://10.0.2.2:5167';
-
 export default function AddInvoiceScreen() {
     const { token } = useAuth();
     const router = useRouter();
@@ -32,8 +30,8 @@ export default function AddInvoiceScreen() {
         const fetchData = async () => {
             try {
                 const [customersRes, servicesRes] = await Promise.all([
-                    axios.get(`${API_URL}/api/Customers`, { headers: { Authorization: `Bearer ${token}` } }),
-                    axios.get(`${API_URL}/api/Services`, { headers: { Authorization: `Bearer ${token}` } })
+                    axios.get(`/api/Customers`), // Usunięto nagłówki, bo są globalne
+                    axios.get(`/api/Services`)   // Usunięto nagłówki, bo są globalne
                 ]);
 
                 const customersData = customersRes.data.$values || customersRes.data;

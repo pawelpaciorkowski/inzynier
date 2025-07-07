@@ -6,6 +6,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { TouchableOpacity } from 'react-native-gesture-handler';
+import axios from 'axios';
 
 interface CustomerDetails {
     id: number;
@@ -42,11 +43,9 @@ export default function CustomerDetailScreen() {
                 return;
             }
             try {
-                const response = await fetch(`http://10.0.2.2:5167/api/Customers/${id}`, {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                });
-                if (!response.ok) throw new Error('Nie udało się pobrać danych klienta.');
-                const data = await response.json();
+                const response = await axios.get(`/api/Customers/${id}`);
+                if (!response.data) throw new Error('Nie udało się pobrać danych klienta.');
+                const data = response.data;
                 setCustomer(data);
             } catch (err: any) {
                 setError(err.message);

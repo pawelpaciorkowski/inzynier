@@ -4,6 +4,7 @@ import { StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, Tex
 import { Link, Stack, useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import axios from 'axios';
 
 // Definicja interfejsu dla klienta
 interface Customer {
@@ -37,15 +38,9 @@ export default function CustomersScreen() {
         setError(null);
 
         try {
-            const response = await fetch('http://10.0.2.2:5167/api/Customers', {
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
+            const response = await axios.get('/api/Customers');
 
-            if (!response.ok) {
-                throw new Error('Nie udało się pobrać listy klientów.');
-            }
-
-            const data = await response.json();
+            const data = response.data;
             const customersData = data.$values || data;
 
             setAllCustomers(customersData);

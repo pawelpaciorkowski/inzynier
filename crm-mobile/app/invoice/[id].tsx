@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import axios from 'axios';
 
 // ✅ INTERFEJSY W PEŁNI ZGODNE Z TWOIM KODEM C#
 interface InvoiceItemDetails {
@@ -54,11 +55,9 @@ export default function InvoiceDetailScreen() {
             if (!id || !token) { setLoading(false); return; }
             setLoading(true);
             try {
-                const response = await fetch(`http://10.0.2.2:5167/api/Invoices/${id}`, {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                });
-                if (!response.ok) throw new Error(`Nie udało się pobrać danych faktury (status: ${response.status})`);
-                const data = await response.json();
+                const response = await axios.get(`/api/Invoices/${id}`);
+                if (!response.data) throw new Error(`Nie udało się pobrać danych faktury (status: ${response.status})`);
+                const data = response.data;
                 setInvoice(data);
             } catch (err: any) {
                 setError(err.message);
@@ -76,15 +75,18 @@ export default function InvoiceDetailScreen() {
             const fileName = `${invoice.invoiceNumber.replace(/\//g, '_')}.pdf`;
             const fileUri = FileSystem.documentDirectory + fileName;
 
-            const response = await FileSystem.downloadAsync(
-                `http://10.0.2.2:5167/api/Invoices/${id}/pdf`,
-                fileUri,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const response = await axios.get(`/api/Invoices/${id}/pdf`, { responseType: 'blob' });
 
-            if (response.status !== 200) throw new Error('Błąd serwera podczas generowania PDF.');
-            if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(response.uri);
-            else Alert.alert("Błąd", "Udostępnianie nie jest dostępne na tym urządzeniu.");
+            const reader = new FileReader();
+            reader.onload = async () => {
+                if (reader.result && typeof reader.result === 'string') {
+                    await FileSystem.writeAsStringAsync(fileUri, reader.result.split(',')[1], { encoding: FileSystem.EncodingType.Base64 });
+                    if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(fileUri);
+                    else Alert.alert("Błąd", "Udostępnianie nie jest dostępne na tym urządzeniu.");
+                }
+            };
+            reader.readAsDataURL(response.data);
+
         } catch (err: any) {
             Alert.alert("Błąd pobierania", "Nie udało się pobrać pliku PDF.");
         } finally {

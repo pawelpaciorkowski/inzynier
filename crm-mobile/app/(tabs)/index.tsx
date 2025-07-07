@@ -4,8 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { useFocusEffect, Link } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
-import * as SecureStore from 'expo-secure-store';
 
+// Definicje interfejsów pozostają bez zmian
 interface Task {
   id: number;
   title: string;
@@ -17,14 +17,16 @@ interface Task {
 interface UpdateTaskDto {
   title: string;
   description?: string;
+
   dueDate?: string;
   completed: boolean;
 }
 
-const API_URL = 'http://10.0.2.2:5167';
+// ❌ Usunięto stałą API_URL, ponieważ jest już globalnie w axios
+// const API_URL = 'http://10.0.2.2:5167'; 
 
 export default function TabOneScreen() {
-  const { token, logout } = useAuth();
+  const { token, logout } = useAuth(); // Token jest już dostępny z kontekstu
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -35,10 +37,11 @@ export default function TabOneScreen() {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get(`${API_URL}/api/user/tasks`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // ✅ Używamy ścieżki względnej, axios zna już adres i token
+      const res = await axios.get('/api/user/tasks');
       const data = res.data;
+
+      // Logika do obsługi .$values pozostaje
       if (data && Array.isArray((data as any).$values)) {
         setTasks((data as any).$values);
       } else if (Array.isArray(data)) {
@@ -63,6 +66,7 @@ export default function TabOneScreen() {
   }, [fetchTasks]);
 
   const toggleComplete = async (task: Task) => {
+    // Logika optymistycznego UI pozostaje
     setTasks(prevTasks =>
       prevTasks.map(t =>
         t.id === task.id ? { ...t, completed: !t.completed } : t
@@ -77,11 +81,11 @@ export default function TabOneScreen() {
     };
 
     try {
-      await axios.put(`${API_URL}/api/user/tasks/${task.id}`, updateDto, {
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      });
+      // ✅ Używamy ścieżki względnej, bez ręcznego dodawania nagłówków
+      await axios.put(`/api/user/tasks/${task.id}`, updateDto);
     } catch (error) {
       alert('Nie udało się zaktualizować zadania.');
+      // Przywrócenie stanu w przypadku błędu
       setTasks(prevTasks =>
         prevTasks.map(t =>
           t.id === task.id ? { ...t, completed: task.completed } : t
@@ -90,34 +94,23 @@ export default function TabOneScreen() {
     }
   };
 
-
   const handleDelete = (taskToDelete: Task) => {
     Alert.alert(
       "Potwierdź usunięcie",
       `Czy na pewno chcesz usunąć zadanie "${taskToDelete.title}"?`,
       [
-        {
-          text: "Anuluj",
-          style: 'cancel',
-          onPress: () => { }
-        },
+        { text: "Anuluj", style: 'cancel' },
         {
           text: "Usuń",
           style: 'destructive',
           onPress: async () => {
-            const token = await SecureStore.getItemAsync('my-jwt');
-            if (!token) {
-              Alert.alert("Błąd", "Brak autoryzacji do wykonania tej akcji.");
-              return;
-            }
+            // ❌ Nie ma potrzeby ponownego pobierania tokenu
+            // const token = await SecureStore.getItemAsync('my-jwt');
 
             try {
-              await axios.delete(`${API_URL}/api/user/tasks/${taskToDelete.id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
-
+              // ✅ Używamy ścieżki względnej, bez ręcznego dodawania nagłówków
+              await axios.delete(`/api/user/tasks/${taskToDelete.id}`);
               setTasks(prev => prev.filter(task => task.id !== taskToDelete.id));
-
             } catch (error) {
               Alert.alert("Błąd", "Nie udało się usunąć zadania.");
               console.error("Błąd usuwania zadania:", error);
@@ -128,6 +121,7 @@ export default function TabOneScreen() {
     );
   };
 
+  // Reszta komponentu (renderowanie) pozostaje bez zmian
   if (loading && !isRefreshing) {
     return <View style={styles.center}><ActivityIndicator size="large" color="#fff" /></View>;
   }
@@ -155,16 +149,12 @@ export default function TabOneScreen() {
                 {item.description && <Text style={styles.taskDescription}>{item.description}</Text>}
               </View>
             </TouchableOpacity>
-            {/* PRZYCISK DO USUWANIA */}
             <View style={styles.actionsContainer}>
-              {/* PRZYCISK DO EDYCJI */}
               <Link href={{ pathname: "/edit-task", params: { taskId: item.id } }} asChild>
                 <TouchableOpacity style={styles.actionButton}>
                   <FontAwesome name="pencil" size={22} color="#facc15" />
                 </TouchableOpacity>
               </Link>
-
-              {/* PRZYCISK DO USUWANIA */}
               <TouchableOpacity onPress={() => handleDelete(item)} style={styles.actionButton}>
                 <FontAwesome name="trash-o" size={22} color="#ef4444" />
               </TouchableOpacity>
@@ -181,6 +171,7 @@ export default function TabOneScreen() {
   );
 }
 
+// Style pozostają bez zmian
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#111827' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#111827' },

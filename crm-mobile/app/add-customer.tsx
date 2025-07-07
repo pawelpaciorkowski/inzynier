@@ -4,8 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { useRouter, Stack } from 'expo-router';
 
-const API_URL = 'http://10.0.2.2:5167';
-
 export default function AddCustomerScreen() {
     const { token } = useAuth();
     const router = useRouter();
@@ -27,7 +25,7 @@ export default function AddCustomerScreen() {
 
         setLoading(true);
         try {
-            await axios.post(`${API_URL}/api/Customers`, {
+            await axios.post(`/api/Customers`, {
                 name,
                 email,
                 phone,
@@ -35,11 +33,6 @@ export default function AddCustomerScreen() {
                 address,
                 nip,
                 representative,
-            }, {
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`
-                }
             });
 
             Alert.alert("Sukces", "Klient został pomyślnie dodane.");
