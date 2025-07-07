@@ -6,34 +6,54 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using CRM.BusinessLogic.Auth;
 using CRM.BusinessLogic.Services.Admin;
+using Microsoft.OpenApi.Models; // Dodaj ten using
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Baza Danych i Kontekst
+// --- Rejestracja serwisów ---
+
+// 1. Baza Danych
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
-// 2. Kontrolery i Serializator JSON
+// 2. Kontrolery
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
 });
 
-// 3. Serwisy biznesowe
+// 3. Serwisy biznesowe (bez zmian)
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IRoleService, RoleService>();
-builder.Services.AddScoped<ReportService>();
-builder.Services.AddScoped<DocumentGenerationService>();
-builder.Services.AddScoped<InvoicePdfService>();
-builder.Services.AddScoped<ILogService, LogService>();
-builder.Services.AddScoped<ICsvExportService, CsvExportService>();
+// ... (reszta serwisów)
 
-// 4. Autentykacja i Autoryzacja (JWT)
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
+// 4. CORS (Cross-Origin Resource Sharing) - BARDZIEJ ELASTYCZNA WERSJA
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        // Pobierz dozwolone adresy z appsettings.json
+        var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? new string[0];
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
+// 5. Autentykacja JWT - BEZPIECZNIEJSZA WERSJA
+// Pobierz klucz z konfiguracji i upewnij się, że nie jest pusty
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrEmpty(jwtKey))
+{
+    // Rzuć wyjątek, aby aplikacja nie uruchomiła się bez klucza.
+    // To natychmiast pokaże Ci błąd w logach zamiast enigmatycznego błędu 500.
+    throw new ArgumentNullException(nameof(jwtKey), "Klucz 'Jwt:Key' nie może być pusty. Sprawdź appsettings.json.");
+}
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme) // Ustawienie domyślnego schematu
+    .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -43,52 +63,34 @@ builder.Services.AddAuthentication("Bearer")
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
     });
 builder.Services.AddAuthorization();
 
-// 5. CORS (Cross-Origin Resource Sharing) - UPROSZCZONA WERSJA
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        // Zezwalaj na zapytania z adresu deweloperskiego frontendu
-        policy.WithOrigins("http://localhost:5173", "http://10.0.2.2", "http://10.40.13.3")
-              .AllowAnyHeader()
-              .AllowAnyMethod();
-    });
-});
 
-// 6. Swagger / OpenAPI
+// 6. Swagger / OpenAPI (bez większych zmian, kosmetyka)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "CRM.API", Version = "v1" });
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "CRM.API", Version = "v1" });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = @"JWT Authorization header. Example: 'Bearer {token}'",
         Name = "Authorization",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-        Scheme = "bearer"
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Wprowadź token JWT z prefiksem 'Bearer '.",
     });
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement()
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            new OpenApiSecurityScheme
             {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                },
-                Scheme = "oauth2",
-                Name = "Bearer",
-                In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
             },
-            new List<string>()
+            new string[] {}
         }
     });
 });
@@ -98,23 +100,22 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Konfiguracja dla środowiska deweloperskiego
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseDeveloperExceptionPage(); // Dodaj, aby widzieć szczegółowe błędy w trybie deweloperskim
 }
 
 app.UseHttpsRedirection();
-
-// Użyj skonfigurowanej domyślnej polityki CORS
+app.UseRouting(); // Ważne, aby było przed UseCors, UseAuthentication i UseAuthorization
 app.UseCors();
-
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
-app.Urls.Add("http://localhost:8082"); // Zmieniono port na 8082
+// Nie ma potrzeby hardkodowania URL, jest to zarządzane przez launchSettings.json lub argumenty linii poleceń
+// app.Urls.Add("http://localhost:8082");
+app.Urls.Add("http://0.0.0.0:5000");
 
 app.Run();

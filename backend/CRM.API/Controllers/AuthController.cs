@@ -23,18 +23,23 @@ namespace CRM.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var user = await _authService.AuthenticateAsync(request.Username, request.Password);
+            try
+            {
+                var user = await _authService.AuthenticateAsync(request.Username, request.Password);
 
-            Console.WriteLine($"[LOGIN] User: {user?.Username}, Role: {user?.Role?.Name}");
+                if (user == null)
+                    return Unauthorized(new { message = "Nieprawidłowe dane logowania" });
 
-            if (user == null)
-                return Unauthorized(new { message = "Invalid credentials" });
-
-            var token = _authService.GenerateJwtToken(user);
-
-            Console.WriteLine($"[LOGIN] JWT Token: {token}");
-
-            return Ok(new { token });
+                var token = _authService.GenerateJwtToken(user);
+                return Ok(new { token });
+            }
+            catch (Exception ex)
+            {
+                // Zwróć bardziej szczegółowy błąd zamiast 500
+                // Możesz tu dodać logowanie błędu do pliku/konsoli
+                Console.WriteLine($"[BŁĄD LOGOWANIA]: {ex.Message}");
+                return StatusCode(500, new { message = $"Wystąpił wewnętrzny błąd serwera: {ex.Message}" });
+            }
         }
 
 

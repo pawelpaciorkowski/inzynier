@@ -4,7 +4,7 @@ import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
 const TOKEN_KEY = 'my-jwt';
-const API_URL = 'http://10.40.13.3:5167';
+const API_URL = 'http://10.40.13.3:5000';
 
 interface AuthState {
     token: string | null;

@@ -65,7 +65,6 @@ export default function TabLayout() {
         name="activities"
         options={{
           title: 'Aktywności',
-          headerShown: false,
           tabBarIcon: ({ color }) => <TabBarIcon name="list-alt" color={color} />,
         }}
       />
