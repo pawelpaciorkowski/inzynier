@@ -28,7 +28,6 @@ export function EditNotePage() {
     useEffect(() => {
         const fetchNoteAndCustomers = async () => {
             try {
-                // Fetch note details
                 const noteResponse = await axios.get<Note>(`/api/Notes/${noteId}`);
                 setContent(noteResponse.data.content);
                 setCustomerId(noteResponse.data.customerId || undefined);
@@ -43,7 +42,7 @@ export function EditNotePage() {
                     errorMessage = err.response.data?.message || err.message;
                 }
                 openModal({ type: 'error', title: 'Błąd', message: errorMessage });
-                navigate('/notes'); // Go back to notes list on error
+                navigate('/notatki'); // Go back to notes list on error
             }
         };
         fetchNoteAndCustomers();
@@ -59,7 +58,7 @@ export function EditNotePage() {
         try {
             await axios.put(`/api/Notes/${noteId}`, { id: noteId, content, customerId: customerId || null });
             openModal({ type: 'success', title: 'Sukces', message: 'Notatka została zaktualizowana.' });
-            navigate('/notes');
+            navigate('/notatki'); // Redirect to notes list
         } catch (err) {
             let errorMessage = 'Wystąpił nieoczekiwany błąd podczas aktualizacji notatki.';
             if (axios.isAxiosError(err) && err.response) {
@@ -103,7 +102,7 @@ export function EditNotePage() {
                 <div className="flex justify-end space-x-4">
                     <button
                         type="button"
-                        onClick={() => navigate('/notes')}
+                        onClick={() => navigate('/notatki')}
                         className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
                     >
                         Anuluj

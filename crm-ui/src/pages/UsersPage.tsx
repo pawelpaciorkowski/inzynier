@@ -4,12 +4,11 @@ import axios from 'axios';
 import { useModal } from '../context/ModalContext'; // Import useModal
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
-// Define clear types for your data
 type User = {
     id: number;
     username: string;
     email: string;
-    role: { name: string; }; // Assuming role is an object with a name property
+    role: string; // Zmieniono typ roli na string
 };
 
 type ApiResponse = {
@@ -80,7 +79,7 @@ export default function UsersPage() {
                         <div>
                             <strong className="text-xl">{user.username}</strong><br />
                             <span className="text-gray-400">📧 {user.email}</span><br />
-                            <span className="italic text-indigo-400">🎭 {user.role?.name || 'Brak roli'}</span>
+                            <span className="italic text-indigo-400">🎭 {user.role || 'Brak roli'}</span>
                         </div>
 
                         <div className="flex gap-4">

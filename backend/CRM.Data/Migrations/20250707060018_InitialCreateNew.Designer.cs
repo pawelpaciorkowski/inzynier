@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRM.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250706182610_AddUserToNotes")]
-    partial class AddUserToNotes
+    [Migration("20250707060018_InitialCreateNew")]
+    partial class InitialCreateNew
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -411,7 +411,13 @@ namespace CRM.Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<int>("RecipientUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SenderUserId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("SentAt")
@@ -422,6 +428,10 @@ namespace CRM.Data.Migrations
                         .HasColumnType("longtext");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("RecipientUserId");
+
+                    b.HasIndex("SenderUserId");
 
                     b.ToTable("Messages");
                 });
@@ -444,7 +454,7 @@ namespace CRM.Data.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
-                    b.Property<int>("UserId")
+                    b.Property<int?>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -658,16 +668,28 @@ namespace CRM.Data.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Level")
-                        .IsRequired()
+                    b.Property<string>("Exception")
                         .HasColumnType("longtext");
 
-                    b.Property<DateTime>("LoggedAt")
-                        .HasColumnType("datetime(6)");
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<string>("Properties")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime(6)");
 
                     b.HasKey("Id");
 
@@ -935,6 +957,25 @@ namespace CRM.Data.Migrations
                     b.Navigation("Customer");
                 });
 
+            modelBuilder.Entity("CRM.Data.Models.Message", b =>
+                {
+                    b.HasOne("CRM.Data.Models.User", "RecipientUser")
+                        .WithMany()
+                        .HasForeignKey("RecipientUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CRM.Data.Models.User", "SenderUser")
+                        .WithMany()
+                        .HasForeignKey("SenderUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("RecipientUser");
+
+                    b.Navigation("SenderUser");
+                });
+
             modelBuilder.Entity("CRM.Data.Models.Note", b =>
                 {
                     b.HasOne("CRM.Data.Models.Customer", "Customer")
@@ -945,9 +986,7 @@ namespace CRM.Data.Migrations
 
                     b.HasOne("CRM.Data.Models.User", "User")
                         .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("UserId");
 
                     b.Navigation("Customer");
 

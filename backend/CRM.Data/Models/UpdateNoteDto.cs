@@ -9,7 +9,7 @@ namespace CRM.Data.Models
 
         [Required]
         [MaxLength(1000)]
-        public string Content { get; set; }
+        public required string Content { get; set; }
 
         public int? CustomerId { get; set; }
     }

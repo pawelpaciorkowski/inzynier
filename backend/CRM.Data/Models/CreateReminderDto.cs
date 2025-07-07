@@ -7,7 +7,7 @@ namespace CRM.Data.Models
     {
         [Required]
         [MaxLength(500)]
-        public string Note { get; set; }
+        public required string Note { get; set; }
 
         [Required]
         public DateTime RemindAt { get; set; }

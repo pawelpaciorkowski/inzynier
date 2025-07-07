@@ -1,156 +1,98 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState } from 'react';
-import axios from 'axios';
-import { Link } from 'react-router-dom';
-import { PencilIcon, TrashIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
-import { useModal } from '../context/ModalContext';
+// Plik: crm-ui/src/pages/ClientsPage.tsx
 
-type Customer = { id: number; name: string; email: string; phone: string; company: string; createdAt: string; };
+import { useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import api from '../services/api'; // Używamy nowej instancji axios
+import { useModal } from '../context/ModalContext'; // Importujemy hooka do modali
+import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
+
+// Definicja typu dla klienta
+interface Client {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+}
+
+interface ApiResponse<T> {
+    $values: T[];
+}
 
 export default function ClientsPage() {
-    const [clients, setClients] = useState<Customer[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isDownloading, setIsDownloading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const api = import.meta.env.VITE_API_URL;
-    const { openModal } = useModal();
+    const { openModal } = useModal(); // Używamy globalnego modala
 
-    const fetchClients = async () => {
-        const token = localStorage.getItem('token');
+    const fetchClients = useCallback(async () => {
+        setLoading(true);
         try {
-            setLoading(true);
-            const res = await axios.get(`${api}/customers`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            const data = res.data;
-            if (data && Array.isArray((data as any).$values)) {
-                setClients((data as any).$values);
-            } else if (Array.isArray(data)) {
-                setClients(data);
-            }
-        } catch (err) {
-            setError('Nie udało się pobrać listy klientów.');
+            const response = await api.get<ApiResponse<Client> | Client[]>('/Customers');
+            const data = '$values' in response.data ? response.data.$values : response.data;
+            setClients(data);
+        } catch (error) {
+            console.error("Błąd pobierania klientów:", error);
+            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się załadować listy klientów.' });
         } finally {
             setLoading(false);
         }
-    };
+    }, [openModal]);
 
     useEffect(() => {
         fetchClients();
-    }, []);
+    }, [fetchClients]);
 
-    const handleDelete = (customer: Customer) => {
+    const handleDelete = (client: Client) => {
         openModal({
             type: 'confirm',
             title: 'Potwierdź usunięcie',
-            message: `Czy na pewno chcesz usunąć klienta "${customer.name}"?`,
+            message: `Czy na pewno chcesz usunąć klienta "${client.name}"? Spowoduje to usunięcie wszystkich powiązanych danych (faktur, umów itd.).`,
             confirmText: 'Usuń',
             onConfirm: async () => {
-                const token = localStorage.getItem('token');
                 try {
-                    await axios.delete(`${api}/customers/${customer.id}`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-
-                    fetchClients();
-                } catch (err) {
+                    await api.delete(`/Customers/${client.id}`);
+                    openModal({ type: 'success', title: 'Sukces', message: 'Klient został pomyślnie usunięty.' });
+                    fetchClients(); // Odśwież listę
+                } catch {
                     openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się usunąć klienta.' });
                 }
             }
         });
     };
 
-    const handleDownloadReport = async () => {
-        const token = localStorage.getItem('token');
-        setIsDownloading(true);
-        try {
-            const response = await axios.get(`${api}/reports/clients`, {
-                headers: { Authorization: `Bearer ${token}` },
-                responseType: 'blob',
-            });
-
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', 'raport-klientow.pdf');
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-
-        } catch (err) {
-            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się pobrać raportu.' });
-        } finally {
-            setIsDownloading(false);
-        }
-    };
+    if (loading) return <p className="p-6 text-white text-center">Ładowanie...</p>;
 
     return (
-        <div className="p-6">
+        <div className="p-6 text-white">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-white">📋 Klienci</h1>
-                <div className="flex gap-2">
-                    {/* Nowy przycisk do pobierania raportu */}
-                    <button
-                        onClick={handleDownloadReport}
-                        disabled={isDownloading}
-                        className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition-colors flex items-center gap-2 disabled:opacity-50"
-                    >
-                        <ArrowDownTrayIcon className="w-5 h-5" />
-                        {isDownloading ? 'Pobieranie...' : 'Pobierz raport PDF'}
+                <h1 className="text-3xl font-bold">👥 Klienci</h1>
+                <Link to="/klienci/dodaj">
+                    <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center transition-colors">
+                        <PlusIcon className="h-5 w-5 mr-2" />
+                        Dodaj klienta
                     </button>
-                    <Link to="/klienci/dodaj">
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
-                            + Dodaj klienta
-                        </button>
-                    </Link>
-                </div>
+                </Link>
             </div>
 
-            {loading && <p className="text-center text-gray-400">Ładowanie...</p>}
-            {error && <p className="text-center text-red-500 bg-red-900/50 p-3 rounded-md">{error}</p>}
-
-            {!loading && !error && (
-                <div className="bg-gray-800 shadow-md rounded-lg overflow-hidden">
-                    <table className="min-w-full leading-normal text-white">
-                        <thead>
-                            <tr>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Nazwa / Imię i nazwisko</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Email</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Telefon</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Firma</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-center text-xs font-semibold uppercase tracking-wider">Akcje</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {clients.length > 0 ? (
-                                clients.map(client => (
-                                    <tr key={client.id} className="hover:bg-gray-700">
-                                        <td className="px-5 py-4 border-b border-gray-700 font-medium">{client.name}</td>
-                                        <td className="px-5 py-4 border-b border-gray-700">{client.email}</td>
-                                        <td className="px-5 py-4 border-b border-gray-700">{client.phone}</td>
-                                        <td className="px-5 py-4 border-b border-gray-700">{client.company}</td>
-                                        <td className="px-5 py-4 border-b border-gray-700 text-center">
-                                            <div className="flex justify-center gap-4">
-                                                <Link to={`/klienci/edytuj/${client.id}`} title="Edytuj">
-                                                    <PencilIcon className="w-5 h-5 text-gray-400 hover:text-yellow-400" />
-                                                </Link>
-                                                <button onClick={() => handleDelete(client)} title="Usuń">
-                                                    <TrashIcon className="w-5 h-5 text-gray-400 hover:text-red-500" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={5} className="text-center py-10 text-gray-500">Brak klientów w bazie.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+            <ul className="space-y-4">
+                {clients.map(client => (
+                    <li key={client.id} className="bg-gray-800 p-4 rounded-lg shadow-md flex justify-between items-center">
+                        <div>
+                            <p className="text-xl font-semibold">{client.name}</p>
+                            <p className="text-gray-400">{client.email}</p>
+                            <p className="text-gray-400">{client.phone}</p>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                            <Link to={`/klienci/edytuj/${client.id}`} className="p-2 text-gray-400 hover:text-yellow-400 transition-colors" title="Edytuj">
+                                <PencilIcon className="h-5 w-5" />
+                            </Link>
+                            <button onClick={() => handleDelete(client)} className="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Usuń">
+                                <TrashIcon className="h-5 w-5" />
+                            </button>
+                        </div>
+                    </li>
+                ))}
+            </ul>
+            {/* Usunęliśmy stąd lokalny, zduplikowany modal */}
         </div>
     );
 }

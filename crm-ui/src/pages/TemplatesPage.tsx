@@ -1,8 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
+// Plik: crm-ui/src/pages/TemplatesPage.tsx
+
+import { useEffect, useState, useCallback, useRef } from 'react';
+import api from '../services/api';
 import { useModal } from '../context/ModalContext';
-import { TrashIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
+import { DocumentArrowDownIcon, TrashIcon, ArrowUpOnSquareIcon } from '@heroicons/react/24/outline';
+import { format } from 'date-fns';
 
 interface Template {
     id: number;
@@ -11,61 +13,48 @@ interface Template {
     uploadedAt: string;
 }
 
+interface ApiResponse<T> {
+    $values: T[];
+}
+
 export function TemplatesPage() {
     const [templates, setTemplates] = useState<Template[]>([]);
     const [loading, setLoading] = useState(true);
-    const [templateName, setTemplateName] = useState('');
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const { openModal } = useModal();
-    const api = import.meta.env.VITE_API_URL;
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const fetchTemplates = useCallback(async () => {
-        const token = localStorage.getItem('token');
         setLoading(true);
         try {
-            const res = await axios.get(`${api}/templates`, { headers: { Authorization: `Bearer ${token}` } });
-            const data = res.data;
-            setTemplates(data?.$values || (Array.isArray(data) ? data : []));
+            const response = await api.get<ApiResponse<Template> | Template[]>('/Templates');
+            const data = '$values' in response.data ? response.data.$values : response.data;
+            setTemplates(data);
         } catch {
-            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się pobrać szablonów.' });
+            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się załadować szablonów.' });
         } finally {
             setLoading(false);
         }
-    }, [api, openModal]);
+    }, [openModal]);
 
     useEffect(() => {
         fetchTemplates();
     }, [fetchTemplates]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            setSelectedFile(e.target.files[0]);
-        }
-    };
-
-    const handleUpload = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedFile || !templateName) {
-            openModal({ type: 'error', title: 'Błąd', message: 'Nazwa szablonu i plik są wymagane.' });
-            return;
-        }
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
 
         const formData = new FormData();
-        formData.append('file', selectedFile);
-        formData.append('templateName', templateName);
+        formData.append('file', file);
 
-        const token = localStorage.getItem('token');
         try {
-            await axios.post(`${api}/templates/upload`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
+            await api.post('/Templates/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
-            openModal({ type: 'success', title: 'Sukces!', message: 'Szablon został wgrany.' });
-            setTemplateName('');
-            setSelectedFile(null);
-            (document.getElementById('file-upload') as HTMLInputElement).value = "";
+            openModal({ type: 'success', title: 'Sukces', message: 'Szablon został przesłany.' });
             fetchTemplates();
         } catch {
-            openModal({ type: 'error', title: 'Błąd', message: 'Wystąpił błąd podczas wgrywania pliku.' });
+            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się przesłać pliku.' });
         }
     };
 
@@ -76,66 +65,60 @@ export function TemplatesPage() {
             message: `Czy na pewno chcesz usunąć szablon "${template.name}"?`,
             confirmText: 'Usuń',
             onConfirm: async () => {
-                const token = localStorage.getItem('token');
                 try {
-                    await axios.delete(`${api}/templates/${template.id}`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-
+                    await api.delete(`/Templates/${template.id}`);
+                    openModal({ type: 'success', title: 'Sukces', message: 'Szablon usunięty.' });
                     fetchTemplates();
-                } catch (err) {
+                } catch {
                     openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się usunąć szablonu.' });
                 }
-            }
+            },
         });
     };
 
+    if (loading) return <p className="text-center p-8 text-white">Ładowanie...</p>;
+
     return (
-        <div className="p-6">
-            <h1 className="text-3xl font-bold text-white mb-6">🗂️ Zarządzanie szablonami (.docx)</h1>
-
-            <form onSubmit={handleUpload} className="mb-8 p-4 bg-gray-800 rounded-lg flex items-end gap-4">
-                <div className="flex-grow">
-                    <label htmlFor="templateName" className="block text-sm font-medium text-gray-300 mb-1">Nazwa szablonu</label>
-                    <input id="templateName" type="text" value={templateName} onChange={e => setTemplateName(e.target.value)} required className="w-full p-2 rounded bg-gray-700 text-white border-gray-600" />
-                </div>
-                <div className="flex-grow">
-                    <label htmlFor="file-upload" className="block text-sm font-medium text-gray-300 mb-1">Plik szablonu (.docx)</label>
-                    <input id="file-upload" type="file" onChange={handleFileChange} required accept=".docx" className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700" />
-                </div>
-                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2">
-                    <ArrowUpTrayIcon className="w-5 h-5" /> Wgraj szablon
+        <div className="p-6 text-white">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-bold">📄 Szablony Dokumentów</h1>
+                <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center transition-colors"
+                >
+                    <ArrowUpOnSquareIcon className="h-5 w-5 mr-2" />
+                    Prześlij nowy szablon
                 </button>
-            </form>
-
-            {loading ? <p className="text-center text-gray-400">Ładowanie...</p> : (
-                <div className="bg-gray-800 shadow-md rounded-lg overflow-hidden">
-                    <table className="min-w-full leading-normal text-white">
-                        <thead>
-                            <tr>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Nazwa szablonu</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Oryginalna nazwa pliku</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Data wgrania</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-center text-xs font-semibold uppercase tracking-wider">Akcje</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {templates.map(template => (
-                                <tr key={template.id} className="hover:bg-gray-700">
-                                    <td className="px-5 py-4 border-b border-gray-700 font-medium">{template.name}</td>
-                                    <td className="px-5 py-4 border-b border-gray-700">{template.fileName}</td>
-                                    <td className="px-5 py-4 border-b border-gray-700">{new Date(template.uploadedAt).toLocaleString()}</td>
-                                    <td className="px-5 py-4 border-b border-gray-700 text-center">
-                                        <button onClick={() => handleDelete(template)} title="Usuń">
-                                            <TrashIcon className="w-5 h-5 text-gray-400 hover:text-red-500" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    accept=".doc,.docx"
+                />
+            </div>
+            <div className="bg-gray-800 shadow-lg rounded-lg overflow-hidden">
+                <ul className="divide-y divide-gray-700">
+                    {templates.map((template) => (
+                        <li key={template.id} className="p-4 flex justify-between items-center hover:bg-gray-700/50">
+                            <div>
+                                <p className="font-semibold text-lg">{template.name}</p>
+                                <p className="text-sm text-gray-400">Przesłano: {format(new Date(template.uploadedAt), 'dd.MM.yyyy HH:mm')}</p>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                                {/* Funkcja pobierania nie jest jeszcze zaimplementowana w API */}
+                                <button className="p-2 text-gray-400 hover:text-white" title="Pobierz">
+                                    <DocumentArrowDownIcon className="h-5 w-5" />
+                                </button>
+                                <button onClick={() => handleDelete(template)} className="p-2 text-gray-400 hover:text-red-500" title="Usuń">
+                                    <TrashIcon className="h-5 w-5" />
+                                </button>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+            {/* Usunęliśmy stąd lokalny, zduplikowany modal */}
         </div>
     );
 }

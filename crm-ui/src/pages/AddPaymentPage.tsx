@@ -51,7 +51,7 @@ export function AddPaymentPage() {
                 amount: parseFloat(amount),
                 paidAt: new Date(paidAt).toISOString(),
             });
-            navigate('/platnosci'); // Przekierowanie do strony płatności
+            navigate('/platnosci');
         } catch (err: any) {
             setError(`Nie udało się dodać płatności: ${err.response?.data?.message || err.message}`);
             console.error('Błąd dodawania płatności:', err);

@@ -7,7 +7,7 @@ import UsersIcon from '@heroicons/react/24/solid/UsersIcon';
 import UserCircleIcon from '@heroicons/react/24/solid/UserCircleIcon';
 import CheckCircleIcon from '@heroicons/react/24/solid/CheckCircleIcon';
 import { ClipboardDocumentListIcon, CalendarDaysIcon, DocumentDuplicateIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon } from "@heroicons/react/16/solid";
-import { Modal } from './Modal';
+
 
 export default function Layout() {
     const { user, logout } = useAuth();
@@ -134,7 +134,7 @@ export default function Layout() {
                 <main className="flex-1 p-10 bg-gray-900 border-l border-gray-700 overflow-auto">
                     <Outlet />
                 </main>
-                <Modal />
+                
             </div>
         </div>
     );

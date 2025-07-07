@@ -90,12 +90,19 @@ namespace CRM.BusinessLogic.Auth
 
             var hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
+            var role = await _context.Roles.FindAsync(request.RoleId);
+            if (role == null)
+            {
+                throw new InvalidOperationException($"Rola o ID {request.RoleId} nie istnieje.");
+            }
+
             var user = new User
             {
                 Username = request.Username,
                 Email = request.Email,
                 PasswordHash = hashedPassword,
-                RoleId = request.RoleId
+                RoleId = request.RoleId,
+                Role = role // Ustawienie wymaganej właściwości Role
             };
 
             // 1. Dodajemy nowego użytkownika do "kolejki" zmian

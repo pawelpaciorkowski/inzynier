@@ -78,6 +78,19 @@ namespace CRM.Data
 
             modelBuilder.Entity<UserGroup>()
         .HasKey(ug => new { ug.UserId, ug.GroupId });
+
+            modelBuilder.Entity<Message>(entity =>
+            {
+                entity.HasOne(m => m.SenderUser)
+                      .WithMany()
+                      .HasForeignKey(m => m.SenderUserId)
+                      .OnDelete(DeleteBehavior.Restrict); // Zapobiega cyklicznemu usuwaniu
+
+                entity.HasOne(m => m.RecipientUser)
+                      .WithMany()
+                      .HasForeignKey(m => m.RecipientUserId)
+                      .OnDelete(DeleteBehavior.Restrict); // Zapobiega cyklicznemu usuwaniu
+            });
         }
 
 

@@ -38,6 +38,7 @@ export function EditContractPage() {
     const [customerId, setCustomerId] = useState<number | string>('');
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const { openModal } = useModal();
 
     useEffect(() => {
@@ -63,6 +64,7 @@ export function EditContractPage() {
                 setCustomers(customersData);
             } catch (err: any) {
                 openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || `Nie udało się pobrać danych: ${err.message}` });
+                setError(err.response?.data?.message || `Nie udało się pobrać danych: ${err.message}`);
                 console.error('Błąd pobierania danych:', err);
             } finally {
                 setLoading(false);

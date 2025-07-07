@@ -146,9 +146,12 @@ namespace CRM.Data.Models
         public int Id { get; set; }
         public string Subject { get; set; } = default!;
         public string Body { get; set; } = default!;
+        public int SenderUserId { get; set; }
+        public virtual User SenderUser { get; set; } = null!;
         public int RecipientUserId { get; set; }
-
+        public virtual User RecipientUser { get; set; } = null!;
         public DateTime SentAt { get; set; }
+        public bool IsRead { get; set; }
     }
 
     // Plik: backend/CRM.Data/Models/FullModels.cs
@@ -164,7 +167,7 @@ namespace CRM.Data.Models
         public virtual Customer Customer { get; set; } = null!;
 
         // ✅ DODAJ TE DWA POLA DO RELACJI Z UŻYTKOWNIKIEM
-        public int UserId { get; set; }
+        public int? UserId { get; set; }
         public virtual User User { get; set; } = null!;
     }
 
@@ -175,32 +178,26 @@ namespace CRM.Data.Models
         public string Value { get; set; } = default!;
     }
 
-    public class SystemLog
-    {
-        public int Id { get; set; }
-        public string Level { get; set; } = default!;
-        public string Message { get; set; } = default!;
-        public DateTime LoggedAt { get; set; }
-    }
+
 
     public class Group
     {
         public int Id { get; set; }
 
-        public string Name { get; set; }
+        public required string Name { get; set; }
 
         public string? Description { get; set; }
 
-        public virtual ICollection<UserGroup> UserGroups { get; set; } = new List<UserGroup>();
+        public virtual required ICollection<UserGroup> UserGroups { get; set; } = new List<UserGroup>();
     }
 
     public class UserGroup
     {
         public int UserId { get; set; }
-        public User User { get; set; }
+        public required User User { get; set; }
 
         public int GroupId { get; set; }
-        public Group Group { get; set; }
+        public required Group Group { get; set; }
     }
 
     public class UserGroupAssignment

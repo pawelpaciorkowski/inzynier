@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useModal } from '../context/ModalContext';
+import { ReminderFormModal } from '../components/ReminderFormModal';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
@@ -27,13 +28,9 @@ export function RemindersPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const { openModal } = useModal();
+    const { openModal, closeModal } = useModal();
 
-    // --- Logika Modala ---
-    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-    const [currentReminder, setCurrentReminder] = useState<Reminder | null>(null);
-    const [note, setNote] = useState('');
-    const [remindAt, setRemindAt] = useState('');
+
 
     const fetchReminders = useCallback(async () => {
         setLoading(true);
@@ -62,45 +59,19 @@ export function RemindersPage() {
 
     // ✅ POPRAWKA: Ta funkcja jest kluczowa do otwierania modala
     const handleOpenFormModal = (reminder: Reminder | null) => {
-        setCurrentReminder(reminder);
-        if (reminder) {
-            setNote(reminder.note);
-            setRemindAt(format(new Date(reminder.remindAt), "yyyy-MM-dd'T'HH:mm"));
-        } else {
-            setNote('');
-            setRemindAt('');
-        }
-        // Ta linia zmienia stan i powoduje wyświetlenie modala
-        setIsFormModalOpen(true);
+        openModal({
+            type: 'custom',
+            content: (
+                <ReminderFormModal
+                    currentReminder={reminder}
+                    onSaveSuccess={fetchReminders}
+                    onClose={closeModal}
+                />
+            ),
+        });
     };
 
-    const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!note || !remindAt) {
-            openModal({ type: 'error', title: 'Błąd walidacji', message: 'Wszystkie pola są wymagane.' });
-            return;
-        }
 
-        const reminderData = {
-            id: currentReminder?.id ?? 0,
-            note,
-            remindAt: new Date(remindAt).toISOString(),
-        };
-
-        try {
-            if (currentReminder) {
-                await axios.put(`/api/Reminders/${currentReminder.id}`, reminderData);
-                openModal({ type: 'success', title: 'Sukces', message: 'Przypomnienie zaktualizowane.' });
-            } else {
-                await axios.post('/api/Reminders', reminderData);
-                openModal({ type: 'success', title: 'Sukces', message: 'Przypomnienie dodane.' });
-            }
-            setIsFormModalOpen(false);
-            fetchReminders();
-        } catch (err: any) {
-            openModal({ type: 'error', title: 'Błąd zapisu', message: err.response?.data?.message || 'Wystąpił błąd.' });
-        }
-    };
 
     const handleDelete = (id: number) => {
         openModal({
@@ -171,46 +142,7 @@ export function RemindersPage() {
                 </ul>
             </div>
 
-            {/* ✅ POPRAWKA: Ten warunek renderuje modal, gdy isFormModalOpen jest true */}
-            {isFormModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 animate-fade-in">
-                    <div className="bg-gray-800 rounded-lg p-8 w-full max-w-md shadow-2xl">
-                        <h2 className="text-2xl font-bold mb-6 text-white">{currentReminder ? 'Edytuj' : 'Dodaj'} przypomnienie</h2>
-                        <form onSubmit={handleSave}>
-                            <div className="mb-4">
-                                <label htmlFor="note" className="block text-gray-300 text-sm font-bold mb-2">Treść:</label>
-                                <textarea
-                                    id="note"
-                                    rows={4}
-                                    value={note}
-                                    onChange={(e) => setNote(e.target.value)}
-                                    className="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-600 text-white"
-                                    required
-                                />
-                            </div>
-                            <div className="mb-6">
-                                <label htmlFor="remindAt" className="block text-gray-300 text-sm font-bold mb-2">Data i godzina:</label>
-                                <input
-                                    type="datetime-local"
-                                    id="remindAt"
-                                    value={remindAt}
-                                    onChange={(e) => setRemindAt(e.target.value)}
-                                    className="w-full p-2 rounded-lg bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-600 text-white"
-                                    required
-                                />
-                            </div>
-                            <div className="flex justify-end space-x-4">
-                                <button type="button" onClick={() => setIsFormModalOpen(false)} className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                                    Anuluj
-                                </button>
-                                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                                    Zapisz
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+
         </div>
     );
 }

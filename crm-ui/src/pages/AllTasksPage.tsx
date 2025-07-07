@@ -33,12 +33,9 @@ export function AllTasksPage() {
 
                 const data = response.data;
 
-                // ✅ POPRAWKA: Sprawdzamy, czy dane mają format z $values
                 if (data && Array.isArray((data as any).$values)) {
-                    // Jeśli tak, bierzemy tablicę z tego pola
                     setTasks((data as any).$values);
                 } else if (Array.isArray(data)) {
-                    // Jeśli format jest standardowy, używamy go bezpośrednio
                     setTasks(data);
                 } else {
                     console.warn("Otrzymano nieoczekiwany format danych dla zadań:", data);

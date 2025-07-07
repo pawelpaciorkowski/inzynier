@@ -78,7 +78,7 @@ export function NotesPage() {
         <div className="p-6">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-white">📝 Notatki</h1>
-                <Link to="/notataki/dodaj">
+                <Link to="/notatki/dodaj">
                     <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center transition-colors">
                         <PlusIcon className="h-5 w-5 mr-2" />
                         Dodaj notatkę
@@ -123,7 +123,7 @@ export function NotesPage() {
                                     </td>
                                     <td className="px-5 py-4 border-b border-gray-600 text-center">
                                         <div className="flex justify-center gap-4">
-                                            <Link to={`/notes/edit/${note.id}`} title="Edytuj">
+                                            <Link to={`/notatki/edytuj/:id`} title="Edytuj">
                                                 <PencilIcon className="w-5 h-5 text-gray-400 hover:text-yellow-400" />
                                             </Link>
                                             <button

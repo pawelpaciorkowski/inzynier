@@ -28,6 +28,8 @@ builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<DocumentGenerationService>();
 builder.Services.AddScoped<InvoicePdfService>();
+builder.Services.AddScoped<ILogService, LogService>();
+builder.Services.AddScoped<ICsvExportService, CsvExportService>();
 
 // 4. Autentykacja i Autoryzacja (JWT)
 builder.Services.AddAuthentication("Bearer")
@@ -112,5 +114,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.Urls.Add("http://localhost:8082"); // Zmieniono port na 8082
 
 app.Run();
