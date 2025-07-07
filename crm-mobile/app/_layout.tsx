@@ -17,22 +17,24 @@ const InitialLayout = () => {
   useEffect(() => {
     if (isLoading) return;
 
-    const inTabsGroup = segments[0] === '(tabs)';
+    const inAuthGroup = segments[0] === 'login'; // Sprawdzamy, czy jesteśmy na ekranie logowania
 
-    if (isAuthenticated && !inTabsGroup) {
+    if (isAuthenticated && inAuthGroup) {
+      // Jeśli zalogowany i na ekranie logowania, przekieruj do (tabs)
       router.replace('/(tabs)');
-    } else if (!isAuthenticated && inTabsGroup) {
+    } else if (!isAuthenticated && !inAuthGroup) {
+      // Jeśli niezalogowany i nie na ekranie logowania, przekieruj do login
       router.replace('/login');
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, segments]);
 
   return (
     <Stack screenOptions={{
       headerStyle: { backgroundColor: '#1f2937' },
       headerTintColor: '#fff',
     }}>
+      <Stack.Screen name="login" options={{ headerShown: false }} /> {/* Ustaw login jako pierwszy ekran */}
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="add-task" options={{ presentation: 'modal', title: 'Nowe Zadanie', contentStyle: { backgroundColor: '#111827' } }} />
       <Stack.Screen name="edit-task" options={{ presentation: 'modal', title: 'Edytuj Zadanie' }} />
     </Stack>

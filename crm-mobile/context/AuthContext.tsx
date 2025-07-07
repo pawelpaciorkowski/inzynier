@@ -4,7 +4,7 @@ import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
 const TOKEN_KEY = 'my-jwt';
-const API_URL = 'http://10.0.2.2:5167';
+const API_URL = 'http://10.40.13.3:5167';
 
 interface AuthState {
     token: string | null;
@@ -40,18 +40,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const loadToken = async () => {
             const token = await SecureStore.getItemAsync(TOKEN_KEY);
             if (token) {
-                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-                setAuthState({
-                    token: token,
-                    isAuthenticated: true,
-                    isLoading: false,
-                });
+                try {
+                    const decodedToken: any = jwtDecode(token);
+                    if (decodedToken.exp * 1000 < Date.now()) {
+                        // Token wygasł
+                        await SecureStore.deleteItemAsync(TOKEN_KEY);
+                        setAuthState({ token: null, isAuthenticated: false, isLoading: false });
+                    } else {
+                        // Token jest ważny
+                        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                        setAuthState({ token: token, isAuthenticated: true, isLoading: false });
+                    }
+                } catch (e) {
+                    // Błąd dekodowania tokenu
+                    await SecureStore.deleteItemAsync(TOKEN_KEY);
+                    setAuthState({ token: null, isAuthenticated: false, isLoading: false });
+                }
             } else {
-                setAuthState({
-                    token: null,
-                    isAuthenticated: false,
-                    isLoading: false,
-                });
+                setAuthState({ token: null, isAuthenticated: false, isLoading: false });
             }
         };
         loadToken();

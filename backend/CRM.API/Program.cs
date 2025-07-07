@@ -55,7 +55,7 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
     {
         // Zezwalaj na zapytania z adresu deweloperskiego frontendu
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("http://localhost:5173", "http://10.0.2.2", "http://10.40.13.3")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
