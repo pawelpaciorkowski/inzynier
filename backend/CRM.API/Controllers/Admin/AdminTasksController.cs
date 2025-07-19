@@ -7,7 +7,7 @@ namespace CRM.API.Controllers.Admin
 {
     [ApiController]
     [Route("api/admin/[controller]")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Sprzedawca")]
     public class TasksController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

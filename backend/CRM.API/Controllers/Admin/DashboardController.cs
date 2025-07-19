@@ -57,6 +57,62 @@ namespace CRM.API.Controllers.Admin
 
                     return Ok(result);
                 }
+                else if (string.Equals(user.Role?.Name, "sprzedawca", StringComparison.OrdinalIgnoreCase))
+                {
+                    var result = new
+                    {
+                        tasksCount = await _context.Tasks.CountAsync(t => t.UserId == userId),
+                        messagesCount = await _context.Messages.CountAsync(m => m.RecipientUserId == userId),
+                        remindersCount = await _context.Reminders.CountAsync(r => r.UserId == userId),
+                        recentMeetings = await _context.Meetings
+                            .Include(m => m.Customer)
+                            .OrderByDescending(m => m.ScheduledAt)
+                            .Take(5)
+                            .Select(m => new { 
+                                Id = m.Id, 
+                                Topic = m.Topic, 
+                                ScheduledAt = m.ScheduledAt,
+                                CustomerName = m.Customer.Name 
+                            })
+                            .ToListAsync(),
+                        recentNotes = await _context.Notes
+                            .Include(n => n.Customer)
+                            .OrderByDescending(n => n.CreatedAt)
+                            .Take(5)
+                            .Select(n => new { 
+                                Id = n.Id, 
+                                Content = n.Content, 
+                                CreatedAt = n.CreatedAt,
+                                CustomerName = n.Customer.Name 
+                            })
+                            .ToListAsync(),
+                        recentCustomers = await _context.Customers
+                            .OrderByDescending(c => c.CreatedAt)
+                            .Take(5)
+                            .Select(c => new { 
+                                Id = c.Id, 
+                                Name = c.Name, 
+                                Company = c.Company,
+                                CreatedAt = c.CreatedAt 
+                            })
+                            .ToListAsync(),
+                        recentTasks = await _context.Tasks
+                            .Include(t => t.Customer)
+                            .Where(t => t.UserId == userId)
+                            .OrderByDescending(t => t.DueDate.HasValue ? t.DueDate.Value : DateTime.MinValue)
+                            .Take(5)
+                            .Select(t => new { 
+                                Id = t.Id, 
+                                Title = t.Title, 
+                                DueDate = t.DueDate,
+                                Completed = t.Completed,
+                                CustomerName = t.Customer.Name 
+                            })
+                            .ToListAsync()
+                    };
+
+                    return Ok(result);
+                }
                 else
                 {
                     var result = new

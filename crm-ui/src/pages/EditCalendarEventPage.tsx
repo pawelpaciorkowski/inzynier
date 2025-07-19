@@ -14,7 +14,7 @@ interface CalendarEvent {
 export function EditCalendarEventPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
 
     const [title, setTitle] = useState('');
     const [start, setStart] = useState<string>('');
@@ -82,7 +82,7 @@ export function EditCalendarEventPage() {
                 start: adjustedStartDate.toISOString(),
                 end: adjustedEndDate.toISOString(),
             });
-            openModal({ type: 'success', title: 'Sukces', message: 'Wydarzenie zostało pomyślnie zaktualizowane.' });
+            openToast('Wydarzenie zostało pomyślnie zaktualizowane.', 'success');
             navigate('/wydarzenia');
         } catch {
             // Error is handled by the modal/interceptor
@@ -146,7 +146,14 @@ export function EditCalendarEventPage() {
                             required
                         />
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
+                        <button
+                            type="button"
+                            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                            onClick={() => navigate('/wydarzenia')}
+                        >
+                            Powrót
+                        </button>
                         <button
                             type="submit"
                             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"

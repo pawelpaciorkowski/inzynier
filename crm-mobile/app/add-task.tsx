@@ -18,7 +18,7 @@ export default function AddTaskScreen() {
     useEffect(() => {
         const fetchCustomers = async () => {
             try {
-                const res = await axios.get(`/api/customers`);
+                const res = await axios.get(`/api/Customers`);
                 const data = res.data;
                 if (data && Array.isArray((data as any).$values)) {
                     setCustomers((data as any).$values);

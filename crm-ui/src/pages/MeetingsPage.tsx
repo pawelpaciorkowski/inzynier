@@ -14,6 +14,8 @@ interface Meeting {
 
 export function MeetingsPage() {
     const [meetings, setMeetings] = useState<Meeting[]>([]);
+    const [filteredMeetings, setFilteredMeetings] = useState<Meeting[]>([]);
+    const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { openModal } = useModal();
@@ -28,8 +30,10 @@ export function MeetingsPage() {
                 const data = res.data;
                 if (data && Array.isArray((data as any).$values)) {
                     setMeetings((data as any).$values);
+                    setFilteredMeetings((data as any).$values);
                 } else if (Array.isArray(data)) {
                     setMeetings(data);
+                    setFilteredMeetings(data);
                 }
             } catch {
                 setError('Nie udało się pobrać spotkań.');
@@ -39,6 +43,15 @@ export function MeetingsPage() {
         };
         fetchMeetings();
     }, []);
+
+    // Filtrowanie spotkań na podstawie wyszukiwania
+    useEffect(() => {
+        const filtered = meetings.filter(meeting =>
+            meeting.topic.toLowerCase().includes(search.toLowerCase()) ||
+            meeting.customerName.toLowerCase().includes(search.toLowerCase())
+        );
+        setFilteredMeetings(filtered);
+    }, [meetings, search]);
 
     const handleDeleteMeeting = async (id: number) => {
         openModal({
@@ -74,41 +87,61 @@ export function MeetingsPage() {
             {error && <p className="text-center text-red-500">{error}</p>}
 
             {!loading && !error && (
-                <div className="bg-gray-800 shadow-md rounded-lg overflow-hidden">
-                    <table className="min-w-full leading-normal text-white">
-                        <thead>
-                            <tr>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Temat</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Klient</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Zaplanowano na</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-center text-xs font-semibold uppercase tracking-wider">Akcje</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {meetings.length > 0 ? (
-                                meetings.map((meeting) => (
-                                    <tr key={meeting.id} className="hover:bg-gray-700">
-                                        <td className="px-5 py-4 border-b border-gray-700">{meeting.topic}</td>
-                                        <td className="px-5 py-4 border-b border-gray-700">{meeting.customerName}</td>
-                                        <td className="px-5 py-4 border-b border-gray-700">{new Date(meeting.scheduledAt).toLocaleString()}</td>
-                                        <td className="px-5 py-4 border-b border-gray-700 text-center">
-                                            <div className="flex justify-center gap-4">
-                                                <Link to={`/spotkania/edytuj/${meeting.id}`} title="Edytuj"><PencilIcon className="w-5 h-5 text-gray-400 hover:text-yellow-400" /></Link>
-                                                <button onClick={() => handleDeleteMeeting(meeting.id)} title="Usuń"><TrashIcon className="w-5 h-5 text-gray-400 hover:text-red-500" /></button>
-                                            </div>
+                <>
+                    {/* Wyszukiwarka */}
+                    <div className="mb-6">
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="Wyszukaj spotkania..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="w-full px-4 py-2 pl-10 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            />
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-gray-800 shadow-md rounded-lg overflow-hidden">
+                        <table className="min-w-full leading-normal text-white">
+                            <thead>
+                                <tr>
+                                    <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Temat</th>
+                                    <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Klient</th>
+                                    <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Zaplanowano na</th>
+                                    <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-center text-xs font-semibold uppercase tracking-wider">Akcje</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredMeetings.length > 0 ? (
+                                    filteredMeetings.map((meeting) => (
+                                        <tr key={meeting.id} className="hover:bg-gray-700">
+                                            <td className="px-5 py-4 border-b border-gray-700">{meeting.topic}</td>
+                                            <td className="px-5 py-4 border-b border-gray-700">{meeting.customerName}</td>
+                                            <td className="px-5 py-4 border-b border-gray-700">{new Date(meeting.scheduledAt).toLocaleString()}</td>
+                                            <td className="px-5 py-4 border-b border-gray-700 text-center">
+                                                <div className="flex justify-center gap-4">
+                                                    <Link to={`/spotkania/edytuj/${meeting.id}`} title="Edytuj"><PencilIcon className="w-5 h-5 text-gray-400 hover:text-yellow-400" /></Link>
+                                                    <button onClick={() => handleDeleteMeeting(meeting.id)} title="Usuń"><TrashIcon className="w-5 h-5 text-gray-400 hover:text-red-500" /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={4} className="text-center py-10 text-gray-500">
+                                            {search ? 'Brak spotkań pasujących do wyszukiwania.' : 'Brak zaplanowanych spotkań.'}
                                         </td>
                                     </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={4} className="text-center py-10 text-gray-500">
-                                        Brak zaplanowanych spotkań.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
             )}
         </div>
     );

@@ -15,7 +15,7 @@ namespace CRM.BusinessLogic.Services
 
         public async Task<List<Customer>> GetAllAsync()
         {
-            return await _context.Customers.ToListAsync();
+            return await _context.Customers.OrderByDescending(c => c.CreatedAt).ToListAsync();
         }
 
         public async Task<Customer?> GetByIdAsync(int id)

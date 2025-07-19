@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 type Role = {
     id: number;
@@ -15,6 +17,11 @@ type UserFormData = {
 };
 
 export function AddUserPage() {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    if (user?.role === 'Sprzedawca') {
+        return <div className="p-6 text-center text-red-500">Brak dostępu do tej sekcji.</div>;
+    }
     const [formData, setFormData] = useState<UserFormData>({});
     const [roles, setRoles] = useState<Role[]>([]);
     const [success, setSuccess] = useState<string | null>(null);
@@ -123,9 +130,21 @@ export function AddUserPage() {
                         <option key={r.id} value={r.id}>{r.name}</option>
                     ))}
                 </select>
-                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded font-bold">
-                    ➕ Dodaj użytkownika
-                </button>
+                <div className="flex items-center justify-between gap-2">
+                    <button
+                        type="button"
+                        className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                        onClick={() => navigate('/uzytkownicy')}
+                    >
+                        Powrót
+                    </button>
+                    <button
+                        type="submit"
+                        className="bg-blue-600 text-white px-4 py-2 rounded font-bold"
+                    >
+                        ➕ Dodaj użytkownika
+                    </button>
+                </div>
             </form>
         </div>
     );

@@ -1,16 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useModal } from '../context/ModalContext';
 
 export function AddCalendarEventPage() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [title, setTitle] = useState('');
-    const [start, setStart] = useState<string>(format(new Date(), 'yyyy-MM-ddTHH:mm'));
-    const [end, setEnd] = useState<string>(format(new Date(), 'yyyy-MM-ddTHH:mm'));
+    const [start, setStart] = useState<string>('');
+    const [end, setEnd] = useState<string>('');
     const [loading, setLoading] = useState(false);
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
+
+    // Inicjalizacja dat z parametrów URL lub dzisiejszej daty
+    useEffect(() => {
+        const startParam = searchParams.get('start');
+        const endParam = searchParams.get('end');
+
+        const formatDateForInput = (date: Date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        };
+
+        if (startParam) {
+            const startDate = new Date(startParam);
+            setStart(formatDateForInput(startDate));
+
+            if (endParam) {
+                const endDate = new Date(endParam);
+                setEnd(formatDateForInput(endDate));
+            } else {
+                // Jeśli nie ma end, ustaw na godzinę później
+                const endDate = new Date(startDate);
+                endDate.setHours(endDate.getHours() + 1);
+                setEnd(formatDateForInput(endDate));
+            }
+        } else {
+            // Domyślne wartości - dzisiejsza data
+            const now = new Date();
+            setStart(formatDateForInput(now));
+
+            const endDate = new Date(now);
+            endDate.setHours(endDate.getHours() + 1);
+            setEnd(formatDateForInput(endDate));
+        }
+    }, [searchParams]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -49,7 +87,7 @@ export function AddCalendarEventPage() {
                 start: adjustedStartDate.toISOString(),
                 end: adjustedEndDate.toISOString(),
             });
-            openModal({ type: 'success', title: 'Sukces', message: 'Wydarzenie zostało pomyślnie dodane.' });
+            openToast('Wydarzenie zostało pomyślnie dodane.', 'success');
             navigate('/wydarzenia');
         } catch {
             // Błąd zostanie obsłużony przez interceptor Axios
@@ -98,7 +136,14 @@ export function AddCalendarEventPage() {
                             required
                         />
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
+                        <button
+                            type="button"
+                            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                            onClick={() => navigate('/wydarzenia')}
+                        >
+                            Powrót
+                        </button>
                         <button
                             type="submit"
                             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"

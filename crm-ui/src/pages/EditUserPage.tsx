@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 // Definicja typów dla przejrzystości
 type Role = {
@@ -16,11 +17,10 @@ type UserFormData = {
 };
 
 export function EditUserPage() {
-    // Pobieranie ID użytkownika z URL, np. /users/101/edit
+    const { user } = useAuth(); // hook zawsze wywoływany
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
 
-    // Stany formularza i komunikaty
     const [formData, setFormData] = useState<UserFormData>({});
     const [roles, setRoles] = useState<Role[]>([]);
     const [success, setSuccess] = useState<string | null>(null);
@@ -30,13 +30,15 @@ export function EditUserPage() {
     const api = import.meta.env.VITE_API_URL;
     const token = localStorage.getItem('token');
 
-    // Efekt do pobrania danych użytkownika i ról po załadowaniu strony
+    // Jeśli użytkownik nie ma uprawnień, zatrzymaj się po hookach
+    const isRestricted = user?.role === 'Sprzedawca';
+
+    // Pobieranie danych użytkownika i ról
     useEffect(() => {
-        if (!id) return; // Zabezpieczenie, jeśli ID nie jest dostępne
+        if (!id || isRestricted) return;
 
         const fetchData = async () => {
             try {
-                // Równoległe pobieranie danych użytkownika i listy ról
                 const [userResponse, rolesResponse] = await Promise.all([
                     axios.get(`${api}/auth/users/${id}`, {
                         headers: { Authorization: `Bearer ${token}` },
@@ -46,7 +48,6 @@ export function EditUserPage() {
                     })
                 ]);
 
-                // Ustawienie danych formularza na podstawie odpowiedzi API
                 const userData = userResponse.data;
                 setFormData({
                     username: userData.username,
@@ -54,7 +55,6 @@ export function EditUserPage() {
                     roleId: userData.roleId,
                 });
 
-                // Ustawienie listy ról
                 const rolesData = rolesResponse.data;
                 if (rolesData && Array.isArray((rolesData as any).$values)) {
                     setRoles((rolesData as any).$values);
@@ -74,9 +74,9 @@ export function EditUserPage() {
         };
 
         fetchData();
-    }, [id, api, token]); // Zależności efektu
+    }, [id, api, token, isRestricted]);
 
-    // Obsługa zmian w polach tekstowych
+    // Obsługa zmian pól tekstowych
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({
@@ -93,7 +93,7 @@ export function EditUserPage() {
         }));
     };
 
-    // Obsługa wysłania formularza
+    // Obsługa formularza
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -108,15 +108,18 @@ export function EditUserPage() {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setSuccess('✅ Użytkownik zaktualizowany pomyślnie!');
-            // Opcjonalnie: przekieruj po chwili
-            setTimeout(() => navigate('/users'), 2000); // Przekierowanie na listę użytkowników
+            setTimeout(() => navigate('/uzytkownicy'), 2000);
         } catch (err) {
             console.error('Błąd aktualizacji użytkownika:', err);
             setError('❌ Błąd aktualizacji użytkownika.');
         }
     };
 
-    // Wyświetlanie stanu ładowania
+    // Render — najpierw ograniczenia, potem ładowanie, potem formularz
+    if (isRestricted) {
+        return <div className="p-6 text-center text-red-500">Brak dostępu do tej sekcji.</div>;
+    }
+
     if (loading) {
         return <div className="p-6 text-center">Ładowanie...</div>;
     }

@@ -11,17 +11,21 @@ interface Group {
 
 export function GroupsPage() {
     const [groups, setGroups] = useState<Group[]>([]);
+    const [filteredGroups, setFilteredGroups] = useState<Group[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [newGroupName, setNewGroupName] = useState('');
     const [newGroupDesc, setNewGroupDesc] = useState('');
+    const [search, setSearch] = useState('');
     const api = import.meta.env.VITE_API_URL;
 
     const fetchGroups = async () => {
         const token = localStorage.getItem('token');
         try {
             const response = await axios.get(`${api}/groups`, { headers: { Authorization: `Bearer ${token}` } });
-            setGroups(response.data.$values || response.data);
+            const groupsData = response.data.$values || response.data;
+            setGroups(groupsData);
+            setFilteredGroups(groupsData);
         } catch {
             setError("Nie udało się pobrać grup lub nie masz uprawnień.");
         } finally {
@@ -32,6 +36,15 @@ export function GroupsPage() {
     useEffect(() => {
         fetchGroups();
     }, []);
+
+    // Filtrowanie grup na podstawie wyszukiwania
+    useEffect(() => {
+        const filtered = groups.filter(group =>
+            group.name.toLowerCase().includes(search.toLowerCase()) ||
+            (group.description && group.description.toLowerCase().includes(search.toLowerCase()))
+        );
+        setFilteredGroups(filtered);
+    }, [groups, search]);
 
     const handleAddGroup = async (e: FormEvent) => {
         e.preventDefault();
@@ -99,9 +112,27 @@ export function GroupsPage() {
                 </form>
             </div>
 
+            {/* Wyszukiwarka */}
+            <div className="mb-6">
+                <div className="relative">
+                    <input
+                        type="text"
+                        placeholder="Wyszukaj grupy..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full px-4 py-2 pl-10 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
             {/* Lista istniejących grup */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {groups.map(group => (
+                {filteredGroups.map(group => (
                     <div key={group.id} className="bg-gray-800 p-5 rounded-lg shadow-lg flex flex-col justify-between">
                         <div>
                             <h3 className="text-lg font-bold text-white">{group.name}</h3>

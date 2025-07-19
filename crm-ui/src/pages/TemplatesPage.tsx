@@ -19,6 +19,8 @@ interface ApiResponse<T> {
 
 export function TemplatesPage() {
     const [templates, setTemplates] = useState<Template[]>([]);
+    const [filteredTemplates, setFilteredTemplates] = useState<Template[]>([]);
+    const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const { openModal } = useModal();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -29,6 +31,7 @@ export function TemplatesPage() {
             const response = await api.get<ApiResponse<Template> | Template[]>('/Templates');
             const data = '$values' in response.data ? response.data.$values : response.data;
             setTemplates(data);
+            setFilteredTemplates(data);
         } catch {
             openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się załadować szablonów.' });
         } finally {
@@ -39,6 +42,15 @@ export function TemplatesPage() {
     useEffect(() => {
         fetchTemplates();
     }, [fetchTemplates]);
+
+    // Filtrowanie szablonów na podstawie wyszukiwania
+    useEffect(() => {
+        const filtered = templates.filter(template =>
+            template.name.toLowerCase().includes(search.toLowerCase()) ||
+            template.fileName.toLowerCase().includes(search.toLowerCase())
+        );
+        setFilteredTemplates(filtered);
+    }, [templates, search]);
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -117,9 +129,28 @@ export function TemplatesPage() {
                     accept=".doc,.docx"
                 />
             </div>
+
+            {/* Wyszukiwarka */}
+            <div className="mb-6">
+                <div className="relative">
+                    <input
+                        type="text"
+                        placeholder="Wyszukaj szablony..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full px-4 py-2 pl-10 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
             <div className="bg-gray-800 shadow-lg rounded-lg overflow-hidden">
                 <ul className="divide-y divide-gray-700">
-                    {templates.map((template) => (
+                    {filteredTemplates.map((template) => (
                         <li key={template.id} className="p-4 flex justify-between items-center hover:bg-gray-700/50">
                             <div>
                                 <p className="font-semibold text-lg">{template.name}</p>

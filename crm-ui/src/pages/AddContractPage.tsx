@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { useModal } from '../context/ModalContext';
+import ClientSelectModal from '../components/ClientSelectModal';
 
 interface Customer {
     id: number;
@@ -28,6 +29,8 @@ export function AddContractPage() {
     const navigate = useNavigate();
     const { openModal } = useModal();
     const api = import.meta.env.VITE_API_URL;
+    const [showClientModal, setShowClientModal] = useState(false);
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
     useEffect(() => {
         const fetchCustomers = async () => {
@@ -100,10 +103,20 @@ export function AddContractPage() {
                     </div>
                     <div>
                         <label htmlFor="customerId" className="block text-sm font-medium text-gray-300 mb-1">Klient</label>
-                        <select id="customerId" name="customerId" value={formData.customerId} onChange={handleChange} required className="w-full p-2 rounded bg-gray-700 text-white">
-                            <option value="">-- Wybierz klienta --</option>
-                            {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
+                        <button type="button" onClick={() => setShowClientModal(true)} className="w-full p-2 rounded bg-gray-700 text-white border border-gray-600 text-left">
+                            {selectedCustomer ? `Klient: ${selectedCustomer.name}` : '-- Wybierz klienta --'}
+                        </button>
+                        {showClientModal && (
+                            <ClientSelectModal
+                                clients={customers}
+                                onSelect={client => {
+                                    setSelectedCustomer(client);
+                                    setFormData(prev => ({ ...prev, customerId: client.id.toString() }));
+                                    setShowClientModal(false);
+                                }}
+                                onClose={() => setShowClientModal(false)}
+                            />
+                        )}
                     </div>
                 </div>
 

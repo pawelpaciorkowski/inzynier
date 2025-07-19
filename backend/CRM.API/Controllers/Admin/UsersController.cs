@@ -9,7 +9,6 @@ namespace CRM.API.Controllers.Admin
 {
     [ApiController]
     [Route("api/admin/[controller]")]
-    [Authorize(Roles = "Admin")]
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
@@ -19,6 +18,7 @@ namespace CRM.API.Controllers.Admin
             _userService = userService;
         }
 
+        [Authorize(Roles = "Admin,Sprzedawca")]
         [HttpGet]
         public async Task<ActionResult<List<UserWithRoleDto>>> GetAll()
         {
@@ -36,6 +36,7 @@ namespace CRM.API.Controllers.Admin
         }
 
 
+        [Authorize(Roles = "Admin")]
         [HttpGet("{id}")]
         public async Task<ActionResult<CRM.Data.Models.User>> GetById(int id)
         {
@@ -44,6 +45,7 @@ namespace CRM.API.Controllers.Admin
             return Ok(user);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<UserWithRoleDto>> Create(CreateUserDto dto)
         {
@@ -60,6 +62,7 @@ namespace CRM.API.Controllers.Admin
 
 
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, UpdateUserDto dto)
         {
@@ -69,6 +72,7 @@ namespace CRM.API.Controllers.Admin
         }
 
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

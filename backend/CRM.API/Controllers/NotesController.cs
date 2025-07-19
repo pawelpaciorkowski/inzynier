@@ -76,5 +76,23 @@ namespace CRM.API.Controllers
             await _context.SaveChangesAsync();
             return CreatedAtAction(nameof(GetNotes), new { id = note.Id }, note);
         }
+
+        // --- Metoda DELETE - Usuwanie notatki ---
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteNote(int id)
+        {
+            var userId = GetCurrentUserId();
+            var note = await _context.Notes
+                .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId);
+
+            if (note == null)
+            {
+                return NotFound();
+            }
+
+            _context.Notes.Remove(note);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
     }
 }

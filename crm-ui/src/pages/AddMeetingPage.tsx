@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useModal } from '../context/ModalContext';
+import ClientSelectModal from '../components/ClientSelectModal';
 
 interface Customer {
     id: number;
@@ -10,27 +11,62 @@ interface Customer {
 }
 
 export function AddMeetingPage() {
+    const api = import.meta.env.VITE_API_URL;
+
     const navigate = useNavigate();
     const [topic, setTopic] = useState('');
-    const [scheduledAt, setScheduledAt] = useState<string>(format(new Date(), 'yyyy-MM-ddTHH:mm'));
+    const [scheduledAt, setScheduledAt] = useState<string>(
+        format(new Date(), "yyyy-MM-dd'T'HH:mm")
+    );
+
     const [customerId, setCustomerId] = useState<number | string>('');
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(false);
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
+    const [showClientModal, setShowClientModal] = useState(false);
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
     useEffect(() => {
+        type CustomerWrapper = {
+            $values: Customer[];
+        };
+
         const fetchCustomers = async () => {
+            const token = localStorage.getItem('token');
             try {
-                const response = await axios.get<any>('/api/Customers');
-                const customersData = response.data.$values || response.data;
-                setCustomers(customersData);
-            } catch (err: any) {
-                openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się pobrać listy klientów.' });
+                const res = await axios.get(`${api}/customers`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                const data = res.data;
+
+                if (
+                    data &&
+                    typeof data === 'object' &&
+                    '$values' in data &&
+                    Array.isArray((data as CustomerWrapper).$values)
+                ) {
+                    setCustomers((data as CustomerWrapper).$values);
+                } else if (Array.isArray(data)) {
+                    setCustomers(data);
+                } else {
+                    console.warn('Nieoczekiwany format danych klientów:', data);
+                    setCustomers([]);
+                }
+
+            } catch (err) {
+                openModal({
+                    type: 'error',
+                    title: 'Błąd',
+                    message: 'Nie udało się pobrać klientów.'
+                });
                 console.error('Błąd pobierania klientów:', err);
             }
         };
+
         fetchCustomers();
-    }, []);
+    }, [api, openModal]);
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -51,9 +87,9 @@ export function AddMeetingPage() {
                 scheduledAt: adjustedScheduledAt.toISOString(),
                 customerId: parseInt(customerId as string),
             });
-            openModal({ type: 'success', title: 'Sukces', message: 'Spotkanie zostało pomyślnie dodane.' });
+            openToast('Spotkanie zostało pomyślnie dodane.', 'success');
             navigate('/spotkania');
-        } catch (err: any) {
+        } catch {
             // Błąd zostanie obsłużony przez interceptor Axios
         } finally {
             setLoading(false);
@@ -89,22 +125,33 @@ export function AddMeetingPage() {
                     </div>
                     <div className="mb-4">
                         <label htmlFor="customerId" className="block text-gray-300 text-sm font-bold mb-2">Klient:</label>
-                        <select
-                            id="customerId"
-                            className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
-                            value={customerId}
-                            onChange={(e) => setCustomerId(e.target.value)}
-                            required
+                        <button
+                            type="button"
+                            onClick={() => setShowClientModal(true)}
+                            className="w-full py-2 px-3 rounded bg-gray-700 text-white border border-gray-600 text-left"
                         >
-                            <option value="">-- Wybierz klienta --</option>
-                            {customers.map(customer => (
-                                <option key={customer.id} value={customer.id}>
-                                    {customer.name}
-                                </option>
-                            ))}
-                        </select>
+                            {selectedCustomer ? `Klient: ${selectedCustomer.name}` : '-- Wybierz klienta --'}
+                        </button>
+                        {showClientModal && (
+                            <ClientSelectModal
+                                clients={customers}
+                                onSelect={client => {
+                                    setSelectedCustomer(client);
+                                    setCustomerId(client.id);
+                                    setShowClientModal(false);
+                                }}
+                                onClose={() => setShowClientModal(false)}
+                            />
+                        )}
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
+                        <button
+                            type="button"
+                            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                            onClick={() => navigate('/spotkania')}
+                        >
+                            Powrót
+                        </button>
                         <button
                             type="submit"
                             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"

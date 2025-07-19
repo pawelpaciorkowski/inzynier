@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import api from '../services/api'; // Używamy nowej instancji axios
 import { useModal } from '../context/ModalContext'; // Importujemy hooka do modali
 import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
+import Pagination from '../components/Pagination';
 
 // Definicja typu dla klienta
 interface Client {
@@ -12,6 +13,11 @@ interface Client {
     name: string;
     email: string;
     phone: string;
+    company?: string;
+    address?: string;
+    nip?: string;
+    representative?: string;
+    createdAt?: string;
 }
 
 interface ApiResponse<T> {
@@ -22,13 +28,23 @@ export default function ClientsPage() {
     const [clients, setClients] = useState<Client[]>([]);
     const [loading, setLoading] = useState(true);
     const { openModal } = useModal(); // Używamy globalnego modala
+    const [search, setSearch] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const resultsPerPage = 10;
 
     const fetchClients = useCallback(async () => {
         setLoading(true);
         try {
             const response = await api.get<ApiResponse<Client> | Client[]>('/Customers');
             const data = '$values' in response.data ? response.data.$values : response.data;
-            setClients(data);
+            // Sortowanie po stronie frontu na wypadek, gdyby backend nie gwarantował
+            const sorted = [...data].sort((a, b) => {
+                if (a.createdAt && b.createdAt) {
+                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                }
+                return 0;
+            });
+            setClients(sorted);
         } catch (error) {
             console.error("Błąd pobierania klientów:", error);
             openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się załadować listy klientów.' });
@@ -59,6 +75,29 @@ export default function ClientsPage() {
         });
     };
 
+    // Filtrowanie klientów po wyszukiwaniu
+    const filteredClients = clients.filter(client => {
+        const q = search.toLowerCase();
+        return (
+            client.name.toLowerCase().includes(q) ||
+            (client.email && client.email.toLowerCase().includes(q)) ||
+            (client.company && client.company.toLowerCase().includes(q)) ||
+            (client.phone && client.phone.toLowerCase().includes(q)) ||
+            (client.address && client.address.toLowerCase().includes(q)) ||
+            (client.nip && client.nip.toLowerCase().includes(q)) ||
+            (client.representative && client.representative.toLowerCase().includes(q))
+        );
+    });
+
+    // PAGINACJA
+    const totalPages = Math.ceil(filteredClients.length / resultsPerPage);
+    const paginatedClients = filteredClients.slice((currentPage - 1) * resultsPerPage, currentPage * resultsPerPage);
+
+    // Resetuj stronę do 1 po zmianie wyszukiwania
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search]);
+
     if (loading) return <p className="p-6 text-white text-center">Ładowanie...</p>;
 
     return (
@@ -72,14 +111,28 @@ export default function ClientsPage() {
                     </button>
                 </Link>
             </div>
-
+            {/* WYSZUKIWARKA */}
+            <div className="mb-6">
+                <input
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Wyszukaj klienta po imieniu, emailu, firmie..."
+                    className="w-full md:w-1/2 p-2 rounded bg-gray-700 text-white border border-gray-600"
+                />
+            </div>
             <ul className="space-y-4">
-                {clients.map(client => (
+                {paginatedClients.map(client => (
                     <li key={client.id} className="bg-gray-800 p-4 rounded-lg shadow-md flex justify-between items-center">
                         <div>
                             <p className="text-xl font-semibold">{client.name}</p>
                             <p className="text-gray-400">{client.email}</p>
                             <p className="text-gray-400">{client.phone}</p>
+                            {client.company && <p className="text-gray-400">Firma: {client.company}</p>}
+                            {client.address && <p className="text-gray-400">Adres: {client.address}</p>}
+                            {client.nip && <p className="text-gray-400">NIP: {client.nip}</p>}
+                            {client.representative && <p className="text-gray-400">Przedstawiciel: {client.representative}</p>}
+                            {client.createdAt && <p className="text-gray-400 text-xs">Dodano: {new Date(client.createdAt).toLocaleString()}</p>}
                         </div>
                         <div className="flex items-center space-x-3">
                             <Link to={`/klienci/edytuj/${client.id}`} className="p-2 text-gray-400 hover:text-yellow-400 transition-colors" title="Edytuj">
@@ -92,7 +145,11 @@ export default function ClientsPage() {
                     </li>
                 ))}
             </ul>
-            {/* Usunęliśmy stąd lokalny, zduplikowany modal */}
+            <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+            />
         </div>
     );
 }

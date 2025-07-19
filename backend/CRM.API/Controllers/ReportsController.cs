@@ -47,8 +47,8 @@ namespace CRM.API.Controllers
             return Ok(reportData);
         }
 
+        [Authorize(Roles = "Admin,Manager,Sprzedawca")]
         [HttpGet("export-customers")]
-        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> ExportCustomers()
         {
             var customers = await _context.Customers.ToListAsync();
@@ -56,8 +56,8 @@ namespace CRM.API.Controllers
             return File(csvBytes, "text/csv", "customers.csv");
         }
 
+        [Authorize(Roles = "Admin,Manager,Sprzedawca")]
         [HttpGet("export-notes")]
-        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> ExportNotes()
         {
             var notes = await _context.Notes.ToListAsync();
@@ -65,8 +65,8 @@ namespace CRM.API.Controllers
             return File(csvBytes, "text/csv", "notes.csv");
         }
 
+        [Authorize(Roles = "Admin,Manager,Sprzedawca")]
         [HttpGet("export-invoices")]
-        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> ExportInvoices()
         {
             var invoices = await _context.Invoices.ToListAsync();
@@ -74,8 +74,8 @@ namespace CRM.API.Controllers
             return File(csvBytes, "text/csv", "invoices.csv");
         }
 
+        [Authorize(Roles = "Admin,Manager,Sprzedawca")]
         [HttpGet("export-payments")]
-        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> ExportPayments()
         {
             var payments = await _context.Payments.ToListAsync();
@@ -83,8 +83,8 @@ namespace CRM.API.Controllers
             return File(csvBytes, "text/csv", "payments.csv");
         }
 
+        [Authorize(Roles = "Admin,Manager,Sprzedawca")]
         [HttpGet("export-contracts")]
-        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> ExportContracts()
         {
             var contracts = await _context.Contracts.ToListAsync();

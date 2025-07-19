@@ -3,6 +3,7 @@ import axios from 'axios';
 import { format } from 'date-fns';
 import { useModal } from '../context/ModalContext';
 import { BellIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { useOutletContext } from 'react-router-dom';
 
 interface Notification {
     id: number;
@@ -17,6 +18,7 @@ export function NotificationsPage() {
     const [error, setError] = useState<string | null>(null);
     const { openModal } = useModal();
     const api = import.meta.env.VITE_API_URL;
+    const { fetchNotifications: globalFetchNotifications } = useOutletContext<{ fetchNotifications: () => void }>();
 
     const fetchNotifications = useCallback(async () => {
         setLoading(true);
@@ -46,11 +48,28 @@ export function NotificationsPage() {
             await axios.post(`${api}/Notifications/mark-as-read/${id}`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            openModal({ type: 'success', title: 'Sukces', message: 'Powiadomienie oznaczone jako przeczytane.' });
-            fetchNotifications(); // Odśwież listę powiadomień
+            fetchNotifications(); // Odśwież lokalnie
+            globalFetchNotifications(); // Odśwież licznik w Layout
         } catch (err) {
             console.error("Błąd oznaczania jako przeczytane:", err);
-            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się oznaczyć powiadomienia jako przeczytanego.' });
+            // Możesz dodać openModal z błędem, jeśli chcesz
+        }
+    };
+
+    // Dodaj funkcję do masowego oznaczania
+    const handleMarkAllAsRead = async () => {
+        const unread = notifications.filter(n => !n.isRead);
+        const token = localStorage.getItem('token');
+        try {
+            await Promise.all(unread.map(n =>
+                axios.post(`${api}/Notifications/mark-as-read/${n.id}`, {}, {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+            ));
+            fetchNotifications();
+            globalFetchNotifications();
+        } catch (err) {
+            console.error("Błąd masowego oznaczania jako przeczytane:", err);
         }
     };
 
@@ -70,6 +89,15 @@ export function NotificationsPage() {
     return (
         <div className="p-6 text-white">
             <h1 className="text-3xl font-bold mb-6">🔔 Powiadomienia</h1>
+
+            {notifications.length > 0 && notifications.some(n => !n.isRead) && (
+                <button
+                    onClick={handleMarkAllAsRead}
+                    className="mb-4 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow"
+                >
+                    Oznacz wszystkie jako przeczytane
+                </button>
+            )}
 
             {notifications.length === 0 ? (
                 <div className="text-center p-8 bg-gray-800 rounded-lg shadow-lg">

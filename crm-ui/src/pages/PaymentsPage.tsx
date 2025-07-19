@@ -17,6 +17,8 @@ interface Payment {
 
 export function PaymentsPage() {
     const [payments, setPayments] = useState<Payment[]>([]);
+    const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
+    const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { openModal } = useModal();
@@ -28,6 +30,7 @@ export function PaymentsPage() {
             const response = await axios.get<any>('/api/Payments');
             const paymentsData = response.data.$values || response.data;
             setPayments(paymentsData);
+            setFilteredPayments(paymentsData);
         } catch (err: any) {
             setError('Nie udało się pobrać listy płatności.');
             console.error('Błąd pobierania płatności:', err);
@@ -39,6 +42,16 @@ export function PaymentsPage() {
     useEffect(() => {
         fetchPayments();
     }, [fetchPayments]);
+
+    // Filtrowanie płatności na podstawie wyszukiwania
+    useEffect(() => {
+        const filtered = payments.filter(payment =>
+            payment.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
+            payment.amount.toString().includes(search) ||
+            payment.id.toString().includes(search)
+        );
+        setFilteredPayments(filtered);
+    }, [payments, search]);
 
     const handleDeletePayment = async (id: number) => {
         openModal({
@@ -86,7 +99,25 @@ export function PaymentsPage() {
                     Dodaj Płatność
                 </Link>
             </div>
-            {payments.length === 0 ? (
+
+            {/* Wyszukiwarka */}
+            <div className="mb-6">
+                <div className="relative">
+                    <input
+                        type="text"
+                        placeholder="Wyszukaj płatności..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full px-4 py-2 pl-10 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            {filteredPayments.length === 0 ? (
                 <div className="bg-gray-800 p-10 rounded-lg text-center flex flex-col items-center shadow-lg">
                     <CreditCardIcon className="w-16 h-16 text-blue-400 mb-4" />
                     <h2 className="text-2xl font-semibold mb-2">Brak Płatności</h2>
@@ -118,7 +149,7 @@ export function PaymentsPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {payments.map((payment) => (
+                            {filteredPayments.map((payment) => (
                                 <tr key={payment.id} className="hover:bg-gray-700">
                                     <td className="px-5 py-5 border-b border-gray-700 bg-gray-800 text-sm">
                                         {payment.id}

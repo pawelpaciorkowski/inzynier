@@ -34,7 +34,7 @@ export default function EditTaskScreen() {
             if (!token || !taskId) return;
             try {
                 const [customersRes, taskRes] = await Promise.all([
-                    axios.get(`/api/customers`),
+                    axios.get(`/api/Customers`),
                     axios.get(`/api/user/tasks/${taskId}`)
                 ]);
 

@@ -41,21 +41,23 @@ export const ReminderFormModal: React.FC<ReminderFormModalProps> = ({ currentRem
         const reminderData = {
             id: currentReminder?.id ?? 0,
             note,
-            remindAt: new Date(remindAt).toISOString(),
+            remindAt,
         };
 
         try {
             if (currentReminder) {
                 await axios.put(`/api/Reminders/${currentReminder.id}`, reminderData);
-                openModal({ type: 'success', title: 'Sukces', message: 'Przypomnienie zaktualizowane.' });
             } else {
                 await axios.post('/api/Reminders', reminderData);
-                openModal({ type: 'success', title: 'Sukces', message: 'Przypomnienie dodane.' });
             }
             onSaveSuccess();
             onClose();
-        } catch (err: any) {
-            openModal({ type: 'error', title: 'Błąd zapisu', message: err.response?.data?.message || 'Wystąpił błąd.' });
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                openModal({ type: 'error', title: 'Błąd zapisu', message: err.response?.data?.message || 'Wystąpił błąd.' });
+            } else {
+                openModal({ type: 'error', title: 'Błąd zapisu', message: 'Wystąpił błąd.' });
+            }
         }
     };
 

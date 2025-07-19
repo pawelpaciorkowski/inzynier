@@ -11,7 +11,7 @@ export function AddClientPage() {
     const [phone, setPhone] = useState('');
     const [company, setCompany] = useState('');
     const navigate = useNavigate();
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
     const api = import.meta.env.VITE_API_URL;
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -23,12 +23,8 @@ export function AddClientPage() {
             await axios.post(`${api}/customers`, newClient, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            openModal({
-                type: 'success',
-                title: 'Sukces!',
-                message: 'Nowy klient został pomyślnie dodany.',
-                onConfirm: () => navigate('/klienci')
-            });
+            navigate('/klienci');
+            openToast('Nowy klient został dodany.', 'success');
         } catch (err: any) {
             openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się dodać klienta.' });
         }
@@ -54,7 +50,10 @@ export function AddClientPage() {
                     <label htmlFor="company" className="block text-sm font-medium text-gray-300 mb-1">Firma</label>
                     <input id="company" type="text" value={company} onChange={e => setCompany(e.target.value)} className="w-full p-2 rounded bg-gray-700 text-white border-gray-600" />
                 </div>
-                <div className="flex justify-end pt-4">
+                <div className="flex justify-between pt-4">
+                    <button type="button" onClick={() => navigate('/klienci')} className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded transition-colors">
+                        Powrót
+                    </button>
                     <button type="submit" className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded transition-colors">
                         Zapisz klienta
                     </button>

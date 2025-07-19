@@ -33,8 +33,8 @@ namespace CRM.API.Controllers
                     a.Id,
                     a.Note,
                     a.CreatedAt,
-                    UserName = a.User.Username,
-                    CustomerName = a.Customer.Name
+                    UserName = a.User != null ? a.User.Username : "Nieznany użytkownik",
+                    CustomerName = a.Customer != null ? a.Customer.Name : "Nieznany klient"
                 })
                 .ToListAsync();
 

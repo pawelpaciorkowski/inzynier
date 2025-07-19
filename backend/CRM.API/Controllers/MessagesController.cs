@@ -1,6 +1,5 @@
 using CRM.Data;
 using CRM.Data.Models;
-using CRM.Data.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

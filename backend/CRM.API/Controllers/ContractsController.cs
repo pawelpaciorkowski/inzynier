@@ -31,8 +31,32 @@ public class CreateContractDto
 // DTO do edycji kontraktu
 public class UpdateContractDto
 {
+    public int Id { get; set; }
     public string Title { get; set; } = null!;
+    public string ContractNumber { get; set; } = null!;
+    public string PlaceOfSigning { get; set; } = null!;
     public DateTime SignedAt { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public decimal? NetAmount { get; set; }
+    public int? PaymentTermDays { get; set; }
+    public string ScopeOfServices { get; set; } = null!;
+    public int CustomerId { get; set; }
+}
+
+// DTO do szczegółów kontraktu
+public class ContractDetailDto
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = null!;
+    public string ContractNumber { get; set; } = null!;
+    public string PlaceOfSigning { get; set; } = null!;
+    public string SignedAt { get; set; } = null!;
+    public string? StartDate { get; set; }
+    public string? EndDate { get; set; }
+    public decimal? NetAmount { get; set; }
+    public int? PaymentTermDays { get; set; }
+    public string ScopeOfServices { get; set; } = null!;
     public int CustomerId { get; set; }
 }
 
@@ -77,16 +101,33 @@ public class ContractsController : ControllerBase
 
     // GET: api/contracts/5
     [HttpGet("{id}")]
-    public async Task<ActionResult<Contract>> GetContract(int id)
+    public async Task<ActionResult<ContractDetailDto>> GetContract(int id)
     {
-        var contract = await _context.Contracts.FindAsync(id);
+        var contract = await _context.Contracts
+            .Include(c => c.Customer)
+            .FirstOrDefaultAsync(c => c.Id == id);
 
         if (contract == null)
         {
             return NotFound();
         }
 
-        return contract;
+        var contractDto = new ContractDetailDto
+        {
+            Id = contract.Id,
+            Title = contract.Title,
+            ContractNumber = contract.ContractNumber ?? "",
+            PlaceOfSigning = contract.PlaceOfSigning ?? "",
+            SignedAt = contract.SignedAt.ToString("yyyy-MM-ddTHH:mm:ss"),
+            StartDate = contract.StartDate?.ToString("yyyy-MM-ddTHH:mm:ss"),
+            EndDate = contract.EndDate?.ToString("yyyy-MM-ddTHH:mm:ss"),
+            NetAmount = contract.NetAmount,
+            PaymentTermDays = contract.PaymentTermDays,
+            ScopeOfServices = contract.ScopeOfServices ?? "",
+            CustomerId = contract.CustomerId
+        };
+
+        return Ok(contractDto);
     }
 
     // POST: api/contracts
@@ -113,7 +154,7 @@ public class ContractsController : ControllerBase
 
     // PUT: api/contracts/5
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateContract(int id, UpdateContractDto contractDto)
+    public async Task<IActionResult> UpdateContract(int id, [FromBody] UpdateContractDto contractDto)
     {
         var contractToUpdate = await _context.Contracts.FindAsync(id);
         if (contractToUpdate == null)
@@ -122,7 +163,14 @@ public class ContractsController : ControllerBase
         }
 
         contractToUpdate.Title = contractDto.Title;
+        contractToUpdate.ContractNumber = contractDto.ContractNumber;
+        contractToUpdate.PlaceOfSigning = contractDto.PlaceOfSigning;
         contractToUpdate.SignedAt = contractDto.SignedAt;
+        contractToUpdate.StartDate = contractDto.StartDate;
+        contractToUpdate.EndDate = contractDto.EndDate;
+        contractToUpdate.NetAmount = contractDto.NetAmount;
+        contractToUpdate.PaymentTermDays = contractDto.PaymentTermDays;
+        contractToUpdate.ScopeOfServices = contractDto.ScopeOfServices;
         contractToUpdate.CustomerId = contractDto.CustomerId;
 
         await _context.SaveChangesAsync();

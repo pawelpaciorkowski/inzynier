@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useModal } from '../context/ModalContext';
+import ClientSelectModal from '../components/ClientSelectModal';
 
 interface Customer {
     id: number;
@@ -19,7 +20,9 @@ export function AddNotePage() {
     const [customerId, setCustomerId] = useState<string>('');
     const [customers, setCustomers] = useState<Customer[]>([]);
     const navigate = useNavigate();
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
+    const [showClientModal, setShowClientModal] = useState(false);
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
     useEffect(() => {
         const fetchCustomers = async () => {
@@ -46,7 +49,7 @@ export function AddNotePage() {
                 content,
                 customerId: parseInt(customerId)
             });
-            openModal({ type: 'success', title: 'Sukces', message: 'Notatka została dodana.' });
+            openToast('Notatka została dodana.', 'success');
             navigate('/notatki');
         } catch (err: any) {
             openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się dodać notatki.' });
@@ -60,18 +63,20 @@ export function AddNotePage() {
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
                         <label htmlFor="customerId" className="block text-gray-300 text-sm font-bold mb-2">Klient:</label>
-                        <select
-                            id="customerId"
-                            value={customerId}
-                            onChange={(e) => setCustomerId(e.target.value)}
-                            className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
-                            required
-                        >
-                            <option value="">-- Wybierz klienta --</option>
-                            {customers.map(customer => (
-                                <option key={customer.id} value={customer.id}>{customer.name}</option>
-                            ))}
-                        </select>
+                        <button type="button" onClick={() => setShowClientModal(true)} className="w-full py-2 px-3 rounded bg-gray-700 text-white border border-gray-600 text-left">
+                            {selectedCustomer ? `Klient: ${selectedCustomer.name}` : '-- Wybierz klienta --'}
+                        </button>
+                        {showClientModal && (
+                            <ClientSelectModal
+                                clients={customers}
+                                onSelect={client => {
+                                    setSelectedCustomer(client);
+                                    setCustomerId(client.id.toString());
+                                    setShowClientModal(false);
+                                }}
+                                onClose={() => setShowClientModal(false)}
+                            />
+                        )}
                     </div>
                     <div className="mb-4">
                         <label htmlFor="content" className="block text-gray-300 text-sm font-bold mb-2">Treść notatki:</label>
@@ -85,7 +90,14 @@ export function AddNotePage() {
                             required
                         />
                     </div>
-                    <div className="flex items-center justify-end">
+                    <div className="flex items-center justify-between gap-2">
+                        <button
+                            type="button"
+                            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                            onClick={() => navigate('/notatki')}
+                        >
+                            Powrót
+                        </button>
                         <button
                             type="submit"
                             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"

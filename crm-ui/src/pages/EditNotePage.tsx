@@ -23,7 +23,7 @@ export function EditNotePage() {
     const [customerId, setCustomerId] = useState<number | undefined>(undefined);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const navigate = useNavigate();
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
 
     useEffect(() => {
         const fetchNoteAndCustomers = async () => {
@@ -34,7 +34,16 @@ export function EditNotePage() {
 
                 // Fetch customers
                 const customersResponse = await axios.get<Customer[]>('/api/Customers');
-                setCustomers(customersResponse.data);
+                const customerData = customersResponse.data;
+                let customersData: Customer[] = [];
+
+                if (customerData && typeof customerData === 'object' && '$values' in customerData && Array.isArray(customerData.$values)) {
+                    customersData = customerData.$values;
+                } else if (Array.isArray(customerData)) {
+                    customersData = customerData;
+                }
+
+                setCustomers(customersData);
             } catch (err) {
                 console.error('Failed to fetch note or customers:', err);
                 let errorMessage = 'Nie udało się pobrać danych notatki lub klientów.';
@@ -57,7 +66,7 @@ export function EditNotePage() {
 
         try {
             await axios.put(`/api/Notes/${noteId}`, { id: noteId, content, customerId: customerId || null });
-            openModal({ type: 'success', title: 'Sukces', message: 'Notatka została zaktualizowana.' });
+            openToast('Notatka została zaktualizowana.', 'success');
             navigate('/notatki'); // Redirect to notes list
         } catch (err) {
             let errorMessage = 'Wystąpił nieoczekiwany błąd podczas aktualizacji notatki.';
@@ -99,13 +108,13 @@ export function EditNotePage() {
                         ))}
                     </select>
                 </div>
-                <div className="flex justify-end space-x-4">
+                <div className="flex items-center justify-between gap-2">
                     <button
                         type="button"
                         onClick={() => navigate('/notatki')}
                         className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
                     >
-                        Anuluj
+                        Powrót
                     </button>
                     <button
                         type="submit"

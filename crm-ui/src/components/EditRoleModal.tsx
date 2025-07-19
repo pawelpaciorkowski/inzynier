@@ -18,7 +18,7 @@ interface EditRoleModalProps {
 export const EditRoleModal: React.FC<EditRoleModalProps> = ({ role, onSaveSuccess, onClose }) => {
     const [editRoleName, setEditRoleName] = useState('');
     const [editRoleDesc, setEditRoleDesc] = useState('');
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
     const api = import.meta.env.VITE_API_URL;
     const token = localStorage.getItem('token');
 
@@ -36,11 +36,12 @@ export const EditRoleModal: React.FC<EditRoleModalProps> = ({ role, onSaveSucces
             }, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            openModal({ type: 'success', title: 'Sukces', message: 'Rola została zaktualizowana.' });
+            openToast('Rola została zaktualizowana.', 'success');
             onSaveSuccess();
             onClose();
-        } catch (err: any) {
-            openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się zaktualizować roli.' });
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Nie udało się zaktualizować roli.';
+            openModal({ type: 'error', title: 'Błąd', message: errorMessage });
         }
     };
 

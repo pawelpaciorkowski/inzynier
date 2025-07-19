@@ -18,6 +18,7 @@ interface ModalContextType {
     openModal: (options: ModalOptions) => void;
     closeModal: () => void;
     options: ModalOptions | null;
+    openToast: (message: string, type?: 'success' | 'error', duration?: number) => void;
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
@@ -25,6 +26,8 @@ const ModalContext = createContext<ModalContextType | undefined>(undefined);
 export const ModalProvider = ({ children }: { children: ReactNode }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [options, setOptions] = useState<ModalOptions | null>(null);
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean } | null>(null);
+    const [toastTimeout, setToastTimeout] = useState<NodeJS.Timeout | null>(null);
 
     const openModal = (newOptions: ModalOptions) => {
         setOptions(newOptions);
@@ -36,6 +39,16 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
         setTimeout(() => setOptions(null), 300);
     };
 
+    const openToast = (message: string, type: 'success' | 'error' = 'success', duration = 2500) => {
+        if (toastTimeout) clearTimeout(toastTimeout);
+        setToast({ message, type, visible: true });
+        const timeout = setTimeout(() => {
+            setToast(t => t ? { ...t, visible: false } : null);
+            setTimeout(() => setToast(null), 400); // fade out
+        }, duration);
+        setToastTimeout(timeout);
+    };
+
     const handleConfirm = () => {
         if (options?.onConfirm) {
             options.onConfirm();
@@ -44,7 +57,7 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <ModalContext.Provider value={{ isOpen, openModal, closeModal, options }}>
+        <ModalContext.Provider value={{ isOpen, openModal, closeModal, options, openToast }}>
             {children}
 
             {isOpen && options && (
@@ -132,6 +145,14 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
                             </>
                         )}
                     </div>
+                </div>
+            )}
+
+            {/* Globalny toast */}
+            {toast && toast.visible && (
+                <div className={`fixed top-6 right-6 z-[9999] px-6 py-3 rounded-lg shadow-lg text-white font-semibold text-lg transition-all duration-400 animate-fade-in ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}
+                    style={{ minWidth: 220, opacity: toast.visible ? 1 : 0 }}>
+                    {toast.type === 'success' ? '✅ ' : '❌ '}{toast.message}
                 </div>
             )}
         </ModalContext.Provider>

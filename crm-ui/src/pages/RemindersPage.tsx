@@ -29,7 +29,8 @@ export function RemindersPage() {
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const { openModal, closeModal } = useModal();
-
+    const [activeReminder, setActiveReminder] = useState<Reminder | null>(null);
+    const [shownReminders, setShownReminders] = useState<number[]>([]);
 
 
     const fetchReminders = useCallback(async () => {
@@ -57,6 +58,22 @@ export function RemindersPage() {
         setFilteredReminders(filtered);
     }, [searchQuery, reminders]);
 
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = new Date();
+            const nowStr = now.toISOString().slice(0, 16); // yyyy-MM-ddTHH:mm
+            const found = reminders.find(r =>
+                !shownReminders.includes(r.id) &&
+                r.remindAt.slice(0, 16) === nowStr
+            );
+            if (found) {
+                setActiveReminder(found);
+                setShownReminders(prev => [...prev, found.id]);
+            }
+        }, 30 * 1000); // sprawdzaj co 30 sekund
+        return () => clearInterval(interval);
+    }, [reminders, shownReminders]);
+
     // ✅ POPRAWKA: Ta funkcja jest kluczowa do otwierania modala
     const handleOpenFormModal = (reminder: Reminder | null) => {
         openModal({
@@ -81,7 +98,6 @@ export function RemindersPage() {
             onConfirm: async () => {
                 try {
                     await axios.delete(`/api/Reminders/${id}`);
-                    openModal({ type: 'success', title: 'Usunięto', message: 'Przypomnienie zostało usunięte.' });
                     fetchReminders();
                 } catch (err: any) {
                     openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się usunąć przypomnienia.' });
@@ -142,7 +158,16 @@ export function RemindersPage() {
                 </ul>
             </div>
 
-
+            {/* Toast w prawym górnym rogu */}
+            {activeReminder && (
+                <div className="fixed top-4 right-4 bg-blue-700 text-white p-4 rounded-lg shadow-lg z-50 animate-fade-in">
+                    <strong>⏰ Przypomnienie!</strong>
+                    <div className="mt-2">{activeReminder.note}</div>
+                    <button className="mt-3 bg-white text-blue-700 px-3 py-1 rounded" onClick={() => setActiveReminder(null)}>
+                        Zamknij
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

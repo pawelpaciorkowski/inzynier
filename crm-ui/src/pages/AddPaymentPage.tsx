@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import ClientSelectModal from '../components/ClientSelectModal';
 
 interface Invoice {
     id: number;
@@ -15,10 +15,20 @@ export function AddPaymentPage() {
     const navigate = useNavigate();
     const [invoiceId, setInvoiceId] = useState<number | string>('');
     const [amount, setAmount] = useState<string>('');
-    const [paidAt, setPaidAt] = useState<string>(format(new Date(), 'yyyy-MM-ddTHH:mm'));
+    const [paidAt, setPaidAt] = useState<string>(() => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    });
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
     useEffect(() => {
         const fetchInvoices = async () => {
@@ -67,20 +77,23 @@ export function AddPaymentPage() {
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
                         <label htmlFor="invoiceId" className="block text-gray-300 text-sm font-bold mb-2">Faktura:</label>
-                        <select
-                            id="invoiceId"
-                            className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
-                            value={invoiceId}
-                            onChange={(e) => setInvoiceId(e.target.value)}
-                            required
-                        >
-                            <option value="">-- Wybierz fakturę --</option>
-                            {invoices.map(invoice => (
-                                <option key={invoice.id} value={invoice.id}>
-                                    {invoice.invoiceNumber} (Kwota: {invoice.totalAmount.toFixed(2)} PLN)
-                                </option>
-                            ))}
-                        </select>
+                        <button type="button" onClick={() => setShowInvoiceModal(true)} className="w-full py-2 px-3 rounded bg-gray-700 text-white border border-gray-600 text-left">
+                            {selectedInvoice ? `Faktura: ${selectedInvoice.invoiceNumber} (Kwota: ${selectedInvoice.totalAmount.toFixed(2)} PLN)` : '-- Wybierz fakturę --'}
+                        </button>
+                        {showInvoiceModal && (
+                            <ClientSelectModal
+                                clients={invoices.map(inv => ({
+                                    id: inv.id,
+                                    name: `${inv.invoiceNumber} (Kwota: ${inv.totalAmount.toFixed(2)} PLN)`
+                                }))}
+                                onSelect={invoice => {
+                                    setSelectedInvoice(invoices.find(inv => inv.id === invoice.id) || null);
+                                    setInvoiceId(invoice.id);
+                                    setShowInvoiceModal(false);
+                                }}
+                                onClose={() => setShowInvoiceModal(false)}
+                            />
+                        )}
                     </div>
                     <div className="mb-4">
                         <label htmlFor="amount" className="block text-gray-300 text-sm font-bold mb-2">Kwota:</label>
@@ -106,7 +119,14 @@ export function AddPaymentPage() {
                         />
                     </div>
                     {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
+                        <button
+                            type="button"
+                            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                            onClick={() => navigate('/platnosci')}
+                        >
+                            Powrót
+                        </button>
                         <button
                             type="submit"
                             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"

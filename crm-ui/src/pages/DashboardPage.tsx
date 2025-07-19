@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import AdminDashboard from "../components/AdminDashboard";
 import UserDashboard from "../components/UserDashboard.tsx";
+import SalesDashboard from "../components/SalesDashboard";
 
 type AdminDashboardData = {
     contractsCount: number;
@@ -20,14 +21,46 @@ type UserDashboardData = {
     loginHistory: { date: string; ipAddress: string }[];
 };
 
+type SalesDashboardData = {
+    tasksCount: number;
+    messagesCount: number;
+    remindersCount: number;
+    recentMeetings: {
+        id: number;
+        topic: string;
+        scheduledAt: string;
+        customerName: string;
+    }[];
+    recentNotes: {
+        id: number;
+        content: string;
+        createdAt: string;
+        customerName: string;
+    }[];
+    recentCustomers: {
+        id: number;
+        name: string;
+        company: string | null;
+        createdAt: string;
+    }[];
+    recentTasks: {
+        id: number;
+        title: string;
+        dueDate: string | null;
+        completed: boolean;
+        customerName: string;
+    }[];
+};
+
 
 
 
 export default function DashboardPage() {
     const { user } = useAuth();
-    const [dashboardData, setDashboardData] = useState<AdminDashboardData | UserDashboardData | null>(null);
+    const [dashboardData, setDashboardData] = useState<AdminDashboardData | UserDashboardData | SalesDashboardData | null>(null);
 
     const isAdmin = user?.role?.toLowerCase() === "admin";
+    const isSales = user?.role?.toLowerCase() === "sprzedawca";
 
 
 
@@ -71,6 +104,8 @@ export default function DashboardPage() {
             <div className="max-w-7xl mx-auto bg-gray-850 bg-opacity-70 rounded-xl shadow-lg p-8 backdrop-blur-md border border-indigo-700">
                 {isAdmin ? (
                     <AdminDashboard data={dashboardData as AdminDashboardData} />
+                ) : isSales ? (
+                    <SalesDashboard data={dashboardData as SalesDashboardData} />
                 ) : (
                     <UserDashboard data={dashboardData as UserDashboardData} />
                 )}

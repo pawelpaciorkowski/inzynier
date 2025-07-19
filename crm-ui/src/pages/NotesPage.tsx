@@ -24,6 +24,8 @@ interface ApiResponse<T> {
 
 export function NotesPage() {
     const [notes, setNotes] = useState<Note[]>([]);
+    const [filteredNotes, setFilteredNotes] = useState<Note[]>([]);
+    const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { openModal } = useModal();
@@ -35,6 +37,7 @@ export function NotesPage() {
             const response = await axios.get<ApiResponse<Note> | Note[]>('/api/Notes');
             const data = '$values' in response.data ? response.data.$values : response.data;
             setNotes(data);
+            setFilteredNotes(data);
         } catch (err: unknown) {
             let errorMessage = 'Nie udało się pobrać notatek.';
             if (axios.isAxiosError(err) && err.response) {
@@ -50,6 +53,15 @@ export function NotesPage() {
         fetchNotes();
     }, [fetchNotes]);
 
+    // Filtrowanie notatek na podstawie wyszukiwania
+    useEffect(() => {
+        const filtered = notes.filter(note =>
+            note.content.toLowerCase().includes(search.toLowerCase()) ||
+            (note.customer?.name && note.customer.name.toLowerCase().includes(search.toLowerCase()))
+        );
+        setFilteredNotes(filtered);
+    }, [notes, search]);
+
     const handleDelete = (id: number) => {
         openModal({
             type: 'confirm',
@@ -58,7 +70,6 @@ export function NotesPage() {
             onConfirm: async () => {
                 try {
                     await axios.delete(`/api/Notes/${id}`);
-                    openModal({ type: 'success', title: 'Usunięto', message: 'Notatka została usunięta.' });
                     fetchNotes(); // Odśwież listę
                 } catch (err: unknown) {
                     let errorMessage = 'Nie udało się usunąć notatki.';
@@ -86,6 +97,24 @@ export function NotesPage() {
                 </Link>
             </div>
 
+            {/* Wyszukiwarka */}
+            <div className="mb-6">
+                <div className="relative">
+                    <input
+                        type="text"
+                        placeholder="Wyszukaj notatki..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full px-4 py-2 pl-10 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
             <div className="bg-gray-800 shadow-md rounded-lg overflow-hidden">
                 <table className="min-w-full leading-normal text-white">
                     <thead>
@@ -105,8 +134,8 @@ export function NotesPage() {
                         </tr>
                     </thead>
                     <tbody>
-                        {notes.length > 0 ? (
-                            notes.map((note) => (
+                        {filteredNotes.length > 0 ? (
+                            filteredNotes.map((note) => (
                                 <tr key={note.id} className="hover:bg-gray-700">
                                     <td className="px-5 py-4 border-b border-gray-600">
                                         {note.content.length > 100
@@ -139,7 +168,7 @@ export function NotesPage() {
                         ) : (
                             <tr>
                                 <td colSpan={4} className="text-center py-10 text-gray-500">
-                                    Brak notatek do wyświetlenia.
+                                    {search ? 'Brak notatek pasujących do wyszukiwania.' : 'Brak notatek do wyświetlenia.'}
                                 </td>
                             </tr>
                         )}

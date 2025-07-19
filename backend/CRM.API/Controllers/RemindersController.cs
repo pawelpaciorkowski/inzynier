@@ -74,17 +74,6 @@ namespace CRM.API.Controllers
             _context.Reminders.Add(reminder);
             await _context.SaveChangesAsync();
 
-            // Create a notification for the user
-            var notification = new Notification
-            {
-                UserId = userId,
-                Message = $"Nowe przypomnienie: {reminder.Note}",
-                CreatedAt = DateTime.UtcNow,
-                IsRead = false
-            };
-            _context.Notifications.Add(notification);
-            await _context.SaveChangesAsync();
-
             return CreatedAtAction("GetReminder", new { id = reminder.Id }, reminder);
         }
 
@@ -112,17 +101,6 @@ namespace CRM.API.Controllers
 
             try
             {
-                await _context.SaveChangesAsync();
-
-                // Create a notification for the user about the updated reminder
-                var notification = new Notification
-                {
-                    UserId = userId,
-                    Message = $"Przypomnienie zaktualizowane: {reminder.Note}",
-                    CreatedAt = DateTime.UtcNow,
-                    IsRead = false
-                };
-                _context.Notifications.Add(notification);
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)

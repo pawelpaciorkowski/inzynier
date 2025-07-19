@@ -17,8 +17,10 @@ interface Template { id: number; name: string; }
 
 export function ContractsPage() {
     const [contracts, setContracts] = useState<Contract[]>([]);
+    const [filteredContracts, setFilteredContracts] = useState<Contract[]>([]);
     const [templates, setTemplates] = useState<Template[]>([]);
     const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+    const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { openModal } = useModal();
@@ -34,7 +36,9 @@ export function ContractsPage() {
             ]);
 
             const contractsData = contractsRes.data;
-            setContracts(contractsData?.$values || (Array.isArray(contractsData) ? contractsData : []));
+            const contractsArray = contractsData?.$values || (Array.isArray(contractsData) ? contractsData : []);
+            setContracts(contractsArray);
+            setFilteredContracts(contractsArray);
 
             const templatesData = templatesRes.data;
             setTemplates(templatesData?.$values || (Array.isArray(templatesData) ? templatesData : []));
@@ -43,6 +47,17 @@ export function ContractsPage() {
     }, [api]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    // Filtrowanie kontraktów na podstawie wyszukiwania
+    useEffect(() => {
+        const filtered = contracts.filter(contract =>
+            contract.title.toLowerCase().includes(search.toLowerCase()) ||
+            (contract.contractNumber && contract.contractNumber.toLowerCase().includes(search.toLowerCase())) ||
+            contract.customerName.toLowerCase().includes(search.toLowerCase()) ||
+            (contract.netAmount && contract.netAmount.toString().includes(search))
+        );
+        setFilteredContracts(filtered);
+    }, [contracts, search]);
 
     const handleDeleteContract = async (id: number) => {
         openModal({
@@ -106,56 +121,76 @@ export function ContractsPage() {
             {error && <p className="text-center text-red-500">{error}</p>}
 
             {!loading && !error && (
-                <div className="bg-gray-800 shadow-md rounded-lg overflow-hidden">
-                    <table className="min-w-full leading-normal text-white">
-                        {/* Zaktualizowany nagłówek tabeli */}
-                        <thead>
-                            <tr>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Tytuł / Numer</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Klient</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Daty</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-right text-xs font-semibold uppercase tracking-wider">Wartość netto</th>
-                                <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-center text-xs font-semibold uppercase tracking-wider">Akcje</th>
-                            </tr>
-                        </thead>
-                        {/* Zaktualizowane ciało tabeli */}
-                        <tbody>
-                            {contracts.length > 0 ? (
-                                contracts.map((contract) => (
-                                    <tr key={contract.id} className="hover:bg-gray-700">
-                                        <td className="px-5 py-4 border-b border-gray-700">
-                                            <p className="font-semibold">{contract.title}</p>
-                                            <p className="text-xs text-gray-400">{contract.contractNumber || 'Brak numeru'}</p>
-                                        </td>
-                                        <td className="px-5 py-4 border-b border-gray-700">{contract.customerName}</td>
-                                        <td className="px-5 py-4 border-b border-gray-700 text-sm">
-                                            <p>Podpisano: {new Date(contract.signedAt).toLocaleDateString()}</p>
-                                            {contract.endDate && <p className="text-gray-400">Zakończenie: {new Date(contract.endDate).toLocaleDateString()}</p>}
-                                        </td>
-                                        <td className="px-5 py-4 border-b border-gray-700 text-right font-semibold">
-                                            {contract.netAmount ? `${contract.netAmount.toFixed(2)} PLN` : '-'}
-                                        </td>
-                                        <td className="px-5 py-4 border-b border-gray-700 text-center">
-                                            <div className="flex justify-center gap-4">
-                                                <button onClick={() => handleGenerate(contract.id)} title="Generuj dokument" className="text-blue-400 hover:text-blue-500">
-                                                    <DocumentArrowDownIcon className="w-5 h-5 inline" />
-                                                </button>
-                                                <Link to={`/kontrakty/edytuj/${contract.id}`} title="Edytuj"><PencilIcon className="w-5 h-5 text-gray-400 hover:text-yellow-400" /></Link>
-                                                <button onClick={() => handleDeleteContract(contract.id)} title="Usuń"><TrashIcon className="w-5 h-5 text-gray-400 hover:text-red-500" /></button>
-                                            </div>
+                <>
+                    {/* Wyszukiwarka */}
+                    <div className="mb-6">
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="Wyszukaj kontrakty..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="w-full px-4 py-2 pl-10 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            />
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-gray-800 shadow-md rounded-lg overflow-hidden">
+                        <table className="min-w-full leading-normal text-white">
+                            {/* Zaktualizowany nagłówek tabeli */}
+                            <thead>
+                                <tr>
+                                    <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Tytuł / Numer</th>
+                                    <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Klient</th>
+                                    <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-left text-xs font-semibold uppercase tracking-wider">Daty</th>
+                                    <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-right text-xs font-semibold uppercase tracking-wider">Wartość netto</th>
+                                    <th className="px-5 py-3 border-b-2 border-gray-700 bg-gray-700 text-center text-xs font-semibold uppercase tracking-wider">Akcje</th>
+                                </tr>
+                            </thead>
+                            {/* Zaktualizowane ciało tabeli */}
+                            <tbody>
+                                {filteredContracts.length > 0 ? (
+                                    filteredContracts.map((contract) => (
+                                        <tr key={contract.id} className="hover:bg-gray-700">
+                                            <td className="px-5 py-4 border-b border-gray-700">
+                                                <p className="font-semibold">{contract.title}</p>
+                                                <p className="text-xs text-gray-400">{contract.contractNumber || 'Brak numeru'}</p>
+                                            </td>
+                                            <td className="px-5 py-4 border-b border-gray-700">{contract.customerName}</td>
+                                            <td className="px-5 py-4 border-b border-gray-700 text-sm">
+                                                <p>Podpisano: {new Date(contract.signedAt).toLocaleDateString()}</p>
+                                                {contract.endDate && <p className="text-gray-400">Zakończenie: {new Date(contract.endDate).toLocaleDateString()}</p>}
+                                            </td>
+                                            <td className="px-5 py-4 border-b border-gray-700 text-right font-semibold">
+                                                {contract.netAmount ? `${contract.netAmount.toFixed(2)} PLN` : '-'}
+                                            </td>
+                                            <td className="px-5 py-4 border-b border-gray-700 text-center">
+                                                <div className="flex justify-center gap-4">
+                                                    <button onClick={() => handleGenerate(contract.id)} title="Generuj dokument" className="text-blue-400 hover:text-blue-500">
+                                                        <DocumentArrowDownIcon className="w-5 h-5 inline" />
+                                                    </button>
+                                                    <Link to={`/kontrakty/edytuj/${contract.id}`} title="Edytuj"><PencilIcon className="w-5 h-5 text-gray-400 hover:text-yellow-400" /></Link>
+                                                    <button onClick={() => handleDeleteContract(contract.id)} title="Usuń"><TrashIcon className="w-5 h-5 text-gray-400 hover:text-red-500" /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={5} className="text-center py-10 text-gray-500">
+                                            {search ? 'Brak kontraktów pasujących do wyszukiwania.' : 'Brak kontraktów do wyświetlenia.'}
                                         </td>
                                     </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={5} className="text-center py-10 text-gray-500">
-                                        Brak kontraktów do wyświetlenia.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
             )}
         </div>
     );

@@ -19,8 +19,10 @@ type User = {
 
 export function RolesPage() {
     const [roles, setRoles] = useState<Role[]>([]);
+    const [filteredRoles, setFilteredRoles] = useState<Role[]>([]);
     const [newRoleName, setNewRoleName] = useState('');
     const [newRoleDesc, setNewRoleDesc] = useState('');
+    const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
@@ -32,6 +34,15 @@ export function RolesPage() {
         loadRoles();
     }, []);
 
+    // Filtrowanie ról na podstawie wyszukiwania
+    useEffect(() => {
+        const filtered = roles.filter(role =>
+            role.name.toLowerCase().includes(search.toLowerCase()) ||
+            (role.description && role.description.toLowerCase().includes(search.toLowerCase()))
+        );
+        setFilteredRoles(filtered);
+    }, [roles, search]);
+
     const loadRoles = () => {
         setLoading(true);
         axios.get(`${api}/admin/roles`, {
@@ -40,19 +51,23 @@ export function RolesPage() {
             .then(res => {
                 const data = res.data;
                 if (data && Array.isArray((data as any).$values)) {
-                    setRoles((data as any).$values);
+                    const rolesArray = (data as any).$values;
+                    setRoles(rolesArray);
+                    setFilteredRoles(rolesArray);
                 } else if (Array.isArray(data)) {
                     setRoles(data);
+                    setFilteredRoles(data);
                 } else {
                     console.error("Otrzymano nieoczekiwany format danych dla ról:", data);
                     setRoles([]);
+                    setFilteredRoles([]);
                 }
             })
             .catch(() => setError('Błąd ładowania ról'))
             .finally(() => setLoading(false));
     };
 
-    const { openModal, closeModal } = useModal();
+    const { openModal, closeModal, openToast } = useModal();
 
     const showUsers = (roleId: number, roleName: string) => {
         setLoading(true);
@@ -127,7 +142,7 @@ export function RolesPage() {
         });
     };
 
-    
+
 
     const handleDeleteRole = (role: Role) => {
         openModal({
@@ -139,7 +154,7 @@ export function RolesPage() {
                     await axios.delete(`${api}/admin/roles/${role.id}`, {
                         headers: { Authorization: `Bearer ${token}` },
                     });
-                    openModal({ type: 'success', title: 'Sukces', message: 'Rola została usunięta.' });
+                    openToast('Rola została usunięta.', 'success');
                     loadRoles();
                 } catch (err: any) {
                     openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się usunąć roli.' });
@@ -150,71 +165,100 @@ export function RolesPage() {
 
 
     return (
-        <div className="p-6 max-w-3xl mx-auto">
-            <h1 className="text-3xl font-bold mb-4">🔐 Role użytkowników</h1>
+        <div className="p-6 text-white">
+            <h1 className="text-3xl font-bold mb-6">🔐 Role użytkowników</h1>
 
-            {loading && <div className="mb-4">⏳ Ładowanie...</div>}
-            {error && <div className="mb-4 p-2 bg-red-700 text-white rounded">{error}</div>}
-            {success && <div className="mb-4 p-2 bg-green-700 text-white rounded">{success}</div>}
+            {loading && <div className="mb-4 text-center">⏳ Ładowanie...</div>}
+            {error && <div className="mb-4 p-3 bg-red-600 text-white rounded-lg">{error}</div>}
+            {success && <div className="mb-4 p-3 bg-green-600 text-white rounded-lg">{success}</div>}
 
             {/* Dodawanie nowej roli */}
-            <form className="mb-6 flex gap-2" onSubmit={handleAddRole}>
-                <input
-                    className="p-2 rounded bg-gray-700 text-white"
-                    value={newRoleName}
-                    onChange={e => setNewRoleName(e.target.value)}
-                    placeholder="Nazwa nowej roli"
-                    required
-                />
-                <input
-                    className="p-2 rounded bg-gray-700 text-white"
-                    value={newRoleDesc}
-                    onChange={e => setNewRoleDesc(e.target.value)}
-                    placeholder="Opis (opcjonalnie)"
-                />
-                <button className="bg-blue-600 text-white px-4 py-2 rounded" type="submit">
-                    ➕ Dodaj rolę
-                </button>
-            </form>
+            <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
+                <h2 className="text-xl font-semibold mb-4">➕ Dodaj nową rolę</h2>
+                <form className="flex gap-4" onSubmit={handleAddRole}>
+                    <input
+                        className="flex-1 p-3 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={newRoleName}
+                        onChange={e => setNewRoleName(e.target.value)}
+                        placeholder="Nazwa nowej roli"
+                        required
+                    />
+                    <input
+                        className="flex-1 p-3 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={newRoleDesc}
+                        onChange={e => setNewRoleDesc(e.target.value)}
+                        placeholder="Opis (opcjonalnie)"
+                    />
+                    <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors" type="submit">
+                        Dodaj rolę
+                    </button>
+                </form>
+            </div>
+
+            {/* Wyszukiwarka */}
+            <div className="mb-6">
+                <div className="relative">
+                    <input
+                        type="text"
+                        placeholder="Wyszukaj role..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full px-4 py-3 pl-10 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
 
             {/* Lista ról */}
-            <table className="w-full bg-gray-800 text-white rounded shadow mb-8">
-                <thead>
-                    <tr>
-                        <th className="p-3">Nazwa roli</th>
-                        <th className="p-3">Opis</th>
-                        <th className="p-3">Liczba użytkowników</th>
-                        <th className="p-3">Akcje</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {roles.map(role => (
-                        <tr key={role.id} className="border-t border-gray-700">
-                            <td className="p-3 font-semibold">{role.name}</td>
-                            <td className="p-3">{role.description || <span className="text-gray-400">brak</span>}</td>
-                            <td className="p-3">{role.usersCount}</td>
-                            <td className="p-3 flex gap-2">
-                                <button className="bg-gray-700 px-2 py-1 rounded" onClick={() => showUsers(role.id, role.name)}>
-                                    👀 Pokaż użytkowników
-                                </button>
-                                <button className="bg-yellow-400 text-black px-2 py-1 rounded" onClick={() => handleEdit(role)}>
-                                    ✏️ Edytuj
-                                </button>
-                                <button
-                                    className="bg-red-600 text-white px-2 py-1 rounded"
-                                    disabled={role.usersCount > 0}
-                                    title={role.usersCount > 0 ? 'Nie można usunąć roli z użytkownikami' : ''}
-                                    onClick={() => handleDeleteRole(role)}
-                                >
-                                    🗑 Usuń
-                                </button>
-                            </td>
+            <div className="bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+                <table className="w-full text-white">
+                    <thead className="bg-gray-700">
+                        <tr>
+                            <th className="p-4 text-left font-semibold">Nazwa roli</th>
+                            <th className="p-4 text-left font-semibold">Opis</th>
+                            <th className="p-4 text-left font-semibold">Liczba użytkowników</th>
+                            <th className="p-4 text-left font-semibold">Akcje</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
-
-            
+                    </thead>
+                    <tbody>
+                        {filteredRoles.map(role => (
+                            <tr key={role.id} className="border-t border-gray-700 hover:bg-gray-750">
+                                <td className="p-4 font-semibold">{role.name}</td>
+                                <td className="p-4">{role.description || <span className="text-gray-400">brak</span>}</td>
+                                <td className="p-4">{role.usersCount}</td>
+                                <td className="p-4">
+                                    <div className="flex gap-2">
+                                        <button
+                                            className="bg-gray-600 hover:bg-gray-500 text-white px-3 py-2 rounded-lg transition-colors text-sm"
+                                            onClick={() => showUsers(role.id, role.name)}
+                                        >
+                                            👀 Pokaż użytkowników
+                                        </button>
+                                        <button
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition-colors text-sm"
+                                            onClick={() => handleEdit(role)}
+                                        >
+                                            ✏️ Edytuj
+                                        </button>
+                                        <button
+                                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg transition-colors text-sm disabled:bg-gray-500 disabled:cursor-not-allowed"
+                                            disabled={role.usersCount > 0}
+                                            title={role.usersCount > 0 ? 'Nie można usunąć roli z użytkownikami' : ''}
+                                            onClick={() => handleDeleteRole(role)}
+                                        >
+                                            🗑️ Usuń
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }

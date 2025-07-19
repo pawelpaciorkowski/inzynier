@@ -6,7 +6,7 @@ import HomeIcon from '@heroicons/react/24/solid/HomeIcon';
 import UsersIcon from '@heroicons/react/24/solid/UsersIcon';
 import UserCircleIcon from '@heroicons/react/24/solid/UserCircleIcon';
 import CheckCircleIcon from '@heroicons/react/24/solid/CheckCircleIcon';
-import { ClipboardDocumentListIcon, CalendarDaysIcon, DocumentDuplicateIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, BellIcon } from "@heroicons/react/24/solid";
+import { ClipboardDocumentListIcon, CalendarDaysIcon, DocumentDuplicateIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, BellIcon, DocumentMagnifyingGlassIcon } from "@heroicons/react/24/solid";
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
@@ -18,6 +18,12 @@ interface Notification {
     isRead: boolean;
 }
 
+interface Reminder {
+    id: number;
+    note: string;
+    remindAt: string;
+    userId: number;
+}
 
 
 export default function Layout() {
@@ -29,6 +35,20 @@ export default function Layout() {
     const navRef = useRef<HTMLDivElement>(null);
     const notificationsRef = useRef<HTMLDivElement>(null);
     const api = import.meta.env.VITE_API_URL;
+    const [reminders, setReminders] = useState<Reminder[]>([]);
+    const [activeReminder, setActiveReminder] = useState<Reminder | null>(null);
+    const [shownReminders, setShownReminders] = useState<number[]>([]);
+    const [clock, setClock] = useState<string>("");
+
+    useEffect(() => {
+        const updateClock = () => {
+            const now = new Date();
+            setClock(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+        };
+        updateClock();
+        const interval = setInterval(updateClock, 1000);
+        return () => clearInterval(interval);
+    }, []);
 
     const fetchNotifications = useCallback(async () => {
         try {
@@ -37,7 +57,8 @@ export default function Layout() {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const data = response.data.$values || response.data;
-            setNotifications(data.filter((n: Notification) => !n.isRead).slice(0, 5)); // Get up to 5 unread notifications
+            // Zmieniamy: licznik = wszystkie nieprzeczytane, dropdown = 5 najnowszych
+            setNotifications(data.filter((n: Notification) => !n.isRead));
         } catch (err) {
             console.error("Błąd pobierania powiadomień:", err);
         }
@@ -54,6 +75,45 @@ export default function Layout() {
             console.error("Błąd oznaczania jako przeczytane:", err);
         }
     };
+
+    // Pobieraj przypomnienia globalnie co 2 minuty
+    useEffect(() => {
+        const fetchReminders = async () => {
+            try {
+                const response = await axios.get('/api/Reminders');
+                const data = response.data.$values || response.data;
+                setReminders(data);
+            } catch {
+                // ignoruj błąd
+            }
+        };
+        fetchReminders();
+        const interval = setInterval(fetchReminders, 1 * 60 * 100);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Sprawdzaj, czy jest przypomnienie na teraz
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = new Date();
+            const nowStr = now.toISOString().slice(0, 16); // yyyy-MM-ddTHH:mm
+            console.log('Aktualny czas:', nowStr);
+            reminders.forEach(r => {
+                console.log('Przypomnienie:', r.id, r.remindAt.slice(0, 16), r.note);
+            });
+            const found = reminders.find(r =>
+                !shownReminders.includes(r.id) &&
+                r.remindAt.slice(0, 16) === nowStr
+            );
+            if (found) {
+                setActiveReminder(found);
+                setShownReminders(prev => [...prev, found.id]);
+                console.log('Znaleziono przypomnienie do wyświetlenia jako toast:', found);
+                console.log('Ustawiam activeReminder:', found);
+            }
+        }, 30 * 1000); // sprawdzaj co 30 sekund
+        return () => clearInterval(interval);
+    }, [reminders, shownReminders]);
 
     useEffect(() => {
         fetchNotifications();
@@ -123,7 +183,7 @@ export default function Layout() {
                                     {notifications.length === 0 ? (
                                         <p className="block px-4 py-2 text-sm text-gray-300">Brak nowych powiadomień.</p>
                                     ) : (
-                                        notifications.map((notification) => (
+                                        notifications.slice(0, 5).map((notification) => (
                                             <div key={notification.id} className="block px-4 py-2 text-sm text-gray-300 border-b border-gray-600 last:border-b-0">
                                                 <p>{notification.message}</p>
                                                 <p className="text-xs text-gray-400">{formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: pl })}</p>
@@ -148,6 +208,7 @@ export default function Layout() {
                     <span>
                         Zalogowano jako: <strong className="text-white">{user?.username}</strong> ({user?.role})
                     </span>
+                    <span className="font-mono text-lg text-indigo-300">{clock}</span>
                     <button
                         onClick={() => {
                             logout();
@@ -174,7 +235,7 @@ export default function Layout() {
                             { to: "/klienci/dodaj", text: "Dodaj klienta" },
                         ])}
 
-                        {renderMenu("uzytkownicy", <UserCircleIcon className="h-5 w-5 inline mr-2" />, "Użytkownicy", [
+                        {user?.role !== 'Sprzedawca' && renderMenu("uzytkownicy", <UserCircleIcon className="h-5 w-5 inline mr-2" />, "Użytkownicy", [
                             { to: "/uzytkownicy", text: "Lista użytkowników" },
                             { to: "/uzytkownicy/dodaj", text: "Dodaj użytkownika" },
                             { to: "/role", text: "Role" },
@@ -183,7 +244,7 @@ export default function Layout() {
 
                         {renderMenu("zadania", <CheckCircleIcon className="h-5 w-5 inline mr-2" />, "Zadania", [
                             { to: "/zadania", text: "Moje zadania" },
-                            { to: "/zadania/wszystkie", text: "Wszystkie zadania" },
+                            ...(user?.role !== 'Sprzedawca' ? [{ to: "/zadania/wszystkie", text: "Wszystkie zadania" }] : []),
                             { to: "/aktywnosci", text: "Aktywności" },
                         ])}
 
@@ -216,14 +277,24 @@ export default function Layout() {
                             { to: "/logi", text: "Logi systemowe" },
                             { to: "/ustawienia", text: "Ustawienia" },
                         ])}
+
                     </nav>
                 </aside>
 
                 <main className="flex-1 p-10 bg-gray-900 border-l border-gray-700 overflow-auto">
-                    <Outlet />
+                    <Outlet context={{ fetchNotifications }} />
                 </main>
-                
             </div>
+            {/* Toast w prawym górnym rogu */}
+            {activeReminder && (console.log('Renderuje toast:', activeReminder), (
+                <div className="fixed top-4 right-4 bg-blue-700 text-white p-4 rounded-lg shadow-lg z-50 animate-fade-in">
+                    <strong>⏰ Przypomnienie!</strong>
+                    <div className="mt-2">{activeReminder.note}</div>
+                    <button className="mt-3 bg-white text-blue-700 px-3 py-1 rounded" onClick={() => setActiveReminder(null)}>
+                        Zamknij
+                    </button>
+                </div>
+            ))}
         </div>
     );
 }

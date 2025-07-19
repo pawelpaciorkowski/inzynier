@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import axios from 'axios';
 import { useModal } from '../context/ModalContext';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import ClientSelectModal from '../components/ClientSelectModal';
 
 interface TaskItem {
     id: number;
@@ -21,7 +22,9 @@ export default function TasksPage() {
     const { user } = useAuth();
     const { openModal } = useModal();
     const [tasks, setTasks] = useState<TaskItem[]>([]);
+    const [filteredTasks, setFilteredTasks] = useState<TaskItem[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
+    const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const api = import.meta.env.VITE_API_URL;
@@ -32,6 +35,8 @@ export default function TasksPage() {
     const [selectedCustomerId, setSelectedCustomerId] = useState("");
 
     const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+    const [showClientModal, setShowClientModal] = useState(false);
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
     const fetchInitialData = useCallback(async () => {
         const token = localStorage.getItem("token");
@@ -47,9 +52,18 @@ export default function TasksPage() {
             ]);
 
             const tasksData = tasksRes.data;
-            if (tasksData && Array.isArray((tasksData as any).$values)) setTasks((tasksData as any).$values);
-            else if (Array.isArray(tasksData)) setTasks(tasksData);
-            else setTasks([]);
+            if (tasksData && Array.isArray((tasksData as any).$values)) {
+                setTasks((tasksData as any).$values);
+                setFilteredTasks((tasksData as any).$values);
+            }
+            else if (Array.isArray(tasksData)) {
+                setTasks(tasksData);
+                setFilteredTasks(tasksData);
+            }
+            else {
+                setTasks([]);
+                setFilteredTasks([]);
+            }
 
             const customerData = customersRes.data;
             if (customerData && Array.isArray((customerData as any).$values)) setCustomers((customerData as any).$values);
@@ -66,6 +80,16 @@ export default function TasksPage() {
     useEffect(() => {
         fetchInitialData();
     }, [fetchInitialData]);
+
+    // Filtrowanie zadań na podstawie wyszukiwania
+    useEffect(() => {
+        const filtered = tasks.filter(task =>
+            task.title.toLowerCase().includes(search.toLowerCase()) ||
+            (task.description && task.description.toLowerCase().includes(search.toLowerCase())) ||
+            (task.user && task.user.username.toLowerCase().includes(search.toLowerCase()))
+        );
+        setFilteredTasks(filtered);
+    }, [tasks, search]);
 
     const addTask = async () => {
         const token = localStorage.getItem("token");
@@ -162,18 +186,45 @@ export default function TasksPage() {
                 <div className="flex flex-col gap-3">
                     <input type="text" placeholder="Tytuł zadania" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} className="rounded-md px-4 py-2 bg-gray-700 text-white border border-gray-600" />
                     <textarea placeholder="Opis zadania" value={newTaskDescription} onChange={(e) => setNewTaskDescription(e.target.value)} className="rounded-md px-4 py-2 bg-gray-700 text-white border border-gray-600 resize-none" rows={2} />
-                    {/* DODANY WYBÓR KLIENTA */}
-                    <select value={selectedCustomerId} onChange={e => setSelectedCustomerId(e.target.value)} className="rounded-md px-4 py-2 bg-gray-700 text-white border border-gray-600">
-                        <option value="">-- Wybierz klienta --</option>
-                        {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
+                    <button type="button" onClick={() => setShowClientModal(true)} className="rounded-md px-4 py-2 bg-gray-700 text-white border border-gray-600 text-left">
+                        {selectedCustomer ? `Klient: ${selectedCustomer.name}` : '-- Wybierz klienta --'}
+                    </button>
+                    {showClientModal && (
+                        <ClientSelectModal
+                            clients={customers}
+                            onSelect={client => {
+                                setSelectedCustomer(client);
+                                setSelectedCustomerId(client.id.toString());
+                                setShowClientModal(false);
+                            }}
+                            onClose={() => setShowClientModal(false)}
+                        />
+                    )}
                     <input type="date" value={newTaskDueDate} onChange={(e) => setNewTaskDueDate(e.target.value)} className="rounded-md px-4 py-2 bg-gray-700 text-white border border-gray-600" />
                     <button onClick={addTask} className="bg-indigo-600 hover:bg-indigo-700 px-6 py-2 rounded-md font-semibold transition self-start">Dodaj</button>
                 </div>
             </div>
 
+            {/* Wyszukiwarka */}
+            <div className="mb-6">
+                <div className="relative">
+                    <input
+                        type="text"
+                        placeholder="Wyszukaj zadania..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full px-4 py-2 pl-10 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
             <ul className="space-y-3">
-                {tasks.map((task) => (
+                {filteredTasks.map((task) => (
                     editingTask?.id === task.id ? (
                         <li key={task.id} className="p-4 rounded-md border border-yellow-400 bg-gray-800">
                             <form onSubmit={handleUpdate} className="flex flex-col gap-3">

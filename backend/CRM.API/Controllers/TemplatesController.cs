@@ -8,7 +8,7 @@ namespace CRM.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Sprzedawca")]
     public class TemplatesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

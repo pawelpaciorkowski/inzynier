@@ -25,7 +25,7 @@ interface ApiResponse<T> {
 export function EditMeetingPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
 
     const [topic, setTopic] = useState('');
     const [scheduledAt, setScheduledAt] = useState<string>('');
@@ -91,7 +91,7 @@ export function EditMeetingPage() {
                 scheduledAt: adjustedScheduledAt.toISOString(),
                 customerId: parseInt(customerId),
             });
-            openModal({ type: 'success', title: 'Sukces', message: 'Spotkanie zostało pomyślnie zaktualizowane.' });
+            openToast('Spotkanie zostało pomyślnie zaktualizowane.', 'success');
             navigate('/spotkania');
         } catch {
             // Error is handled by the Axios interceptor or the modal, so we can leave this empty.
@@ -161,7 +161,14 @@ export function EditMeetingPage() {
                             ))}
                         </select>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
+                        <button
+                            type="button"
+                            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                            onClick={() => navigate('/spotkania')}
+                        >
+                            Powrót
+                        </button>
                         <button
                             type="submit"
                             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"

@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom"; // BrowserRouter is removed from here
 import { AuthProvider } from "./context/AuthContext";
 import { ModalProvider } from './context/ModalContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import ClientsPage from "./pages/ClientsPage";
@@ -45,6 +46,7 @@ import { EditContractPage } from './pages/EditContractPage';
 import { EditClientPage } from './pages/EditClientPage';
 import { EditUserPage } from "./pages/EditUserPage";
 import { InvoiceDetailsPage } from './pages/InvoiceDetailsPage';
+import EditInvoicePage from './pages/EditInvoicePage';
 import './index.css';
 
 function App() {
@@ -76,10 +78,11 @@ function App() {
             <Route path="/zadania/wszystkie" element={<AllTasksPage />} />
             <Route path="/kontrakty" element={<ContractsPage />} />
             <Route path="/kontrakty/dodaj" element={<PrivateRoute><AddContractPage /></PrivateRoute>} />
-            <Route path="/kontrakty/edytuj/:id" element={<PrivateRoute><EditContractPage /></PrivateRoute>} />
+            <Route path="/kontrakty/edytuj/:id" element={<PrivateRoute><ErrorBoundary><EditContractPage /></ErrorBoundary></PrivateRoute>} />
             <Route path="/faktury" element={<InvoicesPage />} />
             <Route path="/faktury/dodaj" element={<AddInvoicePage />} />
             <Route path="/faktury/:id" element={<InvoiceDetailsPage />} />
+            <Route path="/faktury/edytuj/:id" element={<EditInvoicePage />} />
             <Route path="/platnosci" element={<PaymentsPage />} />
             <Route path="/platnosci/dodaj" element={<PrivateRoute><AddPaymentPage /></PrivateRoute>} />
             <Route path="/platnosci/edytuj/:id" element={<PrivateRoute><EditPaymentPage /></PrivateRoute>} />

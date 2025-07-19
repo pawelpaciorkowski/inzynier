@@ -10,15 +10,16 @@ interface Customer {
 }
 
 interface Contract {
+    $id?: string; // Entity Framework Core reference
     id: number;
     title: string;
     contractNumber: string;
     placeOfSigning: string;
     signedAt: string;
-    startDate: string;
-    endDate: string;
-    netAmount: number;
-    paymentTermDays: number;
+    startDate: string | null;
+    endDate: string | null;
+    netAmount: number | null;
+    paymentTermDays: number | null;
     scopeOfServices: string;
     customerId: number;
 }
@@ -39,14 +40,14 @@ export function EditContractPage() {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const [contractRes, customersRes] = await Promise.all([
                     axios.get<Contract>(`/api/Contracts/${id}`),
-                    axios.get<any>('/api/Customers'),
+                    axios.get<Customer[]>('/api/Customers'),
                 ]);
 
                 setTitle(contractRes.data.title);
@@ -60,18 +61,27 @@ export function EditContractPage() {
                 setScopeOfServices(contractRes.data.scopeOfServices);
                 setCustomerId(contractRes.data.customerId);
 
-                const customersData = customersRes.data.$values || customersRes.data;
+                const customerData = customersRes.data;
+                let customersData: Customer[] = [];
+
+                if (customerData && typeof customerData === 'object' && '$values' in customerData && Array.isArray(customerData.$values)) {
+                    customersData = customerData.$values;
+                } else if (Array.isArray(customerData)) {
+                    customersData = customerData;
+                }
+
                 setCustomers(customersData);
-            } catch (err: any) {
-                openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || `Nie udało się pobrać danych: ${err.message}` });
-                setError(err.response?.data?.message || `Nie udało się pobrać danych: ${err.message}`);
+            } catch (err: unknown) {
+                const errorMessage = err instanceof Error ? err.message : 'Nieznany błąd';
+                openModal({ type: 'error', title: 'Błąd', message: `Nie udało się pobrać danych: ${errorMessage}` });
+                setError(`Nie udało się pobrać danych: ${errorMessage}`);
                 console.error('Błąd pobierania danych:', err);
             } finally {
                 setLoading(false);
             }
         };
         fetchData();
-    }, [id]);
+    }, [id, openModal]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -97,9 +107,9 @@ export function EditContractPage() {
                 scopeOfServices,
                 customerId: parseInt(customerId as string),
             });
-            openModal({ type: 'success', title: 'Sukces', message: 'Kontrakt został pomyślnie zaktualizowany.' });
+            openToast('Kontrakt został pomyślnie zaktualizowany.', 'success');
             navigate('/kontrakty');
-        } catch (err: any) {
+        } catch {
             // Błąd zostanie obsłużony przez interceptor Axios
         } finally {
             setLoading(false);
@@ -237,7 +247,14 @@ export function EditContractPage() {
                         </select>
                     </div>
                     {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
+                        <button
+                            type="button"
+                            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                            onClick={() => navigate('/kontrakty')}
+                        >
+                            Powrót
+                        </button>
                         <button
                             type="submit"
                             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"

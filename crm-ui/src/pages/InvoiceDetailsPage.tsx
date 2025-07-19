@@ -7,6 +7,7 @@ import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
+import { PrinterIcon } from '@heroicons/react/24/outline';
 
 interface Payment {
     id: number;
@@ -63,6 +64,30 @@ export function InvoiceDetailsPage() {
                     <ArrowLeftIcon className="w-5 h-5" />
                     Powrót do listy faktur
                 </Link>
+
+                <div className="flex justify-between items-center mb-4">
+                    <div></div>
+                    <button
+                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition-colors"
+                        onClick={async () => {
+                            try {
+                                const token = localStorage.getItem('token');
+                                const response = await axios.get(`/api/invoices/${id}/pdf`, {
+                                    responseType: 'blob',
+                                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                                });
+                                const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+                                window.open(url, '_blank');
+                            } catch {
+                                alert('Nie udało się pobrać PDF faktury.');
+                            }
+                        }}
+                        title="Drukuj fakturę"
+                    >
+                        <PrinterIcon className="w-5 h-5" />
+                        Drukuj
+                    </button>
+                </div>
 
                 <div className="bg-gray-800 rounded-lg shadow-lg p-8 mb-6">
                     <div className="flex justify-between items-start mb-8">

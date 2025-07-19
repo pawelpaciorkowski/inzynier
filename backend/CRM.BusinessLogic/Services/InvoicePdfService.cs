@@ -28,6 +28,13 @@ namespace CRM.BusinessLogic.Services
                 throw new Exception("Faktura nie znaleziona.");
             }
 
+            // Pobierz dane firmy z Settings
+            var settings = await _context.Settings.ToDictionaryAsync(s => s.Key, s => s.Value);
+            string companyName = settings.GetValueOrDefault("CompanyName", "Twoja Firma");
+            string companyAddress = settings.GetValueOrDefault("CompanyAddress", "Adres firmy");
+            string companyNip = settings.GetValueOrDefault("CompanyNIP", "NIP");
+            string companyBankAccount = settings.GetValueOrDefault("CompanyBankAccount", "Numer konta");
+
             QuestPDF.Settings.License = LicenseType.Community;
 
             var document = Document.Create(container =>
@@ -58,10 +65,10 @@ namespace CRM.BusinessLogic.Services
                                 row.RelativeItem().Column(col =>
                                 {
                                     col.Item().Text("Sprzedawca:").SemiBold();
-                                    col.Item().Text("Twoja Firma Sp. z o.o."); // Placeholder
-                                    col.Item().Text("Ul. Przykładowa 1"); // Placeholder
-                                    col.Item().Text("00-001 Miasto"); // Placeholder
-                                    col.Item().Text("NIP: 123-456-78-90"); // Placeholder
+                                    col.Item().Text(companyName);
+                                    col.Item().Text(companyAddress);
+                                    col.Item().Text($"NIP: {companyNip}");
+                                    col.Item().Text($"Konto: {companyBankAccount}");
                                 });
 
                                 row.RelativeItem().Column(col =>

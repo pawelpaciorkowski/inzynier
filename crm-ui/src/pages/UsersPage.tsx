@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useModal } from '../context/ModalContext'; // Import useModal
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '../context/AuthContext';
 
 type User = {
     id: number;
@@ -16,7 +17,10 @@ type ApiResponse = {
 }
 
 export default function UsersPage() {
+    const { user } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
+    const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+    const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const { openModal } = useModal(); // Use the global modal context
     const api = import.meta.env.VITE_API_URL;
@@ -30,6 +34,7 @@ export default function UsersPage() {
             });
             const data = '$values' in res.data ? res.data.$values : res.data;
             setUsers(data);
+            setFilteredUsers(data);
         } catch (err) {
             console.error('❌ Błąd ładowania użytkowników:', err);
             openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się załadować użytkowników.' });
@@ -41,6 +46,20 @@ export default function UsersPage() {
     useEffect(() => {
         fetchUsers();
     }, [fetchUsers]);
+
+    // Filtrowanie użytkowników na podstawie wyszukiwania
+    useEffect(() => {
+        const filtered = users.filter(user =>
+            user.username.toLowerCase().includes(search.toLowerCase()) ||
+            user.email.toLowerCase().includes(search.toLowerCase()) ||
+            user.role.toLowerCase().includes(search.toLowerCase())
+        );
+        setFilteredUsers(filtered);
+    }, [users, search]);
+
+    if (user?.role === 'Sprzedawca') {
+        return <div className="p-6 text-center text-red-500">Brak dostępu do tej sekcji.</div>;
+    }
 
     // ✅ This is the corrected delete handler
     const handleDelete = (user: User) => {
@@ -73,8 +92,26 @@ export default function UsersPage() {
         <div className="p-6">
             <h1 className="text-3xl font-bold mb-4 text-white">👤 Użytkownicy</h1>
 
+            {/* Wyszukiwarka */}
+            <div className="mb-6">
+                <div className="relative">
+                    <input
+                        type="text"
+                        placeholder="Wyszukaj użytkowników..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full px-4 py-2 pl-10 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
             <ul className="space-y-4">
-                {users.map(user => (
+                {filteredUsers.map(user => (
                     <li key={user.id} className="bg-gray-800 p-4 rounded-md text-white shadow flex justify-between items-center">
                         <div>
                             <strong className="text-xl">{user.username}</strong><br />

@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useModal } from '../context/ModalContext';
 import { PaperAirplaneIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '../context/AuthContext';
+import { useOutletContext } from 'react-router-dom';
 
 interface Message {
     id: number;
@@ -26,6 +28,7 @@ interface CreateMessageDto {
 }
 
 export function MessagesPage() {
+    const { user } = useAuth();
     const [inboxMessages, setInboxMessages] = useState<Message[]>([]);
     const [sentMessages, setSentMessages] = useState<Message[]>([]);
     const [users, setUsers] = useState<User[]>([]);
@@ -38,6 +41,7 @@ export function MessagesPage() {
         body: '',
     });
     const { openModal } = useModal();
+    const { fetchNotifications: globalFetchNotifications } = useOutletContext<{ fetchNotifications: () => void }>();
 
     const fetchMessages = async () => {
         setLoading(true);
@@ -66,8 +70,10 @@ export function MessagesPage() {
 
     useEffect(() => {
         fetchMessages();
-        fetchUsers();
-    }, []);
+        if (user?.role === 'Admin' || user?.role === 'Sprzedawca') {
+            fetchUsers();
+        }
+    }, [user]);
 
     const handleMarkAsRead = async (id: number) => {
         try {
@@ -89,7 +95,6 @@ export function MessagesPage() {
             onConfirm: async () => {
                 try {
                     await axios.delete(`/api/Messages/${id}`);
-                    openModal({ type: 'success', title: 'Sukces', message: 'Wiadomość usunięta.' });
                     fetchMessages(); // Odśwież listę
                 } catch (err: any) {
                     console.error('Błąd usuwania wiadomości:', err);
@@ -103,10 +108,10 @@ export function MessagesPage() {
         e.preventDefault();
         try {
             await axios.post('/api/Messages', newMessage);
-            openModal({ type: 'success', title: 'Sukces', message: 'Wiadomość wysłana pomyślnie.' });
             setShowNewMessageModal(false);
             setNewMessage({ recipientUserId: 0, subject: '', body: '' });
             fetchMessages(); // Odśwież listę
+            globalFetchNotifications(); // Odśwież licznik powiadomień
         } catch (err: any) {
             console.error('Błąd wysyłania wiadomości:', err);
             openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się wysłać wiadomości.' });
@@ -191,18 +196,27 @@ export function MessagesPage() {
                         <form onSubmit={handleSendMessage}>
                             <div className="mb-4">
                                 <label htmlFor="recipient" className="block text-gray-300 text-sm font-bold mb-2">Do:</label>
-                                <select
-                                    id="recipient"
-                                    className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
-                                    value={newMessage.recipientUserId}
-                                    onChange={(e) => setNewMessage({ ...newMessage, recipientUserId: parseInt(e.target.value) })}
-                                    required
-                                >
-                                    <option value="">-- Wybierz odbiorcę --</option>
-                                    {users.map(user => (
-                                        <option key={user.id} value={user.id}>{user.username}</option>
-                                    ))}
-                                </select>
+                                {user?.role === 'Admin' || user?.role === 'Sprzedawca' ? (
+                                    <select
+                                        id="recipient"
+                                        className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
+                                        value={newMessage.recipientUserId}
+                                        onChange={(e) => setNewMessage({ ...newMessage, recipientUserId: parseInt(e.target.value) })}
+                                        required
+                                    >
+                                        <option value={0}>-- Wybierz użytkownika --</option>
+                                        {users.map(u => (
+                                            <option key={u.id} value={u.id}>{u.username}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <input
+                                        type="text"
+                                        className="w-full p-2 rounded bg-gray-700 text-white border-gray-600"
+                                        value="Tylko admin może wysyłać wiadomości do innych użytkowników."
+                                        disabled
+                                    />
+                                )}
                             </div>
                             <div className="mb-4">
                                 <label htmlFor="subject" className="block text-gray-300 text-sm font-bold mb-2">Temat:</label>

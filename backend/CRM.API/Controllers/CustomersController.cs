@@ -42,7 +42,7 @@ namespace CRM.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin,Manager,Sprzedawca")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, Customer customer)
         {
@@ -52,7 +52,7 @@ namespace CRM.API.Controllers
             return NoContent();
         }
 
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin,Manager,Sprzedawca")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

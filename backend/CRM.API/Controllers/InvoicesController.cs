@@ -47,9 +47,9 @@ public class InvoiceDetailDto : InvoiceListItemDto
 // Klasa DTO dla tworzenia nowej faktury
 public class CreateInvoiceDto
 {
-    public string InvoiceNumber { get; set; }
+    public string InvoiceNumber { get; set; } = string.Empty;
     public int CustomerId { get; set; }
-    public List<CreateInvoiceItemDto> Items { get; set; }
+    public List<CreateInvoiceItemDto> Items { get; set; } = new List<CreateInvoiceItemDto>();
 }
 
 public class CreateInvoiceItemDto

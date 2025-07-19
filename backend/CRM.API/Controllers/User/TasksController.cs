@@ -9,7 +9,7 @@ namespace CRM.API.Controllers.User
 {
     [ApiController]
     [Route("api/user/[controller]")]
-    [Authorize(Roles = "User,Admin")]
+    [Authorize(Roles = "User,Admin,Sprzedawca")]
 
     public class TasksController : ControllerBase
     {
