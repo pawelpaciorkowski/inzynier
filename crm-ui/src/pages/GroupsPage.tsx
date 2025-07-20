@@ -1,12 +1,20 @@
+
 import { useEffect, useState, type FormEvent } from 'react';
 import axios from 'axios';
-import { UsersIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { Link } from 'react-router-dom';
+import { UsersIcon, TrashIcon, PlusIcon, ChartBarIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { useModal } from '../context/ModalContext';
 
 interface Group {
     id: number;
     name: string;
     description: string | null;
     memberCount: number;
+    customerCount: number;
+    taskCount: number;
+    contractCount: number;
+    invoiceCount: number;
+    meetingCount: number;
 }
 
 export function GroupsPage() {
@@ -18,16 +26,20 @@ export function GroupsPage() {
     const [newGroupDesc, setNewGroupDesc] = useState('');
     const [search, setSearch] = useState('');
     const api = import.meta.env.VITE_API_URL;
+    const { openToast } = useModal();
 
     const fetchGroups = async () => {
         const token = localStorage.getItem('token');
+        setLoading(true);
         try {
             const response = await axios.get(`${api}/groups`, { headers: { Authorization: `Bearer ${token}` } });
             const groupsData = response.data.$values || response.data;
             setGroups(groupsData);
             setFilteredGroups(groupsData);
+            setError(null);
         } catch {
-            setError("Nie udało się pobrać grup lub nie masz uprawnień.");
+            setError("Nie udało się pobrać grup. Spróbuj odświeżyć stronę.");
+            openToast('Błąd podczas pobierania grup', 'error');
         } finally {
             setLoading(false);
         }
@@ -37,7 +49,6 @@ export function GroupsPage() {
         fetchGroups();
     }, []);
 
-    // Filtrowanie grup na podstawie wyszukiwania
     useEffect(() => {
         const filtered = groups.filter(group =>
             group.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -55,9 +66,10 @@ export function GroupsPage() {
             await axios.post(`${api}/groups`, { name: newGroupName, description: newGroupDesc }, { headers: { Authorization: `Bearer ${token}` } });
             setNewGroupName('');
             setNewGroupDesc('');
-            fetchGroups(); // Odśwież listę
+            fetchGroups();
+            openToast('Grupa została utworzona pomyślnie', 'success');
         } catch {
-            alert("Wystąpił błąd podczas dodawania grupy.");
+            openToast('Wystąpił błąd podczas tworzenia grupy', 'error');
         }
     };
 
@@ -67,11 +79,12 @@ export function GroupsPage() {
         const token = localStorage.getItem('token');
         try {
             await axios.delete(`${api}/groups/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-            fetchGroups(); // Odśwież listę
+            fetchGroups();
+            openToast('Grupa została usunięta pomyślnie', 'success');
         } catch {
-            alert("Wystąpił błąd podczas usuwania grupy.");
+            openToast('Wystąpił błąd podczas usuwania grupy', 'error');
         }
-    }
+    };
 
     if (loading) return <p className="p-6 text-gray-400">Ładowanie...</p>;
     if (error) return <p className="p-6 text-red-500">{error}</p>;
@@ -137,13 +150,37 @@ export function GroupsPage() {
                         <div>
                             <h3 className="text-lg font-bold text-white">{group.name}</h3>
                             <p className="text-gray-400 text-sm mt-1">{group.description || 'Brak opisu'}</p>
-                            <div className="flex items-center text-gray-500 mt-4">
-                                <UsersIcon className="w-5 h-5 mr-2" />
-                                <span>{group.memberCount} członków</span>
+
+                            {/* Statystyki grupy */}
+                            <div className="mt-4 space-y-2">
+                                <div className="flex items-center text-gray-500 text-sm">
+                                    <UsersIcon className="w-4 h-4 mr-2" />
+                                    <span>{group.memberCount} członków</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                                    <div>Klienci: {group.customerCount}</div>
+                                    <div>Zadania: {group.taskCount}</div>
+                                    <div>Kontrakty: {group.contractCount}</div>
+                                    <div>Faktury: {group.invoiceCount}</div>
+                                </div>
                             </div>
                         </div>
+
                         <div className="mt-4 flex justify-end space-x-2">
-                            <button className="text-sm bg-gray-700 hover:bg-gray-600 text-gray-200 py-1 px-3 rounded-md">Zarządzaj</button>
+                            <Link
+                                to={`/grupy/${group.id}`}
+                                className="text-sm bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded-md flex items-center"
+                            >
+                                <EyeIcon className="w-4 h-4 mr-1" />
+                                Szczegóły
+                            </Link>
+                            <Link
+                                to={`/grupy/${group.id}/statystyki`}
+                                className="text-sm bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded-md flex items-center"
+                            >
+                                <ChartBarIcon className="w-4 h-4 mr-1" />
+                                Statystyki
+                            </Link>
                             <button onClick={() => handleDeleteGroup(group.id)} className="p-2 bg-red-800 hover:bg-red-700 rounded-md">
                                 <TrashIcon className="w-4 h-4 text-white" />
                             </button>

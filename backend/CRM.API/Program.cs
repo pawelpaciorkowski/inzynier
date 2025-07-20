@@ -15,12 +15,14 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Baza Danych
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
+           .EnableSensitiveDataLogging());
 
 // 2. Kontrolery
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+    options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase; // Ta linia konwertuje na camelCase
 });
 
 // 3. Serwisy biznesowe (bez zmian)
@@ -143,19 +145,329 @@ using (var scope = app.Services.CreateScope())
         if (!context.Users.Any())
         {
             var userRole = context.Roles.FirstOrDefault(r => r.Name == "User");
-            if (userRole != null)
+            var adminRole = context.Roles.FirstOrDefault(r => r.Name == "Admin");
+            if (userRole != null && adminRole != null)
             {
                 var hashedPassword = BCrypt.Net.BCrypt.HashPassword("user123");
-                context.Users.Add(new CRM.Data.Models.User
-                {
-                    Username = "user",
-                    Email = "user@example.com",
-                    PasswordHash = hashedPassword,
-                    RoleId = userRole.Id,
-                    Role = userRole
-                });
+                context.Users.AddRange(
+                    new CRM.Data.Models.User
+                    {
+                        Username = "user",
+                        Email = "user@example.com",
+                        PasswordHash = hashedPassword,
+                        RoleId = userRole.Id,
+                        Role = userRole
+                    },
+                    new CRM.Data.Models.User
+                    {
+                        Username = "admin",
+                        Email = "admin@example.com",
+                        PasswordHash = hashedPassword,
+                        RoleId = adminRole.Id,
+                        Role = adminRole
+                    }
+                );
                 context.SaveChanges();
             }
+        }
+
+        // Seedowanie grup
+        if (!context.Groups.Any())
+        {
+            context.Groups.AddRange(
+                new CRM.Data.Models.Group { Name = "Sprzedaż", Description = "Zespół sprzedaży", UserGroups = new List<CRM.Data.Models.UserGroup>() },
+                new CRM.Data.Models.Group { Name = "Marketing", Description = "Zespół marketingu", UserGroups = new List<CRM.Data.Models.UserGroup>() },
+                new CRM.Data.Models.Group { Name = "Wsparcie", Description = "Zespół wsparcia technicznego", UserGroups = new List<CRM.Data.Models.UserGroup>() }
+            );
+            context.SaveChanges();
+        }
+
+        // Seedowanie tagów
+        if (!context.Tags.Any())
+        {
+            context.Tags.AddRange(
+                new CRM.Data.Models.Tag { Name = "VIP", Color = "#FFD700", Description = "Klient VIP" },
+                new CRM.Data.Models.Tag { Name = "Nowy", Color = "#00FF00", Description = "Nowy klient" },
+                new CRM.Data.Models.Tag { Name = "Pilne", Color = "#FF0000", Description = "Pilne zadanie" },
+                new CRM.Data.Models.Tag { Name = "Długoterminowy", Color = "#0000FF", Description = "Projekt długoterminowy" }
+            );
+            context.SaveChanges();
+        }
+
+        // Seedowanie klientów
+        if (!context.Customers.Any())
+        {
+            var groups = context.Groups.ToList();
+            var tags = context.Tags.ToList();
+            
+            var customers = new List<CRM.Data.Models.Customer>
+            {
+                new CRM.Data.Models.Customer
+                {
+                    Name = "Jan Kowalski",
+                    Email = "jan.kowalski@example.com",
+                    Phone = "+48 123 456 789",
+                    Company = "Kowalski Sp. z o.o.",
+                    Address = "ul. Przykładowa 1, 00-001 Warszawa",
+                    AssignedGroupId = groups.FirstOrDefault()?.Id ?? 1,
+                    AssignedUserId = context.Users.FirstOrDefault()?.Id ?? 1
+                },
+                new CRM.Data.Models.Customer
+                {
+                    Name = "Anna Nowak",
+                    Email = "anna.nowak@example.com",
+                    Phone = "+48 987 654 321",
+                    Company = "Nowak Consulting",
+                    Address = "ul. Testowa 5, 30-001 Kraków",
+                    AssignedGroupId = groups.Skip(1).FirstOrDefault()?.Id ?? 1,
+                    AssignedUserId = context.Users.FirstOrDefault()?.Id ?? 1
+                },
+                new CRM.Data.Models.Customer
+                {
+                    Name = "Piotr Wiśniewski",
+                    Email = "piotr.wisniewski@example.com",
+                    Phone = "+48 555 123 456",
+                    Company = "Wiśniewski Solutions",
+                    Address = "ul. Próbna 10, 80-001 Gdańsk",
+                    AssignedGroupId = groups.Skip(2).FirstOrDefault()?.Id ?? 1,
+                    AssignedUserId = context.Users.FirstOrDefault()?.Id ?? 1
+                }
+            };
+
+            context.Customers.AddRange(customers);
+            context.SaveChanges();
+
+            // Dodanie tagów do klientów
+            var customerTags = new List<CRM.Data.Models.CustomerTag>();
+            foreach (var customer in customers)
+            {
+                customerTags.Add(new CRM.Data.Models.CustomerTag
+                {
+                    CustomerId = customer.Id,
+                    TagId = tags.FirstOrDefault()?.Id ?? 1
+                });
+            }
+            context.CustomerTags.AddRange(customerTags);
+            context.SaveChanges();
+        }
+
+        // Seedowanie faktur
+        if (!context.Invoices.Any())
+        {
+            var customers = context.Customers.ToList();
+            var groups = context.Groups.ToList();
+            var users = context.Users.ToList();
+            var tags = context.Tags.ToList();
+
+            var invoices = new List<CRM.Data.Models.Invoice>
+            {
+                new CRM.Data.Models.Invoice
+                {
+                    Number = "F/2024/001",
+                    CustomerId = customers.FirstOrDefault()?.Id ?? 1,
+                    AssignedGroupId = groups.FirstOrDefault()?.Id ?? 0,
+                    CreatedByUserId = users.FirstOrDefault()?.Id,
+                    TotalAmount = 1500.00m,
+                    IsPaid = true,
+                    IssuedAt = DateTime.Now.AddDays(-30),
+                    DueDate = DateTime.Now.AddDays(-15)
+                },
+                new CRM.Data.Models.Invoice
+                {
+                    Number = "F/2024/002",
+                    CustomerId = customers.Skip(1).FirstOrDefault()?.Id ?? 1,
+                    AssignedGroupId = groups.Skip(1).FirstOrDefault()?.Id,
+                    CreatedByUserId = users.FirstOrDefault()?.Id,
+                    TotalAmount = 2500.00m,
+                    IsPaid = false,
+                    IssuedAt = DateTime.Now.AddDays(-15),
+                    DueDate = DateTime.Now.AddDays(15)
+                },
+                new CRM.Data.Models.Invoice
+                {
+                    Number = "F/2024/003",
+                    CustomerId = customers.Skip(2).FirstOrDefault()?.Id ?? 1,
+                    AssignedGroupId = groups.Skip(2).FirstOrDefault()?.Id,
+                    CreatedByUserId = users.FirstOrDefault()?.Id,
+                    TotalAmount = 800.00m,
+                    IsPaid = true,
+                    IssuedAt = DateTime.Now.AddDays(-7),
+                    DueDate = DateTime.Now.AddDays(23)
+                }
+            };
+
+            context.Invoices.AddRange(invoices);
+            context.SaveChanges();
+
+            // Dodanie tagów do faktur
+            var invoiceTags = new List<CRM.Data.Models.InvoiceTag>();
+            foreach (var invoice in invoices)
+            {
+                invoiceTags.Add(new CRM.Data.Models.InvoiceTag
+                {
+                    InvoiceId = invoice.Id,
+                    TagId = tags.Skip(1).FirstOrDefault()?.Id ?? 1
+                });
+            }
+            context.InvoiceTags.AddRange(invoiceTags);
+            context.SaveChanges();
+        }
+
+        // Seedowanie zadań
+        if (!context.Tasks.Any())
+        {
+            var customers = context.Customers.ToList();
+            var groups = context.Groups.ToList();
+            var users = context.Users.ToList();
+            var tags = context.Tags.ToList();
+
+            var tasks = new List<CRM.Data.Models.TaskItem>
+            {
+                new CRM.Data.Models.TaskItem
+                {
+                    Title = "Kontakt z klientem",
+                    Description = "Nawiązać kontakt z klientem w sprawie nowej oferty",
+                    CustomerId = customers.FirstOrDefault()?.Id ?? 1,
+                    AssignedGroupId = groups.FirstOrDefault()?.Id ?? 0,
+                    UserId = users.FirstOrDefault()?.Id ?? 0,
+                    DueDate = DateTime.Now.AddDays(7),
+                    Completed = false
+                },
+                new CRM.Data.Models.TaskItem
+                {
+                    Title = "Przygotowanie raportu",
+                    Description = "Przygotować raport miesięczny",
+                    CustomerId = customers.Skip(1).FirstOrDefault()?.Id ?? 1,
+                    AssignedGroupId = groups.Skip(1).FirstOrDefault()?.Id ?? 0,
+                    UserId = users.FirstOrDefault()?.Id ?? 0,
+                    DueDate = DateTime.Now.AddDays(3),
+                    Completed = true
+                },
+                new CRM.Data.Models.TaskItem
+                {
+                    Title = "Analiza rynku",
+                    Description = "Przeprowadzić analizę konkurencji",
+                    CustomerId = customers.Skip(2).FirstOrDefault()?.Id ?? 1,
+                    AssignedGroupId = groups.Skip(2).FirstOrDefault()?.Id ?? 0,
+                    UserId = users.FirstOrDefault()?.Id ?? 0,
+                    DueDate = DateTime.Now.AddDays(14),
+                    Completed = false
+                }
+            };
+
+            context.Tasks.AddRange(tasks);
+            context.SaveChanges();
+
+            // Dodanie tagów do zadań
+            var taskTags = new List<CRM.Data.Models.TaskTag>();
+            foreach (var task in tasks)
+            {
+                taskTags.Add(new CRM.Data.Models.TaskTag
+                {
+                    TaskId = task.Id,
+                    TagId = tags.Skip(2).FirstOrDefault()?.Id ?? 1
+                });
+            }
+            context.TaskTags.AddRange(taskTags);
+            context.SaveChanges();
+        }
+
+        // Seedowanie kontraktów
+        if (!context.Contracts.Any())
+        {
+            var customers = context.Customers.ToList();
+            var groups = context.Groups.ToList();
+            var users = context.Users.ToList();
+            var tags = context.Tags.ToList();
+
+            var contracts = new List<CRM.Data.Models.Contract>
+            {
+                new CRM.Data.Models.Contract
+                {
+                    Title = "Umowa o świadczenie usług",
+                    ContractNumber = "K/2024/001",
+                    CustomerId = customers.FirstOrDefault()?.Id ?? 1,
+                    ResponsibleGroupId = groups.FirstOrDefault()?.Id ?? 0,
+                    CreatedByUserId = users.FirstOrDefault()?.Id ?? 0,
+                    NetAmount = 5000.00m,
+                    SignedAt = DateTime.Now.AddDays(-60),
+                    StartDate = DateTime.Now.AddDays(-30),
+                    EndDate = DateTime.Now.AddDays(335)
+                },
+                new CRM.Data.Models.Contract
+                {
+                    Title = "Umowa partnerska",
+                    ContractNumber = "K/2024/002",
+                    CustomerId = customers.Skip(1).FirstOrDefault()?.Id ?? 1,
+                    ResponsibleGroupId = groups.Skip(1).FirstOrDefault()?.Id ?? 0,
+                    CreatedByUserId = users.FirstOrDefault()?.Id ?? 0,
+                    NetAmount = 8000.00m,
+                    SignedAt = DateTime.Now.AddDays(-45),
+                    StartDate = DateTime.Now.AddDays(-15),
+                    EndDate = DateTime.Now.AddDays(350)
+                }
+            };
+
+            context.Contracts.AddRange(contracts);
+            context.SaveChanges();
+
+            // Dodanie tagów do kontraktów
+            var contractTags = new List<CRM.Data.Models.ContractTag>();
+            foreach (var contract in contracts)
+            {
+                contractTags.Add(new CRM.Data.Models.ContractTag
+                {
+                    ContractId = contract.Id,
+                    TagId = tags.Skip(3).FirstOrDefault()?.Id ?? 1
+                });
+            }
+            context.ContractTags.AddRange(contractTags);
+            context.SaveChanges();
+        }
+
+        // Seedowanie spotkań
+        if (!context.Meetings.Any())
+        {
+            var customers = context.Customers.ToList();
+            var groups = context.Groups.ToList();
+            var users = context.Users.ToList();
+            var tags = context.Tags.ToList();
+
+            var meetings = new List<CRM.Data.Models.Meeting>
+            {
+                new CRM.Data.Models.Meeting
+                {
+                    Topic = "Prezentacja oferty",
+                    CustomerId = customers.FirstOrDefault()?.Id ?? 1,
+                    AssignedGroupId = groups.FirstOrDefault()?.Id ?? 0,
+                    CreatedByUserId = users.FirstOrDefault()?.Id ?? 0,
+                    ScheduledAt = DateTime.Now.AddDays(5)
+                },
+                new CRM.Data.Models.Meeting
+                {
+                    Topic = "Omówienie projektu",
+                    CustomerId = customers.Skip(1).FirstOrDefault()?.Id ?? 1,
+                    AssignedGroupId = groups.Skip(1).FirstOrDefault()?.Id ?? 0,
+                    CreatedByUserId = users.FirstOrDefault()?.Id ?? 0,
+                    ScheduledAt = DateTime.Now.AddDays(10)
+                }
+            };
+
+            context.Meetings.AddRange(meetings);
+            context.SaveChanges();
+
+            // Dodanie tagów do spotkań
+            var meetingTags = new List<CRM.Data.Models.MeetingTag>();
+            foreach (var meeting in meetings)
+            {
+                meetingTags.Add(new CRM.Data.Models.MeetingTag
+                {
+                    MeetingId = meeting.Id,
+                    TagId = tags.FirstOrDefault()?.Id ?? 1
+                });
+            }
+            context.MeetingTags.AddRange(meetingTags);
+            context.SaveChanges();
         }
     }
     catch (Exception ex)

@@ -2,6 +2,8 @@ using CRM.BusinessLogic.Services;
 using CRM.Data.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace CRM.API.Controllers
 {
@@ -36,17 +38,17 @@ namespace CRM.API.Controllers
 
         [Authorize]
         [HttpPost]
-        public async Task<ActionResult<Customer>> Create(Customer customer)
+        public async Task<ActionResult<Customer>> Create(CreateCustomerDto customerDto)
         {
-            var created = await _customerService.CreateAsync(customer);
+            var created = await _customerService.CreateAsync(customerDto);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
         [Authorize(Roles = "Admin,Manager,Sprzedawca")]
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, Customer customer)
+        public async Task<IActionResult> Update(int id, UpdateCustomerDto customerDto)
         {
-            var updated = await _customerService.UpdateAsync(id, customer);
+            var updated = await _customerService.UpdateAsync(id, customerDto);
             if (!updated)
                 return NotFound();
             return NoContent();

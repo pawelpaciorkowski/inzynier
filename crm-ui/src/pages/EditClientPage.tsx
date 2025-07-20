@@ -4,15 +4,24 @@ import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useModal } from '../context/ModalContext';
 
+interface Tag {
+    id: number;
+    name: string;
+    color?: string;
+}
+
 interface CustomerFormData {
     name: string;
     email: string;
-    phone: string;
-    company: string;
+    phone?: string;
+    company?: string;
+    tagIds?: number[]; // Added tagIds to the form data
 }
 
 export function EditClientPage() {
     const [formData, setFormData] = useState<Partial<CustomerFormData>>({});
+    const [allTags, setAllTags] = useState<Tag[]>([]);
+    const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
     const [loading, setLoading] = useState(true);
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -26,20 +35,41 @@ export function EditClientPage() {
             return;
         }
 
-        axios.get(`${api}/customers/${id}`, { headers: { Authorization: `Bearer ${token}` } })
-            .then(res => {
-                const clientData = res.data;
+        const fetchClientAndTags = async () => {
+            try {
+                // Fetch client data
+                const clientResponse = await axios.get(`${api}/customers/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+                const clientData = clientResponse.data;
+
+                // Fetch all tags
+                const tagsResponse = await axios.get(`${api}/tags`, { headers: { Authorization: `Bearer ${token}` } });
+                const tagsData = tagsResponse.data.$values || tagsResponse.data;
+
+                setAllTags(tagsData);
+
+                // Set form data
                 setFormData({
                     name: clientData.name,
                     email: clientData.email,
                     phone: clientData.phone,
                     company: clientData.company,
                 });
-            })
-            .catch(err => {
-                openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się załadować danych klienta.' });
-            })
-            .finally(() => setLoading(false));
+
+                // Set selected tags
+                if (clientData.customerTags && clientData.customerTags.$values) {
+                    setSelectedTagIds(clientData.customerTags.$values.map((ct: any) => ct.tagId));
+                } else if (clientData.customerTags) {
+                    setSelectedTagIds(clientData.customerTags.map((ct: any) => ct.tagId));
+                }
+
+            } catch (err: any) {
+                openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się załadować danych klienta lub tagów.' });
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchClientAndTags();
     }, [api, id, navigate, openModal]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,11 +77,22 @@ export function EditClientPage() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleTagChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const options = Array.from(e.target.selectedOptions);
+        const values = options.map(option => Number(option.value));
+        setSelectedTagIds(values);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const token = localStorage.getItem('token');
+        const updatedClientData = {
+            ...formData,
+            tagIds: selectedTagIds // Include selected tags
+        };
+
         try {
-            await axios.put(`${api}/customers/${id}`, formData, {
+            await axios.put(`${api}/customers/${id}`, updatedClientData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             navigate('/klienci');
@@ -88,6 +129,22 @@ export function EditClientPage() {
                 <div>
                     <label htmlFor="company" className="block text-sm font-medium text-gray-300 mb-1">Firma</label>
                     <input id="company" name="company" type="text" value={formData.company || ''} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 text-white border-gray-600" />
+                </div>
+                <div>
+                    <label htmlFor="tags" className="block text-sm font-medium text-gray-300 mb-1">Tagi</label>
+                    <select
+                        id="tags"
+                        multiple
+                        value={selectedTagIds.map(String)} // Convert numbers to strings for select value
+                        onChange={handleTagChange}
+                        className="w-full p-2 rounded bg-gray-700 text-white border-gray-600 h-32"
+                    >
+                        {allTags.map(tag => (
+                            <option key={tag.id} value={tag.id}>
+                                {tag.name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
                 <div className="flex justify-between pt-4">
                     <button type="button" onClick={() => navigate('/klienci')} className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded transition-colors">

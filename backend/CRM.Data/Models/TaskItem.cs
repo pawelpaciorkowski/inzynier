@@ -13,5 +13,11 @@ namespace CRM.Data.Models
         public User User { get; set; } = default!;
         public Customer? Customer { get; set; }
 
+        // ✅ NOWE POLA - POWIĄZANIA Z GRUPAMI
+        public int? AssignedGroupId { get; set; }
+        public virtual Group? AssignedGroup { get; set; }
+
+        // ✅ NOWE POLA - POWIĄZANIA Z TAGAMI
+        public virtual ICollection<TaskTag> TaskTags { get; set; } = new List<TaskTag>();
     }
 }

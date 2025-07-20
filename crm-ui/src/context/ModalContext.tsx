@@ -19,6 +19,7 @@ interface ModalContextType {
     closeModal: () => void;
     options: ModalOptions | null;
     openToast: (message: string, type?: 'success' | 'error', duration?: number) => void;
+    openConfirmModal: (title: string, message: string, onConfirm?: () => void, onCancel?: () => void) => Promise<boolean>;
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
@@ -49,6 +50,22 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
         setToastTimeout(timeout);
     };
 
+    const openConfirmModal = (title: string, message: string): Promise<boolean> => {
+        return new Promise((resolve) => {
+            openModal({
+                type: 'confirm',
+                title,
+                message,
+                onConfirm: () => {
+                    resolve(true);
+                },
+                onCancel: () => {
+                    resolve(false);
+                },
+            });
+        });
+    };
+
     const handleConfirm = () => {
         if (options?.onConfirm) {
             options.onConfirm();
@@ -57,7 +74,7 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <ModalContext.Provider value={{ isOpen, openModal, closeModal, options, openToast }}>
+        <ModalContext.Provider value={{ isOpen, openModal, closeModal, options, openToast, openConfirmModal }}>
             {children}
 
             {isOpen && options && (

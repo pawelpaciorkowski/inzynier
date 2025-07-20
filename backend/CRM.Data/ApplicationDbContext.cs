@@ -40,6 +40,10 @@ namespace CRM.Data
         public DbSet<UserGroupAssignment> UserGroupAssignments { get; set; }
         public DbSet<Tag> Tags { get; set; }
         public DbSet<CustomerTag> CustomerTags { get; set; }
+        public DbSet<ContractTag> ContractTags { get; set; }
+        public DbSet<InvoiceTag> InvoiceTags { get; set; }
+        public DbSet<TaskTag> TaskTags { get; set; }
+        public DbSet<MeetingTag> MeetingTags { get; set; }
         public DbSet<Address> Addresses { get; set; }
         public DbSet<CalendarEvent> CalendarEvents { get; set; }
         public DbSet<InvoiceItem> InvoiceItems { get; set; }

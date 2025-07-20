@@ -1,237 +1,479 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
-import { ChartBarIcon, ExclamationTriangleIcon, CurrencyDollarIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import { useEffect, useState, type ReactNode } from 'react';
+import api from '../api';
+import { UsersIcon, DocumentTextIcon, CurrencyDollarIcon, CheckCircleIcon, ClockIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { useModal } from '../context/ModalContext';
 
-interface CustomerGrowthData {
-    month: string;
-    count: number;
+// --- HELPER: Rozpakowywanie $values z obiektów .NET --- 
+interface DotNetObject {
+    $values?: unknown[];
+    [key: string]: unknown;
 }
 
-interface SalesData {
-    customerName: string;
-    totalAmount: number;
+const unwrapValues = (obj: unknown): unknown => {
+    if (obj === null || typeof obj !== 'object') {
+        return obj;
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(unwrapValues);
+    }
+
+    const dotNetObj = obj as DotNetObject;
+    if (dotNetObj.$values && Array.isArray(dotNetObj.$values)) {
+        return dotNetObj.$values.map(unwrapValues);
+    }
+
+    const newObj: { [key: string]: unknown } = {};
+    for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            newObj[key] = unwrapValues((obj as Record<string, unknown>)[key]);
+        }
+    }
+    return newObj;
+};
+
+// --- INTERFEJSY DANYCH --- 
+
+interface DashboardData {
+    summary: {
+        totalCustomers: number;
+        totalInvoices: number;
+        totalTasks: number;
+        totalContracts: number;
+        totalMeetings: number;
+        totalInvoiceValue: number;
+        paidInvoiceValue: number;
+        unpaidInvoiceValue: number;
+        completedTasks: number;
+        pendingTasks: number;
+        upcomingMeetings: number;
+    };
+    topGroups: Array<{
+        id: number;
+        name: string;
+        customerCount: number;
+        invoiceCount: number;
+        taskCount: number;
+        contractCount: number;
+    }>;
+    topTags: Array<{
+        id: number;
+        name: string;
+        color?: string;
+        totalUsage: number;
+    }>;
 }
 
-interface InvoiceStatusData {
-    status: string;
-    count: number;
+interface Group {
+    id: number;
+    name: string;
+    memberCount: number;
 }
+
+interface Tag {
+    id: number;
+    name: string;
+    totalUsage: number;
+}
+
+// Nowe, poprawione interfejsy dla raportów grupowych i tagowych
+interface GroupReport {
+    summary: {
+        totalCustomers: number;
+        totalInvoicesSales: number; // Zmienione z totalInvoices
+        totalAmount: number;
+        totalTasks: number;
+        // Dodatkowe pola z sales report summary
+        paidAmount: number;
+        unpaidAmount: number;
+        paidCount: number;
+        unpaidCount: number;
+        completedTasks: number;
+        pendingTasks: number;
+        completionRate: number;
+        totalContracts: number;
+        totalInvoiceValue: number;
+        totalPaidValue: number;
+    };
+    customers: Array<{
+        id: number;
+        name: string;
+        email: string;
+        company: string;
+        phone: string;
+        createdAt: string;
+        assignedUser: string;
+        tags: string[];
+        contractCount: number;
+        invoiceCount: number;
+        totalInvoiceValue: number;
+        paidInvoiceValue: number;
+    }>;
+    invoices: Array<{
+        id: number;
+        number: string;
+        totalAmount: number;
+        isPaid: boolean;
+        issuedAt: string;
+        dueDate: string;
+        customerName: string;
+        customerEmail: string;
+        createdBy: string;
+        tags: string[];
+    }>;
+    tasks: Array<{
+        id: number;
+        title: string;
+        description: string;
+        dueDate: string;
+        completed: boolean;
+        assignedUser: string;
+        customerName: string;
+        tags: string[];
+    }>;
+}
+
+interface TagReport {
+    customers: Array<{
+        id: number;
+        name: string;
+        email: string;
+        groupName?: string;
+    }>;
+    invoices: Array<{
+        id: number;
+        number: string;
+        customerName: string;
+        totalAmount: number;
+        isPaid: boolean; // Dodane pole isPaid
+    }>;
+    tasks: Array<{
+        id: number;
+        title: string;
+        customerName: string;
+        completed: boolean;
+    }>;
+    contracts: Array<{
+        id: number;
+        title: string;
+        customerName: string;
+        contractNumber: string;
+    }>;
+    meetings: Array<{
+        id: number;
+        topic: string;
+        customerName: string;
+        scheduledAt: string;
+    }>;
+}
+
+// --- KOMPONENT GŁÓWNY --- 
 
 export function ReportsPage() {
-    const [customerGrowthData, setCustomerGrowthData] = useState<CustomerGrowthData[]>([]);
-    const [salesData, setSalesData] = useState<SalesData[]>([]);
-    const [invoiceStatusData, setInvoiceStatusData] = useState<InvoiceStatusData[]>([]);
+    const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+    const [groups, setGroups] = useState<Group[]>([]);
+    const [tags, setTags] = useState<Tag[]>([]);
+    const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
+    const [selectedTag, setSelectedTag] = useState<number | null>(null);
+    const [groupReport, setGroupReport] = useState<GroupReport | null>(null);
+    const [tagReport, setTagReport] = useState<TagReport | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [activeReport, setActiveReport] = useState('customerGrowth'); // 'customerGrowth', 'sales', 'invoiceStatus'
-    const api = import.meta.env.VITE_API_URL;
+    const { openToast } = useModal();
+
+    // --- POBIERANIE DANYCH --- 
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [dashboardRes, groupsRes, tagsRes] = await Promise.all([
+                api.get('/reports/dashboard'),
+                api.get('/groups'),
+                api.get('/tags')
+            ]);
+
+            setDashboardData(unwrapValues(dashboardRes.data) as DashboardData);
+            setGroups(unwrapValues(groupsRes.data) as Group[]);
+            setTags(unwrapValues(tagsRes.data) as Tag[]);
+            setError(null);
+
+        } catch (err) {
+            console.error('Błąd podczas ładowania danych początkowych:', err);
+            setError('Nie udało się załadować danych. Spróbuj odświeżyć stronę.');
+            openToast('Błąd ładowania danych', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchGroupReport = async (groupId: number) => {
+        try {
+            const [customersRes, salesRes, tasksRes] = await Promise.all([
+                api.get(`/reports/groups/${groupId}/customers`),
+                api.get(`/reports/groups/${groupId}/sales`),
+                api.get(`/reports/groups/${groupId}/tasks`)
+            ]);
+
+            const unwrappedCustomers = unwrapValues(customersRes.data) as Record<string, unknown>;
+            const unwrappedSales = unwrapValues(salesRes.data) as Record<string, unknown>;
+            const unwrappedTasks = unwrapValues(tasksRes.data) as Record<string, unknown>;
+
+            setGroupReport({
+                summary: {
+                    ...(unwrappedCustomers.summary as Record<string, unknown>),
+                    ...(unwrappedSales.summary as Record<string, unknown>),
+                    ...(unwrappedTasks.summary as Record<string, unknown>),
+                } as GroupReport['summary'],
+                customers: unwrappedCustomers.customers as GroupReport['customers'],
+                invoices: unwrappedSales.invoices as GroupReport['invoices'],
+                tasks: unwrappedTasks.tasks as GroupReport['tasks'],
+            });
+        } catch (err) {
+            console.error(`Błąd ładowania raportu dla grupy ${groupId}:`, err);
+            openToast('Nie udało się pobrać raportu grupy', 'error');
+        }
+    };
+
+    const fetchTagReport = async (tagId: number) => {
+        try {
+            const [customersRes, invoicesRes, tasksRes, contractsRes, meetingsRes] = await Promise.all([
+                api.get(`/reports/tags/${tagId}/customers`),
+                api.get(`/reports/tags/${tagId}/invoices`),
+                api.get(`/reports/tags/${tagId}/tasks`),
+                api.get(`/reports/tags/${tagId}/contracts`),
+                api.get(`/reports/tags/${tagId}/meetings`)
+            ]);
+
+            setTagReport({
+                customers: unwrapValues(customersRes.data) as TagReport['customers'],
+                invoices: unwrapValues(invoicesRes.data) as TagReport['invoices'],
+                tasks: unwrapValues(tasksRes.data) as TagReport['tasks'],
+                contracts: unwrapValues(contractsRes.data) as TagReport['contracts'],
+                meetings: unwrapValues(meetingsRes.data) as TagReport['meetings'],
+            });
+        } catch (err) {
+            console.error(`Błąd ładowania raportu dla taga ${tagId}:`, err);
+            openToast('Nie udało się pobrać raportu taga', 'error');
+        }
+    };
+
+    const handleDownloadGroupReportPdf = async (groupId: number, groupName: string) => {
+        try {
+            const response = await api.get(`/reports/groups/${groupId}/pdf`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `raport_grupy_${groupName.replace(/ /g, '_')}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            openToast('Raport PDF został pobrany', 'success');
+        } catch (err) {
+            console.error('Błąd podczas pobierania raportu PDF:', err);
+            openToast('Nie udało się pobrać raportu PDF', 'error');
+        }
+    };
 
     useEffect(() => {
-        const fetchReportData = async () => {
-            const token = localStorage.getItem('token');
-            setLoading(true);
-            setError(null);
-            try {
-                if (activeReport === 'customerGrowth') {
-                    const response = await axios.get(`${api}/reports/customer-growth`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-                    const responseData = response.data.$values || response.data;
-                    setCustomerGrowthData(responseData);
-                } else if (activeReport === 'sales') {
-                    const response = await axios.get(`${api}/reports/sales-by-customer`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-                    const responseData = response.data.$values || response.data;
-                    setSalesData(responseData);
-                } else if (activeReport === 'invoiceStatus') {
-                    const response = await axios.get(`${api}/reports/invoice-status`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-                    const responseData = response.data.$values || response.data;
-                    setInvoiceStatusData(responseData);
-                }
-            } catch (err) {
-                console.error("Błąd pobierania danych do raportu:", err);
-                setError("Nie udało się załadować danych raportu.");
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchReportData();
-    }, [api, activeReport]);
+        fetchData();
+    }, []);
 
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+    useEffect(() => {
+        if (selectedGroup) {
+            setTagReport(null); // Resetuj raport taga
+            fetchGroupReport(selectedGroup);
+        } else {
+            setGroupReport(null); // Czyść raport po odznaczeniu
+        }
+    }, [selectedGroup]);
+
+    useEffect(() => {
+        if (selectedTag) {
+            setGroupReport(null); // Resetuj raport grupy
+            fetchTagReport(selectedTag);
+        } else {
+            setTagReport(null); // Czyść raport po odznaczeniu
+        }
+    }, [selectedTag]);
+
+    // --- RENDEROWANIE --- 
+
+    if (loading) return <p className="p-6 text-gray-400">Ładowanie raportów...</p>;
+    if (error) return <p className="p-6 text-red-500">{error}</p>;
+    if (!dashboardData) return <p className="p-6 text-red-500">Brak danych do wyświetlenia.</p>;
 
     return (
         <div className="p-6">
-            <h1 className="text-3xl font-bold text-white mb-6">📊 Raporty</h1>
+            <h1 className="text-3xl font-bold text-white mb-8">Raporty i Analizy</h1>
 
-            <div className="mb-6 flex space-x-4">
-                <button
-                    onClick={() => setActiveReport('customerGrowth')}
-                    className={`px-4 py-2 rounded-lg font-semibold ${activeReport === 'customerGrowth' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                >
-                    Wzrost Klientów
-                </button>
-                <button
-                    onClick={() => setActiveReport('sales')}
-                    className={`px-4 py-2 rounded-lg font-semibold ${activeReport === 'sales' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                >
-                    Sprzedaż wg Klienta
-                </button>
-                <button
-                    onClick={() => setActiveReport('invoiceStatus')}
-                    className={`px-4 py-2 rounded-lg font-semibold ${activeReport === 'invoiceStatus' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                >
-                    Status Faktur
-                </button>
+            {/* --- SEKCJA GŁÓWNEGO DASHBOARDU --- */}
+            <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
+                <h2 className="text-xl text-white font-semibold mb-4">Podsumowanie Ogólne</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {/* Kafelki z podsumowaniem */}
+                    <StatTile icon={UsersIcon} value={dashboardData.summary.totalCustomers} label="Klienci" color="text-blue-400" />
+                    <StatTile icon={DocumentTextIcon} value={dashboardData.summary.totalInvoices} label="Faktury" color="text-green-400" />
+                    <StatTile icon={CheckCircleIcon} value={dashboardData.summary.totalTasks} label="Zadania" color="text-yellow-400" />
+                    <StatTile icon={CurrencyDollarIcon} value={dashboardData.summary.totalContracts} label="Kontrakty" color="text-purple-400" />
+                    <StatTile icon={ClockIcon} value={dashboardData.summary.totalMeetings} label="Spotkania" color="text-indigo-400" />
+                    <StatTile icon={CurrencyDollarIcon} value={`${dashboardData.summary.totalInvoiceValue.toLocaleString()} PLN`} label="Wartość Faktur" color="text-pink-400" />
+                </div>
             </div>
 
-            <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                {loading && <p className="text-gray-400 text-center">Generowanie raportu...</p>}
-
-                {error && (
-                    <div className="text-center text-red-400">
-                        <ExclamationTriangleIcon className="w-12 h-12 mx-auto text-red-500" />
-                        <p className="mt-4">{error}</p>
-                    </div>
-                )}
-
-                {!loading && !error && activeReport === 'customerGrowth' && (
-                    <>
-                        <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
-                            <ChartBarIcon className="w-6 h-6 mr-3 text-green-400" />
-                            Wzrost liczby klientów w czasie
-                        </h2>
-                        <div className="w-full h-[400px]">
-                            <BarChart
-                                width={700}
-                                height={400}
-                                data={customerGrowthData}
-                                margin={{ top: 20, right: 30, left: 10, bottom: 60 }}
-                            >
-                                <defs>
-                                    <linearGradient id="colorGrowth" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#68D391" stopOpacity={0.9} />
-                                        <stop offset="95%" stopColor="#38A169" stopOpacity={0.8} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
-                                <XAxis
-                                    dataKey="month"
-                                    stroke="#CBD5E0"
-                                    tick={{ fontSize: 12 }}
-                                    angle={-30}
-                                    textAnchor="end"
-                                    interval={0}
-                                    height={80}
-                                />
-                                <YAxis
-                                    stroke="#CBD5E0"
-                                    tick={{ fontSize: 12 }}
-                                    allowDecimals={false}
-                                />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#2D3748', border: 'none' }}
-                                    formatter={(value: number) => [`${value} klientów`, 'Wzrost']}
-                                />
-                                <Legend />
-                                <Bar
-                                    dataKey="count"
-                                    name="Nowi klienci"
-                                    fill="url(#colorGrowth)"
-                                    animationDuration={800}
-                                />
-                            </BarChart>
-                        </div>
-                    </>
-                )}
-
-
-                {!loading && !error && activeReport === 'sales' && (
-                    <>
-                        <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
-                            <CurrencyDollarIcon className="w-6 h-6 mr-3 text-yellow-400" />
-                            Sprzedaż według klienta
-                        </h2>
-                        <div className="overflow-x-auto">
-                            <div className="min-w-[900px] h-[450px] flex justify-center items-center">
-                                <BarChart
-                                    width={Math.max(600, salesData.length * 45)}
-                                    height={400}
-                                    data={salesData}
-                                    margin={{ top: 5, right: 30, left: 10, bottom: 40 }}
-                                >
-                                    <defs>
-                                        <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#F6AD55" stopOpacity={0.9} />
-                                            <stop offset="95%" stopColor="#ED8936" stopOpacity={0.8} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
-                                    <XAxis
-                                        dataKey="customerName"
-                                        stroke="#CBD5E0"
-                                        angle={-45}
-                                        textAnchor="end"
-                                        interval={0}
-                                        height={100}
-                                        tick={{ fontSize: 12 }}
-                                    />
-                                    <YAxis
-                                        stroke="#CBD5E0"
-                                        tick={{ fontSize: 12 }}
-                                        tickFormatter={(value) => `${value.toLocaleString('pl-PL')} zł`}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#2D3748', border: 'none' }}
-                                        formatter={(value: number) => [`${value.toLocaleString('pl-PL')} zł`, 'Sprzedaż']}
-                                    />
-                                    <Legend />
-                                    <Bar
-                                        dataKey="totalAmount"
-                                        name="Całkowita kwota"
-                                        fill="url(#colorSales)"
-                                        animationDuration={600}
-                                    />
-                                </BarChart>
-                            </div>
-                        </div>
-                    </>
-                )}
-
-
-                {!loading && !error && activeReport === 'invoiceStatus' && (
-                    <>
-                        <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
-                            <DocumentTextIcon className="w-6 h-6 mr-3 text-purple-400" />
-                            Status faktur
-                        </h2>
-                        <div className="flex justify-center items-center" style={{ height: 400 }}>
-                            <PieChart width={400} height={400}>
-                                <Pie
-                                    data={invoiceStatusData}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    outerRadius={150}
-                                    fill="#8884d8"
-                                    dataKey="count"
-                                    nameKey="status"
-                                >
-                                    {invoiceStatusData.map((_, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip contentStyle={{ backgroundColor: '#2D3748', border: 'none' }} />
-                                <Legend />
-                            </PieChart>
-                        </div>
-                    </>
-                )}
+            {/* --- SEKCJA FILTROWANIA --- */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                {/* Filtrowanie po grupach */}
+                <div>
+                    <label className="block text-lg font-medium text-gray-300 mb-2">Wybierz grupę do analizy</label>
+                    <select onChange={(e) => setSelectedGroup(e.target.value ? Number(e.target.value) : null)} className="w-full p-2 bg-gray-700 rounded-md text-white">
+                        <option value="">-- Brak --</option>
+                        {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                </div>
+                {/* Filtrowanie po tagach */}
+                <div>
+                    <label className="block text-lg font-medium text-gray-300 mb-2">Wybierz tag do analizy</label>
+                    <select onChange={(e) => setSelectedTag(e.target.value ? Number(e.target.value) : null)} className="w-full p-2 bg-gray-700 rounded-md text-white">
+                        <option value="">-- Brak --</option>
+                        {tags.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                </div>
             </div>
+
+            {/* --- SEKCJA WYNIKÓW FILTROWANIA --- */}
+            {groupReport && <GroupReportDisplay report={groupReport} groupName={groups.find(g => g.id === selectedGroup)?.name || 'Wybrana Grupa'} onDownloadPdf={() => handleDownloadGroupReportPdf(selectedGroup!, groups.find(g => g.id === selectedGroup)?.name || 'raport_grupy')} />}
+            {tagReport && <TagReportDisplay report={tagReport} tagName={tags.find(t => t.id === selectedTag)?.name || 'Wybrany Tag'} />}
+
         </div>
     );
 }
+
+// --- KOMPONENTY POMOCNICZE ---
+
+const StatTile = ({ icon: Icon, value, label, color }: { icon: React.ElementType, value: ReactNode, label: string, color: string }) => (
+    <div className="bg-gray-700 p-4 rounded-lg text-center">
+        <Icon className={`w-8 h-8 ${color} mx-auto mb-2`} />
+        <div className="text-2xl font-bold text-white">{value}</div>
+        <div className="text-gray-400 text-sm">{label}</div>
+    </div>
+);
+
+const GroupReportDisplay = ({ report, groupName, onDownloadPdf }: { report: GroupReport, groupName: string, onDownloadPdf: () => void }) => (
+    <div className="bg-gray-800 p-6 rounded-lg shadow-lg mt-4">
+        <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl text-white font-semibold">Raport dla grupy: {groupName}</h2>
+            <button onClick={onDownloadPdf} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md flex items-center">
+                <ArrowDownTrayIcon className="w-5 h-5 mr-2" />
+                Pobierz PDF
+            </button>
+        </div>
+
+        {/* Podsumowanie raportu grupowego */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+            <StatTile icon={UsersIcon} value={report.summary.totalCustomers} label="Klienci" color="text-blue-400" />
+            <StatTile icon={DocumentTextIcon} value={report.summary.totalInvoicesSales} label="Faktury (Sprzedaż)" color="text-green-400" />
+            <StatTile icon={CurrencyDollarIcon} value={`${report.summary.totalAmount.toLocaleString()} PLN`} label="Wartość Sprzedaży" color="text-purple-400" />
+            <StatTile icon={CheckCircleIcon} value={report.summary.totalTasks} label="Zadania" color="text-yellow-400" />
+            <StatTile icon={CurrencyDollarIcon} value={`${report.summary.paidAmount.toLocaleString()} PLN`} label="Opłacone Faktury" color="text-green-400" />
+            <StatTile icon={CurrencyDollarIcon} value={`${report.summary.unpaidAmount.toLocaleString()} PLN`} label="Nieopłacone Faktury" color="text-red-400" />
+            <StatTile icon={CheckCircleIcon} value={report.summary.completedTasks} label="Ukończone Zadania" color="text-green-400" />
+            <StatTile icon={ClockIcon} value={report.summary.pendingTasks} label="Zadania w toku" color="text-orange-400" />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <ReportCard title="Klienci" data={report.customers} renderItem={(item: ReportItem) => (
+                <div>
+                    <div className="font-medium">{item.name as string} ({item.company as string})</div>
+                    <div className="text-gray-400 text-sm">{item.email as string} | {item.phone as string}</div>
+                    <div className="text-gray-400 text-xs">Faktur: {item.invoiceCount as number} ({(item.totalInvoiceValue as number).toLocaleString()} PLN)</div>
+                    {item.tags && (item.tags as string[]).length > 0 && <div className="text-gray-500 text-xs">Tagi: {(item.tags as string[]).join(', ')}</div>}
+                </div>
+            )} />
+            <ReportCard title="Faktury" data={report.invoices} renderItem={(item: ReportItem) => (
+                <div>
+                    <div className="font-medium">{item.number as string} ({(item.totalAmount as number).toLocaleString()} PLN)</div>
+                    <div className="text-gray-400 text-sm">{item.customerName as string} ({item.customerEmail as string})</div>
+                    <div className={`text-xs ${item.isPaid ? 'text-green-400' : 'text-red-400'}`}>
+                        {item.isPaid ? 'Opłacona' : 'Nieopłacona'} | {new Date(item.issuedAt as string).toLocaleDateString()} - {new Date(item.dueDate as string).toLocaleDateString()}
+                    </div>
+                    {item.tags && (item.tags as string[]).length > 0 && <div className="text-gray-500 text-xs">Tagi: {(item.tags as string[]).join(', ')}</div>}
+                </div>
+            )} />
+            <ReportCard title="Zadania" data={report.tasks} renderItem={(item: ReportItem) => (
+                <div>
+                    <div className="font-medium">{item.title as string}</div>
+                    <div className="text-gray-400 text-sm">{item.customerName as string} | {item.assignedUser as string}</div>
+                    <div className={`text-xs ${item.completed ? 'text-green-400' : 'text-yellow-400'}`}>
+                        {item.completed ? 'Ukończone' : 'Oczekujące'} | Termin: {item.dueDate ? new Date(item.dueDate as string).toLocaleDateString() : 'Brak'}
+                    </div>
+                    {item.tags && (item.tags as string[]).length > 0 && <div className="text-gray-500 text-xs">Tagi: {(item.tags as string[]).join(', ')}</div>}
+                </div>
+            )} />
+        </div>
+    </div>
+);
+
+const TagReportDisplay = ({ report, tagName }: { report: TagReport, tagName: string }) => {
+    // --- Obliczenia summary ---
+    const totalCustomers = report.customers.length;
+    const totalInvoices = report.invoices.length;
+    const totalAmount = report.invoices.reduce((acc, i) => acc + i.totalAmount, 0);
+    const paidInvoices = report.invoices.filter(i => i.isPaid);
+    const unpaidInvoices = report.invoices.filter(i => !i.isPaid);
+    const paidAmount = paidInvoices.reduce((acc, i) => acc + i.totalAmount, 0);
+    const unpaidAmount = unpaidInvoices.reduce((acc, i) => acc + i.totalAmount, 0);
+    const totalTasks = report.tasks.length;
+    const completedTasks = report.tasks.filter(t => t.completed).length;
+    const pendingTasks = totalTasks - completedTasks;
+
+    return (
+        <div className="bg-gray-800 p-6 rounded-lg shadow-lg mt-4">
+            <h2 className="text-xl text-white font-semibold mb-4">Raport dla taga: {tagName}</h2>
+
+            {/* Podsumowanie raportu tagowego */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+                <StatTile icon={UsersIcon} value={totalCustomers} label="Klienci" color="text-blue-400" />
+                <StatTile icon={DocumentTextIcon} value={totalInvoices} label="Faktury" color="text-green-400" />
+                <StatTile icon={CurrencyDollarIcon} value={`${totalAmount.toLocaleString()} PLN`} label="Wartość Faktur" color="text-purple-400" />
+                <StatTile icon={CheckCircleIcon} value={totalTasks} label="Zadania" color="text-yellow-400" />
+                <StatTile icon={CurrencyDollarIcon} value={`${paidAmount.toLocaleString()} PLN`} label="Opłacone Faktury" color="text-green-400" />
+                <StatTile icon={CurrencyDollarIcon} value={`${unpaidAmount.toLocaleString()} PLN`} label="Nieopłacone Faktury" color="text-red-400" />
+                <StatTile icon={CheckCircleIcon} value={completedTasks} label="Ukończone Zadania" color="text-green-400" />
+                <StatTile icon={ClockIcon} value={pendingTasks} label="Zadania w toku" color="text-orange-400" />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <ReportCard title="Klienci" data={report.customers} renderItem={(item: ReportItem) => <div>{item.name as string}</div>} />
+                <ReportCard title="Faktury" data={report.invoices} renderItem={(item: ReportItem) => (
+                    <div>
+                        <div className="font-medium">{item.number as string} ({(item.totalAmount as number).toLocaleString()} PLN)</div>
+                        <div className="text-gray-400 text-sm">{item.customerName as string}</div>
+                        <div className={`text-xs ${item.isPaid ? 'text-green-400' : 'text-red-400'}`}>{item.isPaid ? 'Opłacona' : 'Nieopłacona'}</div>
+                    </div>
+                )} />
+
+                <ReportCard title="Kontrakty" data={report.contracts} renderItem={(item: ReportItem) => <div>{item.title as string}</div>} />
+
+            </div>
+        </div>
+    );
+};
+
+
+interface ReportItem {
+    id?: number;
+    [key: string]: unknown;
+}
+
+const ReportCard = ({ title, data, renderItem }: { title: string, data: unknown[], renderItem: (item: ReportItem) => ReactNode }) => (
+    <div className="bg-gray-700 p-4 rounded-lg">
+        <h3 className="text-lg font-semibold text-white mb-4">{title} ({data?.length || 0})</h3>
+        <div className="space-y-2 max-h-60 overflow-y-auto">
+            {data && data.length > 0 ? (
+                data.map((item, index) => <div key={(item as ReportItem)?.id || index} className="bg-gray-600 p-2 rounded">{renderItem(item as ReportItem)}</div>)
+            ) : (
+                <p className="text-gray-400">Brak danych.</p>
+            )}
+        </div>
+    </div>
+);

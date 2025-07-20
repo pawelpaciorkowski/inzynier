@@ -15,6 +15,15 @@ namespace CRM.Data.Models
         public DateTime? EndDate { get; set; }
         public decimal? NetAmount { get; set; }
         public int? PaymentTermDays { get; set; }
+
+        // ✅ NOWE POLA - POWIĄZANIA Z GRUPAMI I UŻYTKOWNIKAMI
+        public int? ResponsibleGroupId { get; set; }
+        public virtual Group? ResponsibleGroup { get; set; }
+        public int? CreatedByUserId { get; set; }
+        public virtual User CreatedByUser { get; set; } = null!;
+
+        // ✅ NOWE POLA - POWIĄZANIA Z TAGAMI
+        public virtual ICollection<ContractTag> ContractTags { get; set; } = new List<ContractTag>();
     }
 
     // Plik: backend/CRM.Data/Models/FullModels.cs
@@ -34,6 +43,15 @@ namespace CRM.Data.Models
         public decimal TotalAmount { get; set; }
         public virtual ICollection<InvoiceItem> Items { get; set; } = new List<InvoiceItem>();
         public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
+
+        // ✅ NOWE POLA - POWIĄZANIA Z GRUPAMI I UŻYTKOWNIKAMI
+        public int? AssignedGroupId { get; set; }
+        public virtual Group? AssignedGroup { get; set; }
+        public int? CreatedByUserId { get; set; }
+        public virtual User CreatedByUser { get; set; } = null!;
+
+        // ✅ NOWE POLA - POWIĄZANIA Z TAGAMI
+        public virtual ICollection<InvoiceTag> InvoiceTags { get; set; } = new List<InvoiceTag>();
     }
 
     public class Payment
@@ -96,6 +114,15 @@ namespace CRM.Data.Models
         public DateTime ScheduledAt { get; set; }
         public int CustomerId { get; set; }
         public virtual Customer Customer { get; set; } = null!;
+
+        // ✅ NOWE POLA - POWIĄZANIA Z GRUPAMI I UŻYTKOWNIKAMI
+        public int? AssignedGroupId { get; set; }
+        public virtual Group? AssignedGroup { get; set; }
+        public int? CreatedByUserId { get; set; }
+        public virtual User CreatedByUser { get; set; } = null!;
+
+        // ✅ NOWE POLA - POWIĄZANIA Z TAGAMI
+        public virtual ICollection<MeetingTag> MeetingTags { get; set; } = new List<MeetingTag>();
     }
 
     public class Reminder
@@ -180,8 +207,6 @@ namespace CRM.Data.Models
         public string Value { get; set; } = default!;
     }
 
-
-
     public class Group
     {
         public int Id { get; set; }
@@ -190,7 +215,14 @@ namespace CRM.Data.Models
 
         public string? Description { get; set; }
 
-        public virtual required ICollection<UserGroup> UserGroups { get; set; } = new List<UserGroup>();
+        public virtual ICollection<UserGroup> UserGroups { get; set; } = new List<UserGroup>();
+
+        // ✅ NOWE POLA - POWIĄZANIA Z INNYMI ENCJAMI
+        public virtual ICollection<Customer> AssignedCustomers { get; set; } = new List<Customer>();
+        public virtual ICollection<Contract> ResponsibleContracts { get; set; } = new List<Contract>();
+        public virtual ICollection<Invoice> AssignedInvoices { get; set; } = new List<Invoice>();
+        public virtual ICollection<Meeting> AssignedMeetings { get; set; } = new List<Meeting>();
+        public virtual ICollection<TaskItem> AssignedTasks { get; set; } = new List<TaskItem>();
     }
 
     public class UserGroup
@@ -213,6 +245,15 @@ namespace CRM.Data.Models
     {
         public int Id { get; set; }
         public string Name { get; set; } = default!;
+        public string? Color { get; set; } // ✅ NOWE POLE - kolor tagu
+        public string? Description { get; set; } // ✅ NOWE POLE - opis tagu
+
+        // ✅ NOWE POLA - POWIĄZANIA Z RÓŻNYMI ENCJAMI
+        public virtual ICollection<CustomerTag> CustomerTags { get; set; } = new List<CustomerTag>();
+        public virtual ICollection<ContractTag> ContractTags { get; set; } = new List<ContractTag>();
+        public virtual ICollection<InvoiceTag> InvoiceTags { get; set; } = new List<InvoiceTag>();
+        public virtual ICollection<TaskTag> TaskTags { get; set; } = new List<TaskTag>();
+        public virtual ICollection<MeetingTag> MeetingTags { get; set; } = new List<MeetingTag>();
     }
 
     public class CustomerTag
@@ -220,6 +261,45 @@ namespace CRM.Data.Models
         public int Id { get; set; }
         public int CustomerId { get; set; }
         public int TagId { get; set; }
+        public virtual Customer Customer { get; set; } = null!;
+        public virtual Tag Tag { get; set; } = null!;
+    }
+
+    // ✅ NOWE MODELE DLA TAGÓW RÓŻNYCH ENCJI
+    public class ContractTag
+    {
+        public int Id { get; set; }
+        public int ContractId { get; set; }
+        public int TagId { get; set; }
+        public virtual Contract Contract { get; set; } = null!;
+        public virtual Tag Tag { get; set; } = null!;
+    }
+
+    public class InvoiceTag
+    {
+        public int Id { get; set; }
+        public int InvoiceId { get; set; }
+        public int TagId { get; set; }
+        public virtual Invoice Invoice { get; set; } = null!;
+        public virtual Tag Tag { get; set; } = null!;
+    }
+
+    public class TaskTag
+    {
+        public int Id { get; set; }
+        public int TaskId { get; set; }
+        public int TagId { get; set; }
+        public virtual TaskItem Task { get; set; } = null!;
+        public virtual Tag Tag { get; set; } = null!;
+    }
+
+    public class MeetingTag
+    {
+        public int Id { get; set; }
+        public int MeetingId { get; set; }
+        public int TagId { get; set; }
+        public virtual Meeting Meeting { get; set; } = null!;
+        public virtual Tag Tag { get; set; } = null!;
     }
 
     public class Address

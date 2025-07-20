@@ -13,7 +13,7 @@ export default defineConfig({
         // Zmień port na ten, na którym FAKTYCZNIE działa Twój backend
         target: 'http://localhost:5000', 
         changeOrigin: true,
-        secure: false, // Dobre na czas developmentu
+        secure: false, 
       },
     },
   },

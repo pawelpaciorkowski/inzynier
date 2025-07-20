@@ -15,6 +15,8 @@ import { AddClientPage } from "./pages/AddClientPage";
 import { AddUserPage } from "./pages/AddUserPage";
 import { RolesPage } from "./pages/RolesPage";
 import { GroupsPage } from "./pages/GroupsPage";
+import { GroupDetailsPage } from "./pages/GroupDetailsPage";
+import { GroupStatisticsPage } from "./pages/GroupStatisticsPage";
 import { AllTasksPage } from "./pages/AllTasksPage";
 import { ContractsPage } from "./pages/ContractsPage";
 import { InvoicesPage } from "./pages/InvoicesPage";
@@ -75,6 +77,8 @@ function App() {
             <Route path="/uzytkownicy/edytuj/:id" element={<EditUserPage />} />
             <Route path="/role" element={<RolesPage />} />
             <Route path="/grupy" element={<GroupsPage />} />
+            <Route path="/grupy/:id" element={<GroupDetailsPage />} />
+            <Route path="/grupy/:id/statystyki" element={<GroupStatisticsPage />} />
             <Route path="/zadania/wszystkie" element={<AllTasksPage />} />
             <Route path="/kontrakty" element={<ContractsPage />} />
             <Route path="/kontrakty/dodaj" element={<PrivateRoute><AddContractPage /></PrivateRoute>} />
@@ -94,7 +98,7 @@ function App() {
             <Route path="/spotkania/edytuj/:id" element={<PrivateRoute><EditMeetingPage /></PrivateRoute>} />
             <Route path="/przypomnienia" element={<RemindersPage />} />
             <Route path="/szablony" element={<TemplatesPage />} />
-            <Route path="/raporty" element={<ReportsPage />} />
+            <Route path="/raporty" element={<ErrorBoundary><ReportsPage /></ErrorBoundary>} />
             <Route path="/eksporty" element={<ExportsPage />} />
             <Route path="/wiadomosci" element={<MessagesPage />} />
             <Route path="/notatki" element={<NotesPage />} />
