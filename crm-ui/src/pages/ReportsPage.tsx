@@ -386,7 +386,7 @@ const GroupReportDisplay = ({ report, groupName, onDownloadPdf }: { report: Grou
                     <div className="font-medium">{item.name as string} ({item.company as string})</div>
                     <div className="text-gray-400 text-sm">{item.email as string} | {item.phone as string}</div>
                     <div className="text-gray-400 text-xs">Faktur: {item.invoiceCount as number} ({(item.totalInvoiceValue as number).toLocaleString()} PLN)</div>
-                    {item.tags && (item.tags as string[]).length > 0 && <div className="text-gray-500 text-xs">Tagi: {(item.tags as string[]).join(', ')}</div>}
+                    {(item.tags as string[])?.length > 0 && <div className="text-gray-500 text-xs">Tagi: {(item.tags as string[]).join(', ')}</div>}
                 </div>
             )} />
             <ReportCard title="Faktury" data={report.invoices} renderItem={(item: ReportItem) => (
@@ -396,7 +396,7 @@ const GroupReportDisplay = ({ report, groupName, onDownloadPdf }: { report: Grou
                     <div className={`text-xs ${item.isPaid ? 'text-green-400' : 'text-red-400'}`}>
                         {item.isPaid ? 'Opłacona' : 'Nieopłacona'} | {new Date(item.issuedAt as string).toLocaleDateString()} - {new Date(item.dueDate as string).toLocaleDateString()}
                     </div>
-                    {item.tags && (item.tags as string[]).length > 0 && <div className="text-gray-500 text-xs">Tagi: {(item.tags as string[]).join(', ')}</div>}
+                    {(item.tags as string[])?.length > 0 && <div className="text-gray-500 text-xs">Tagi: {(item.tags as string[]).join(', ')}</div>}
                 </div>
             )} />
             <ReportCard title="Zadania" data={report.tasks} renderItem={(item: ReportItem) => (
@@ -406,7 +406,7 @@ const GroupReportDisplay = ({ report, groupName, onDownloadPdf }: { report: Grou
                     <div className={`text-xs ${item.completed ? 'text-green-400' : 'text-yellow-400'}`}>
                         {item.completed ? 'Ukończone' : 'Oczekujące'} | Termin: {item.dueDate ? new Date(item.dueDate as string).toLocaleDateString() : 'Brak'}
                     </div>
-                    {item.tags && (item.tags as string[]).length > 0 && <div className="text-gray-500 text-xs">Tagi: {(item.tags as string[]).join(', ')}</div>}
+                    {(item.tags as string[])?.length > 0 && <div className="text-gray-500 text-xs">Tagi: {(item.tags as string[]).join(', ')}</div>}
                 </div>
             )} />
         </div>
