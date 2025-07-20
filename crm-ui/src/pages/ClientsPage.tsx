@@ -18,6 +18,14 @@ interface Client {
     nip?: string;
     representative?: string;
     createdAt?: string;
+    customerTags?: Array<{
+        tagId: number;
+        tag: {
+            id: number;
+            name: string;
+            color?: string;
+        };
+    }>;
 }
 
 interface ApiResponse<T> {
@@ -79,10 +87,10 @@ export default function ClientsPage() {
     const filteredClients = clients.filter(client => {
         const q = search.toLowerCase();
         return (
-            client.name.toLowerCase().includes(q) ||
+            (client.name && client.name.toLowerCase().includes(q)) ||
             (client.email && client.email.toLowerCase().includes(q)) ||
             (client.company && client.company.toLowerCase().includes(q)) ||
-            (client.phone && client.phone.toLowerCase().includes(q)) ||
+            (client.phone && client.phone && client.phone.toLowerCase().includes(q)) ||
             (client.address && client.address.toLowerCase().includes(q)) ||
             (client.nip && client.nip.toLowerCase().includes(q)) ||
             (client.representative && client.representative.toLowerCase().includes(q))
@@ -133,6 +141,24 @@ export default function ClientsPage() {
                             {client.nip && <p className="text-gray-400">NIP: {client.nip}</p>}
                             {client.representative && <p className="text-gray-400">Przedstawiciel: {client.representative}</p>}
                             {client.createdAt && <p className="text-gray-400 text-xs">Dodano: {new Date(client.createdAt).toLocaleString()}</p>}
+
+                            {/* Wyświetlanie tagów */}
+                            {client.customerTags && client.customerTags.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                    {client.customerTags.map((customerTag) => (
+                                        <span
+                                            key={customerTag.tagId}
+                                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                                            style={{
+                                                backgroundColor: customerTag.tag.color || '#3B82F6',
+                                                color: 'white'
+                                            }}
+                                        >
+                                            {customerTag.tag.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <div className="flex items-center space-x-3">
                             <Link to={`/klienci/edytuj/${client.id}`} className="p-2 text-gray-400 hover:text-yellow-400 transition-colors" title="Edytuj">

@@ -57,13 +57,17 @@ export function EditClientPage() {
 
                 // Set selected tags
                 if (clientData.customerTags && clientData.customerTags.$values) {
-                    setSelectedTagIds(clientData.customerTags.$values.map((ct: any) => ct.tagId));
+                    setSelectedTagIds(clientData.customerTags.$values.map((ct: { tagId: number }) => ct.tagId));
                 } else if (clientData.customerTags) {
-                    setSelectedTagIds(clientData.customerTags.map((ct: any) => ct.tagId));
+                    setSelectedTagIds(clientData.customerTags.map((ct: { tagId: number }) => ct.tagId));
                 }
 
-            } catch (err: any) {
-                openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się załadować danych klienta lub tagów.' });
+            } catch (err: unknown) {
+                let errorMessage = 'Nie udało się załadować danych klienta lub tagów.';
+                if (axios.isAxiosError(err) && err.response) {
+                    errorMessage = (err.response.data as { message?: string })?.message || err.message;
+                }
+                openModal({ type: 'error', title: 'Błąd', message: errorMessage });
             } finally {
                 setLoading(false);
             }
@@ -77,10 +81,12 @@ export function EditClientPage() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleTagChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const options = Array.from(e.target.selectedOptions);
-        const values = options.map(option => Number(option.value));
-        setSelectedTagIds(values);
+    const handleTagToggle = (tagId: number) => {
+        setSelectedTagIds(prev =>
+            prev.includes(tagId)
+                ? prev.filter(id => id !== tagId)
+                : [...prev, tagId]
+        );
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -100,7 +106,7 @@ export function EditClientPage() {
         } catch (err: unknown) {
             let errorMessage = 'Nie udało się zaktualizować danych.';
             if (axios.isAxiosError(err) && err.response) {
-                errorMessage = err.response.data?.message || err.message;
+                errorMessage = (err.response.data as { message?: string })?.message || err.message;
             }
             openModal({ type: 'error', title: 'Błąd', message: errorMessage });
         }
@@ -131,20 +137,54 @@ export function EditClientPage() {
                     <input id="company" name="company" type="text" value={formData.company || ''} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 text-white border-gray-600" />
                 </div>
                 <div>
-                    <label htmlFor="tags" className="block text-sm font-medium text-gray-300 mb-1">Tagi</label>
-                    <select
-                        id="tags"
-                        multiple
-                        value={selectedTagIds.map(String)} // Convert numbers to strings for select value
-                        onChange={handleTagChange}
-                        className="w-full p-2 rounded bg-gray-700 text-white border-gray-600 h-32"
-                    >
-                        {allTags.map(tag => (
-                            <option key={tag.id} value={tag.id}>
-                                {tag.name}
-                            </option>
-                        ))}
-                    </select>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Tagi (kliknij aby wybrać)</label>
+                    <div className="max-h-32 overflow-y-auto border border-gray-600 rounded bg-gray-700 p-2">
+                        {allTags.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                                {allTags.map(tag => (
+                                    <button
+                                        key={tag.id}
+                                        type="button"
+                                        onClick={() => handleTagToggle(tag.id)}
+                                        className={`px-3 py-1 rounded-full text-sm font-medium transition-all ${selectedTagIds.includes(tag.id)
+                                                ? 'ring-2 ring-white ring-opacity-50'
+                                                : 'opacity-70 hover:opacity-100'
+                                            }`}
+                                        style={{
+                                            backgroundColor: tag.color || '#3B82F6',
+                                            color: 'white'
+                                        }}
+                                    >
+                                        {tag.name}
+                                    </button>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-gray-400 text-sm">Brak dostępnych tagów</p>
+                        )}
+                    </div>
+                    {selectedTagIds.length > 0 && (
+                        <div className="mt-2">
+                            <p className="text-xs text-gray-400 mb-1">Wybrane tagi:</p>
+                            <div className="flex flex-wrap gap-1">
+                                {selectedTagIds.map(tagId => {
+                                    const tag = allTags.find(t => t.id === tagId);
+                                    return tag ? (
+                                        <span
+                                            key={tag.id}
+                                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                                            style={{
+                                                backgroundColor: tag.color || '#3B82F6',
+                                                color: 'white'
+                                            }}
+                                        >
+                                            {tag.name}
+                                        </span>
+                                    ) : null;
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
                 <div className="flex justify-between pt-4">
                     <button type="button" onClick={() => navigate('/klienci')} className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded transition-colors">
