@@ -22,7 +22,7 @@ export function TemplatesPage() {
     const [filteredTemplates, setFilteredTemplates] = useState<Template[]>([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const fetchTemplates = useCallback(async () => {
@@ -64,7 +64,7 @@ export function TemplatesPage() {
             await api.post('/Templates/upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
-            openModal({ type: 'success', title: 'Sukces', message: 'Szablon został przesłany.' });
+            openToast('Szablon został przesłany.', 'success');
             fetchTemplates();
         } catch {
             openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się przesłać pliku.' });
@@ -80,7 +80,7 @@ export function TemplatesPage() {
             onConfirm: async () => {
                 try {
                     await api.delete(`/Templates/${template.id}`);
-                    openModal({ type: 'success', title: 'Sukces', message: 'Szablon usunięty.' });
+                    openToast('Szablon usunięty.', 'success');
                     fetchTemplates();
                 } catch {
                     openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się usunąć szablonu.' });

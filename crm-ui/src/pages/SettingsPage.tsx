@@ -9,7 +9,7 @@ interface SettingsData {
 
 export function SettingsPage() {
     const { user } = useAuth();
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
     const [settings, setSettings] = useState<SettingsData>({});
     const [loading, setLoading] = useState(true);
     const api = import.meta.env.VITE_API_URL;
@@ -37,7 +37,7 @@ export function SettingsPage() {
         const token = localStorage.getItem('token');
         try {
             await axios.post(`${api}/settings`, settings, { headers: { Authorization: `Bearer ${token}` } });
-            openModal({ type: 'success', title: 'Sukces', message: 'Ustawienia zostały zapisane.' });
+            openToast('Ustawienia zostały zapisane.', 'success');
         } catch {
             openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się zapisać ustawień.' });
         }
@@ -77,7 +77,7 @@ function ChangePasswordForm() {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
     const api = import.meta.env.VITE_API_URL;
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -97,7 +97,7 @@ function ChangePasswordForm() {
                 { currentPassword, newPassword },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            openModal({ type: 'success', title: 'Sukces!', message: 'Hasło zostało pomyślnie zmienione.' });
+            openToast('Hasło zostało pomyślnie zmienione.', 'success');
             setCurrentPassword('');
             setNewPassword('');
             setConfirmPassword('');

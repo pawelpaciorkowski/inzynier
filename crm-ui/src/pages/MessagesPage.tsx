@@ -40,7 +40,7 @@ export function MessagesPage() {
         subject: '',
         body: '',
     });
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
     const { fetchNotifications: globalFetchNotifications } = useOutletContext<{ fetchNotifications: () => void }>();
 
     const fetchMessages = async () => {
@@ -78,7 +78,7 @@ export function MessagesPage() {
     const handleMarkAsRead = async (id: number) => {
         try {
             await axios.put(`/api/Messages/${id}/read`);
-            openModal({ type: 'success', title: 'Sukces', message: 'Wiadomość oznaczona jako przeczytana.' });
+            openToast('Wiadomość oznaczona jako przeczytana.', 'success');
             fetchMessages(); // Odśwież listę
         } catch (err: any) {
             console.error('Błąd oznaczania jako przeczytane:', err);

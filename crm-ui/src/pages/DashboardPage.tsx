@@ -68,22 +68,26 @@ export default function DashboardPage() {
 
     useEffect(() => {
         const fetchData = async () => {
-            const token = localStorage.getItem("token");
+            try {
+                const token = localStorage.getItem("token");
 
-            const response = await fetch("/api/admin/dashboard", {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
+                const response = await fetch("/api/admin/dashboard", {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
 
-            if (!response.ok) {
-                console.error("Błąd HTTP", response.status);
-                return;
+                if (!response.ok) {
+                    console.error("Błąd HTTP", response.status);
+                    return;
+                }
+
+                const data = await response.json();
+                console.log("Dashboard data:", data);
+                setDashboardData(data);
+            } catch (error) {
+                console.error("Błąd pobierania danych dashboardu:", error);
             }
-
-            const data = await response.json();
-            console.log("Dashboard data:", data);
-            setDashboardData(data);
         };
 
         fetchData();

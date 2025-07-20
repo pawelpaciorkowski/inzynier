@@ -6,7 +6,7 @@ import { useModal } from '../context/ModalContext';
 export function ExportsPage() {
     const [exportType, setExportType] = useState('customers'); // Domyślny typ eksportu
     const [loading, setLoading] = useState(false);
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
 
     const handleExport = async () => {
         setLoading(true);
@@ -24,7 +24,7 @@ export function ExportsPage() {
             link.remove();
             window.URL.revokeObjectURL(url);
 
-            openModal({ type: 'success', title: 'Sukces', message: `Dane ${exportType} zostały wyeksportowane.` });
+            openToast(`Dane ${exportType} zostały wyeksportowane.`, 'success');
         } catch (error: any) {
             console.error('Błąd eksportu:', error);
             openModal({ type: 'error', title: 'Błąd', message: error.response?.data?.message || 'Nie udało się wyeksportować danych.' });

@@ -27,7 +27,7 @@ interface ApiResponse<T> {
 export default function ClientsPage() {
     const [clients, setClients] = useState<Client[]>([]);
     const [loading, setLoading] = useState(true);
-    const { openModal } = useModal(); // Używamy globalnego modala
+    const { openModal, openToast } = useModal(); // Używamy globalnego modala
     const [search, setSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const resultsPerPage = 10;
@@ -66,7 +66,7 @@ export default function ClientsPage() {
             onConfirm: async () => {
                 try {
                     await api.delete(`/Customers/${client.id}`);
-                    openModal({ type: 'success', title: 'Sukces', message: 'Klient został pomyślnie usunięty.' });
+                    openToast('Klient został pomyślnie usunięty.', 'success');
                     fetchClients(); // Odśwież listę
                 } catch {
                     openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się usunąć klienta.' });

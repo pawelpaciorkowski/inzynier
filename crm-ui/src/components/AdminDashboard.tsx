@@ -14,6 +14,17 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ data }: AdminDashboardProps) {
+    // Sprawdź czy data nie jest null
+    if (!data) {
+        return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                <div className="col-span-full text-center text-gray-400">
+                    <p>Ładowanie danych...</p>
+                </div>
+            </div>
+        );
+    }
+
     const tasks = (data.taskPerUser && !Array.isArray(data.taskPerUser) && (data.taskPerUser as any).$values)
         ? (data.taskPerUser as any).$values
         : (Array.isArray(data.taskPerUser) ? data.taskPerUser : []);
@@ -39,12 +50,9 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
                                 key={index}
                                 className="flex justify-between px-4 py-2 bg-gray-800 hover:bg-gray-700"
                             >
-                                <Link
-                                    to={`/zadania/uzytkownik/${entry.username}`}
-                                    className="text-indigo-400 hover:underline font-medium"
-                                >
+                                <span className="text-indigo-400 font-medium">
                                     {entry.username || <i>Nieznany</i>}
-                                </Link>
+                                </span>
                                 <span className="text-gray-400">{entry.count} zadań</span>
                             </li>
                         ))}

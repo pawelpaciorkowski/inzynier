@@ -31,7 +31,7 @@ interface ApiResponse<T> {
 export function EditPaymentPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
 
     // ✅ Krok 2: Użyj zdefiniowanych typów w stanie komponentu
     const [invoiceId, setInvoiceId] = useState<string>(''); // ID z selecta jest stringiem
@@ -100,7 +100,7 @@ export function EditPaymentPage() {
                 amount: parseFloat(amount),
                 paidAt: new Date(paidAt).toISOString(),
             });
-            openModal({ type: 'success', title: 'Sukces', message: 'Płatność została pomyślnie zaktualizowana.' });
+            openToast('Płatność została pomyślnie zaktualizowana.', 'success');
             navigate('/platnosci');
         } catch {
             // Interceptor Axios (jeśli go masz) lub hook 'useModal' obsłuży błąd

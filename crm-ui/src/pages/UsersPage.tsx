@@ -22,7 +22,7 @@ export default function UsersPage() {
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
-    const { openModal } = useModal(); // Use the global modal context
+    const { openModal, openToast } = useModal(); // Use the global modal context
     const api = import.meta.env.VITE_API_URL;
 
     const fetchUsers = useCallback(async () => {
@@ -74,7 +74,7 @@ export default function UsersPage() {
                     await axios.delete(`${api}/admin/users/${user.id}`, {
                         headers: { Authorization: `Bearer ${token}` },
                     });
-                    openModal({ type: 'success', title: 'Sukces', message: 'Użytkownik usunięty.' });
+                    openToast('Użytkownik usunięty.', 'success');
                     fetchUsers(); // Refresh the list after deleting
                 } catch (err) {
                     console.error('❌ Błąd usuwania użytkownika:', err);

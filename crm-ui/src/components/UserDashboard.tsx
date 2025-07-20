@@ -10,6 +10,17 @@ interface UserDashboardProps {
 }
 
 export default function UserDashboard({ data }: UserDashboardProps) {
+    // Sprawdź czy data nie jest null
+    if (!data) {
+        return (
+            <div className="space-y-8">
+                <div className="text-center text-gray-400">
+                    <p>Ładowanie danych...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
