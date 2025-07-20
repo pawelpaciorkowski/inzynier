@@ -469,6 +469,100 @@ using (var scope = app.Services.CreateScope())
             context.MeetingTags.AddRange(meetingTags);
             context.SaveChanges();
         }
+
+        // Seedowanie notatek
+        if (!context.Notes.Any())
+        {
+            var customers = context.Customers.ToList();
+            var users = context.Users.ToList();
+
+            var notes = new List<CRM.Data.Models.Note>
+            {
+                new CRM.Data.Models.Note
+                {
+                    Content = "Klient zainteresowany nową ofertą. Należy skontaktować się w przyszłym tygodniu.",
+                    CustomerId = customers.FirstOrDefault()?.Id ?? 1,
+                    UserId = users.FirstOrDefault()?.Id ?? 1,
+                    CreatedAt = DateTime.Now.AddDays(-2)
+                },
+                new CRM.Data.Models.Note
+                {
+                    Content = "Omówiono szczegóły projektu. Klient oczekuje wyceny do końca miesiąca.",
+                    CustomerId = customers.Skip(1).FirstOrDefault()?.Id ?? 1,
+                    UserId = users.FirstOrDefault()?.Id ?? 1,
+                    CreatedAt = DateTime.Now.AddDays(-1)
+                },
+                new CRM.Data.Models.Note
+                {
+                    Content = "Wysłano dokumentację techniczną. Klient potwierdził otrzymanie.",
+                    CustomerId = customers.Skip(2).FirstOrDefault()?.Id ?? 1,
+                    UserId = users.FirstOrDefault()?.Id ?? 1,
+                    CreatedAt = DateTime.Now.AddHours(-6)
+                }
+            };
+
+            context.Notes.AddRange(notes);
+            context.SaveChanges();
+        }
+
+        // Seedowanie przypomnień
+        if (!context.Reminders.Any())
+        {
+            var users = context.Users.ToList();
+
+            var reminders = new List<CRM.Data.Models.Reminder>
+            {
+                new CRM.Data.Models.Reminder
+                {
+                    Note = "Przypomnienie o spotkaniu z klientem VIP",
+                    DueDate = DateTime.Now.AddDays(1),
+                    UserId = users.FirstOrDefault()?.Id ?? 1,
+                    IsCompleted = false
+                },
+                new CRM.Data.Models.Reminder
+                {
+                    Note = "Sprawdzić status płatności za fakturę F/2024/002",
+                    DueDate = DateTime.Now.AddDays(3),
+                    UserId = users.FirstOrDefault()?.Id ?? 1,
+                    IsCompleted = false
+                },
+                new CRM.Data.Models.Reminder
+                {
+                    Note = "Przygotować raport miesięczny",
+                    DueDate = DateTime.Now.AddDays(7),
+                    UserId = users.FirstOrDefault()?.Id ?? 1,
+                    IsCompleted = false
+                }
+            };
+
+            context.Reminders.AddRange(reminders);
+            context.SaveChanges();
+        }
+
+        // Seedowanie płatności
+        if (!context.Payments.Any())
+        {
+            var invoices = context.Invoices.ToList();
+
+            var payments = new List<CRM.Data.Models.Payment>
+            {
+                new CRM.Data.Models.Payment
+                {
+                    InvoiceId = invoices.FirstOrDefault()?.Id ?? 1,
+                    Amount = 1500.00m,
+                    PaidAt = DateTime.Now.AddDays(-20)
+                },
+                new CRM.Data.Models.Payment
+                {
+                    InvoiceId = invoices.Skip(2).FirstOrDefault()?.Id ?? 1,
+                    Amount = 800.00m,
+                    PaidAt = DateTime.Now.AddDays(-5)
+                }
+            };
+
+            context.Payments.AddRange(payments);
+            context.SaveChanges();
+        }
     }
     catch (Exception ex)
     {

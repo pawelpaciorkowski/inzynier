@@ -9,7 +9,7 @@ using System.Security.Claims;
 namespace CRM.API.Controllers.Admin
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/admin/[controller]")]
     [Authorize]
     public class DashboardController : ControllerBase
     {
@@ -64,6 +64,8 @@ namespace CRM.API.Controllers.Admin
                         tasksCount = await _context.Tasks.CountAsync(t => t.UserId == userId),
                         messagesCount = await _context.Messages.CountAsync(m => m.RecipientUserId == userId),
                         remindersCount = await _context.Reminders.CountAsync(r => r.UserId == userId),
+                        invoicesCount = await _context.Invoices.CountAsync(),
+                        paymentsCount = await _context.Payments.CountAsync(),
                         recentMeetings = await _context.Meetings
                             .Include(m => m.Customer)
                             .OrderByDescending(m => m.ScheduledAt)

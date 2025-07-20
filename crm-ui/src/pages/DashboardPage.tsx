@@ -25,6 +25,8 @@ type SalesDashboardData = {
     tasksCount: number;
     messagesCount: number;
     remindersCount: number;
+    invoicesCount: number;
+    paymentsCount: number;
     recentMeetings: {
         id: number;
         topic: string;
@@ -68,7 +70,7 @@ export default function DashboardPage() {
         const fetchData = async () => {
             const token = localStorage.getItem("token");
 
-            const response = await fetch("/api/dashboard", {
+            const response = await fetch("/api/admin/dashboard", {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -87,13 +89,7 @@ export default function DashboardPage() {
         fetchData();
     }, []);
 
-    if (!dashboardData) {
-        return (
-            <p className="p-6 text-center text-gray-400 animate-pulse">
-                Ładowanie dashboardu...
-            </p>
-        );
-    }
+
 
     return (
         <div className="min-h-screen bg-gradient-to-tr from-gray-900 via-gray-800 to-gray-900 text-gray-200 p-6">
