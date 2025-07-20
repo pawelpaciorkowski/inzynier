@@ -53,47 +53,473 @@ namespace CRM.API.Controllers
 
         [Authorize(Roles = "Admin,Manager,Sprzedawca")]
         [HttpGet("export-customers")]
-        public async Task<IActionResult> ExportCustomers()
+        public async Task<IActionResult> ExportCustomers(
+            [FromQuery] string? format = "csv",
+            [FromQuery] bool includeRelations = true,
+            [FromQuery] string? columns = null,
+            [FromQuery] string? dateFrom = null,
+            [FromQuery] string? dateTo = null,
+            [FromQuery] int? groupId = null,
+            [FromQuery] int? tagId = null)
         {
-            var customers = await _context.Customers.ToListAsync();
-            var csvBytes = _csvExportService.ExportCustomersToCsv(customers);
-            return File(csvBytes, "text/csv", "customers.csv");
-        }
+            var query = _context.Customers.AsQueryable();
 
-        [Authorize(Roles = "Admin,Manager,Sprzedawca")]
-        [HttpGet("export-notes")]
-        public async Task<IActionResult> ExportNotes()
-        {
-            var notes = await _context.Notes.ToListAsync();
-            var csvBytes = _csvExportService.ExportNotesToCsv(notes);
-            return File(csvBytes, "text/csv", "notes.csv");
+            // Filtrowanie po dacie
+            if (!string.IsNullOrEmpty(dateFrom) && DateTime.TryParse(dateFrom, out var fromDate))
+            {
+                query = query.Where(c => c.CreatedAt >= fromDate);
+            }
+            if (!string.IsNullOrEmpty(dateTo) && DateTime.TryParse(dateTo, out var toDate))
+            {
+                query = query.Where(c => c.CreatedAt <= toDate);
+            }
+
+            // Filtrowanie po grupie
+            if (groupId.HasValue)
+            {
+                query = query.Where(c => c.AssignedGroupId == groupId);
+            }
+
+            // Filtrowanie po tagu
+            if (tagId.HasValue)
+            {
+                query = query.Where(c => c.CustomerTags.Any(ct => ct.TagId == tagId));
+            }
+
+            // Include relations if requested
+            if (includeRelations)
+            {
+                query = query
+                    .Include(c => c.AssignedGroup)
+                    .Include(c => c.AssignedUser)
+                    .Include(c => c.CustomerTags)
+                        .ThenInclude(ct => ct.Tag);
+            }
+
+            var customers = await query.ToListAsync();
+
+            // Parse columns
+            var selectedColumns = !string.IsNullOrEmpty(columns) 
+                ? columns.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                : new[] { "id", "name", "email", "phone", "company", "createdAt" };
+
+            byte[] fileBytes;
+            string contentType;
+            if (format.ToLower() == "xlsx")
+            {
+                fileBytes = _csvExportService.ExportCustomersToXlsx(customers, selectedColumns, includeRelations);
+                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            }
+            else if (format.ToLower() == "pdf")
+            {
+                fileBytes = _csvExportService.ExportCustomersToCsvAdvanced(customers, selectedColumns, includeRelations);
+                contentType = "text/csv";
+            }
+            else
+            {
+                fileBytes = _csvExportService.ExportCustomersToCsvAdvanced(customers, selectedColumns, includeRelations);
+                contentType = "text/csv";
+            }
+            var fileName = $"customers_export_{DateTime.Now:yyyyMMdd_HHmmss}.{format.ToLower()}";
+            return File(fileBytes, contentType, fileName);
         }
 
         [Authorize(Roles = "Admin,Manager,Sprzedawca")]
         [HttpGet("export-invoices")]
-        public async Task<IActionResult> ExportInvoices()
+        public async Task<IActionResult> ExportInvoices(
+            [FromQuery] string? format = "csv",
+            [FromQuery] bool includeRelations = true,
+            [FromQuery] string? columns = null,
+            [FromQuery] string? dateFrom = null,
+            [FromQuery] string? dateTo = null,
+            [FromQuery] int? groupId = null,
+            [FromQuery] int? tagId = null)
         {
-            var invoices = await _context.Invoices.ToListAsync();
-            var csvBytes = _csvExportService.ExportInvoicesToCsv(invoices);
-            return File(csvBytes, "text/csv", "invoices.csv");
+            var query = _context.Invoices.AsQueryable();
+
+            // Filtrowanie po dacie
+            if (!string.IsNullOrEmpty(dateFrom) && DateTime.TryParse(dateFrom, out var fromDate))
+            {
+                query = query.Where(i => i.IssuedAt >= fromDate);
+            }
+            if (!string.IsNullOrEmpty(dateTo) && DateTime.TryParse(dateTo, out var toDate))
+            {
+                query = query.Where(i => i.IssuedAt <= toDate);
+            }
+
+            // Filtrowanie po grupie
+            if (groupId.HasValue)
+            {
+                query = query.Where(i => i.AssignedGroupId == groupId || i.Customer.AssignedGroupId == groupId);
+            }
+
+            // Filtrowanie po tagu
+            if (tagId.HasValue)
+            {
+                query = query.Where(i => i.InvoiceTags.Any(it => it.TagId == tagId) || i.Customer.CustomerTags.Any(ct => ct.TagId == tagId));
+            }
+
+            // Include relations if requested
+            if (includeRelations)
+            {
+                query = query
+                    .Include(i => i.Customer)
+                    .Include(i => i.AssignedGroup)
+                    .Include(i => i.CreatedByUser)
+                    .Include(i => i.InvoiceTags)
+                        .ThenInclude(it => it.Tag);
+            }
+
+            var invoices = await query.ToListAsync();
+
+            // Parse columns
+            var selectedColumns = !string.IsNullOrEmpty(columns) 
+                ? columns.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                : new[] { "id", "number", "customerName", "totalAmount", "isPaid", "issuedAt" };
+
+            byte[] fileBytes;
+            string contentType;
+            if (format.ToLower() == "xlsx")
+            {
+                fileBytes = _csvExportService.ExportInvoicesToXlsx(invoices, selectedColumns, includeRelations);
+                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            }
+            else if (format.ToLower() == "pdf")
+            {
+                fileBytes = _csvExportService.ExportInvoicesToCsvAdvanced(invoices, selectedColumns, includeRelations);
+                contentType = "text/csv";
+            }
+            else
+            {
+                fileBytes = _csvExportService.ExportInvoicesToCsvAdvanced(invoices, selectedColumns, includeRelations);
+                contentType = "text/csv";
+            }
+            var fileName = $"invoices_export_{DateTime.Now:yyyyMMdd_HHmmss}.{format.ToLower()}";
+            return File(fileBytes, contentType, fileName);
         }
 
         [Authorize(Roles = "Admin,Manager,Sprzedawca")]
         [HttpGet("export-payments")]
-        public async Task<IActionResult> ExportPayments()
+        public async Task<IActionResult> ExportPayments(
+            [FromQuery] string? format = "csv",
+            [FromQuery] bool includeRelations = true,
+            [FromQuery] string? columns = null,
+            [FromQuery] string? dateFrom = null,
+            [FromQuery] string? dateTo = null)
         {
-            var payments = await _context.Payments.ToListAsync();
-            var csvBytes = _csvExportService.ExportPaymentsToCsv(payments);
-            return File(csvBytes, "text/csv", "payments.csv");
+            var query = _context.Payments.AsQueryable();
+
+            // Filtrowanie po dacie
+            if (!string.IsNullOrEmpty(dateFrom) && DateTime.TryParse(dateFrom, out var fromDate))
+            {
+                query = query.Where(p => p.PaidAt >= fromDate);
+            }
+            if (!string.IsNullOrEmpty(dateTo) && DateTime.TryParse(dateTo, out var toDate))
+            {
+                query = query.Where(p => p.PaidAt <= toDate);
+            }
+
+            // Include relations if requested
+            if (includeRelations)
+            {
+                query = query.Include(p => p.Invoice);
+            }
+
+            var payments = await query.ToListAsync();
+
+            // Parse columns
+            var selectedColumns = !string.IsNullOrEmpty(columns) 
+                ? columns.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                : new[] { "id", "invoiceNumber", "amount", "paidAt" };
+
+            byte[] fileBytes;
+            string contentType;
+            if (format.ToLower() == "xlsx")
+            {
+                fileBytes = _csvExportService.ExportPaymentsToCsvAdvanced(payments, selectedColumns, includeRelations);
+                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            }
+            else if (format.ToLower() == "pdf")
+            {
+                fileBytes = _csvExportService.ExportPaymentsToCsvAdvanced(payments, selectedColumns, includeRelations);
+                contentType = "text/csv";
+            }
+            else
+            {
+                fileBytes = _csvExportService.ExportPaymentsToCsvAdvanced(payments, selectedColumns, includeRelations);
+                contentType = "text/csv";
+            }
+            var fileName = $"payments_export_{DateTime.Now:yyyyMMdd_HHmmss}.{format.ToLower()}";
+            return File(fileBytes, contentType, fileName);
         }
 
         [Authorize(Roles = "Admin,Manager,Sprzedawca")]
         [HttpGet("export-contracts")]
-        public async Task<IActionResult> ExportContracts()
+        public async Task<IActionResult> ExportContracts(
+            [FromQuery] string? format = "csv",
+            [FromQuery] bool includeRelations = true,
+            [FromQuery] string? columns = null,
+            [FromQuery] string? dateFrom = null,
+            [FromQuery] string? dateTo = null,
+            [FromQuery] int? groupId = null,
+            [FromQuery] int? tagId = null)
         {
-            var contracts = await _context.Contracts.ToListAsync();
-            var csvBytes = _csvExportService.ExportContractsToCsv(contracts);
-            return File(csvBytes, "text/csv", "contracts.csv");
+            var query = _context.Contracts.AsQueryable();
+
+            // Filtrowanie po dacie
+            if (!string.IsNullOrEmpty(dateFrom) && DateTime.TryParse(dateFrom, out var fromDate))
+            {
+                query = query.Where(c => c.SignedAt >= fromDate);
+            }
+            if (!string.IsNullOrEmpty(dateTo) && DateTime.TryParse(dateTo, out var toDate))
+            {
+                query = query.Where(c => c.SignedAt <= toDate);
+            }
+
+            // Filtrowanie po grupie
+            if (groupId.HasValue)
+            {
+                query = query.Where(c => c.Customer.AssignedGroupId == groupId);
+            }
+
+            // Filtrowanie po tagu
+            if (tagId.HasValue)
+            {
+                query = query.Where(c => c.Customer.CustomerTags.Any(ct => ct.TagId == tagId));
+            }
+
+            // Include relations if requested
+            if (includeRelations)
+            {
+                query = query.Include(c => c.Customer);
+            }
+
+            var contracts = await query.ToListAsync();
+
+            // Parse columns
+            var selectedColumns = !string.IsNullOrEmpty(columns) 
+                ? columns.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                : new[] { "id", "title", "contractNumber", "customerName", "signedAt" };
+
+            byte[] fileBytes;
+            string contentType;
+            if (format.ToLower() == "xlsx")
+            {
+                fileBytes = _csvExportService.ExportContractsToCsvAdvanced(contracts, selectedColumns, includeRelations);
+                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            }
+            else if (format.ToLower() == "pdf")
+            {
+                fileBytes = _csvExportService.ExportContractsToCsvAdvanced(contracts, selectedColumns, includeRelations);
+                contentType = "text/csv";
+            }
+            else
+            {
+                fileBytes = _csvExportService.ExportContractsToCsvAdvanced(contracts, selectedColumns, includeRelations);
+                contentType = "text/csv";
+            }
+            var fileName = $"contracts_export_{DateTime.Now:yyyyMMdd_HHmmss}.{format.ToLower()}";
+            return File(fileBytes, contentType, fileName);
+        }
+
+        [Authorize(Roles = "Admin,Manager,Sprzedawca")]
+        [HttpGet("export-tasks")]
+        public async Task<IActionResult> ExportTasks(
+            [FromQuery] string? format = "csv",
+            [FromQuery] bool includeRelations = true,
+            [FromQuery] string? columns = null,
+            [FromQuery] string? dateFrom = null,
+            [FromQuery] string? dateTo = null,
+            [FromQuery] int? groupId = null,
+            [FromQuery] int? tagId = null)
+        {
+            var query = _context.Tasks.AsQueryable();
+
+            // Filtrowanie po dacie (TaskItem nie ma CreatedAt, używamy DueDate)
+            if (!string.IsNullOrEmpty(dateFrom) && DateTime.TryParse(dateFrom, out var fromDate))
+            {
+                query = query.Where(t => t.DueDate >= fromDate);
+            }
+            if (!string.IsNullOrEmpty(dateTo) && DateTime.TryParse(dateTo, out var toDate))
+            {
+                query = query.Where(t => t.DueDate <= toDate);
+            }
+
+            // Filtrowanie po grupie
+            if (groupId.HasValue)
+            {
+                query = query.Where(t => t.AssignedGroupId == groupId || t.Customer.AssignedGroupId == groupId);
+            }
+
+            // Filtrowanie po tagu
+            if (tagId.HasValue)
+            {
+                query = query.Where(t => t.TaskTags.Any(tt => tt.TagId == tagId) || t.Customer.CustomerTags.Any(ct => ct.TagId == tagId));
+            }
+
+            // Include relations if requested
+            if (includeRelations)
+            {
+                query = query
+                    .Include(t => t.User)
+                    .Include(t => t.Customer)
+                    .Include(t => t.AssignedGroup)
+                    .Include(t => t.TaskTags)
+                        .ThenInclude(tt => tt.Tag);
+            }
+
+            var tasks = await query.ToListAsync();
+
+            // Parse columns
+            var selectedColumns = !string.IsNullOrEmpty(columns) 
+                ? columns.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                : new[] { "id", "title", "customerName", "assignedUser", "dueDate", "completed" };
+
+            byte[] fileBytes;
+            string contentType;
+            if (format.ToLower() == "xlsx")
+            {
+                fileBytes = _csvExportService.ExportTasksToXlsx(tasks, selectedColumns, includeRelations);
+                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            }
+            else if (format.ToLower() == "pdf")
+            {
+                fileBytes = _csvExportService.ExportTasksToCsvAdvanced(tasks, selectedColumns, includeRelations);
+                contentType = "text/csv";
+            }
+            else
+            {
+                fileBytes = _csvExportService.ExportTasksToCsvAdvanced(tasks, selectedColumns, includeRelations);
+                contentType = "text/csv";
+            }
+            var fileName = $"tasks_export_{DateTime.Now:yyyyMMdd_HHmmss}.{format.ToLower()}";
+            return File(fileBytes, contentType, fileName);
+        }
+
+        [Authorize(Roles = "Admin,Manager,Sprzedawca")]
+        [HttpGet("export-meetings")]
+        public async Task<IActionResult> ExportMeetings(
+            [FromQuery] string? format = "csv",
+            [FromQuery] bool includeRelations = true,
+            [FromQuery] string? columns = null,
+            [FromQuery] string? dateFrom = null,
+            [FromQuery] string? dateTo = null,
+            [FromQuery] int? groupId = null,
+            [FromQuery] int? tagId = null)
+        {
+            var query = _context.Meetings.AsQueryable();
+
+            // Filtrowanie po dacie
+            if (!string.IsNullOrEmpty(dateFrom) && DateTime.TryParse(dateFrom, out var fromDate))
+            {
+                query = query.Where(m => m.ScheduledAt >= fromDate);
+            }
+            if (!string.IsNullOrEmpty(dateTo) && DateTime.TryParse(dateTo, out var toDate))
+            {
+                query = query.Where(m => m.ScheduledAt <= toDate);
+            }
+
+            // Filtrowanie po grupie
+            if (groupId.HasValue)
+            {
+                query = query.Where(m => m.Customer.AssignedGroupId == groupId);
+            }
+
+            // Filtrowanie po tagu
+            if (tagId.HasValue)
+            {
+                query = query.Where(m => m.Customer.CustomerTags.Any(ct => ct.TagId == tagId));
+            }
+
+            // Include relations if requested
+            if (includeRelations)
+            {
+                query = query.Include(m => m.Customer);
+            }
+
+            var meetings = await query.ToListAsync();
+
+            // Parse columns
+            var selectedColumns = !string.IsNullOrEmpty(columns) 
+                ? columns.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                : new[] { "id", "topic", "customerName", "scheduledAt", "duration" };
+
+            byte[] fileBytes;
+            string contentType;
+            if (format.ToLower() == "xlsx")
+            {
+                fileBytes = _csvExportService.ExportMeetingsToCsvAdvanced(meetings, selectedColumns, includeRelations);
+                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            }
+            else if (format.ToLower() == "pdf")
+            {
+                fileBytes = _csvExportService.ExportMeetingsToCsvAdvanced(meetings, selectedColumns, includeRelations);
+                contentType = "text/csv";
+            }
+            else
+            {
+                fileBytes = _csvExportService.ExportMeetingsToCsvAdvanced(meetings, selectedColumns, includeRelations);
+                contentType = "text/csv";
+            }
+            var fileName = $"meetings_export_{DateTime.Now:yyyyMMdd_HHmmss}.{format.ToLower()}";
+            return File(fileBytes, contentType, fileName);
+        }
+
+        [Authorize(Roles = "Admin,Manager,Sprzedawca")]
+        [HttpGet("export-notes")]
+        public async Task<IActionResult> ExportNotes(
+            [FromQuery] string? format = "csv",
+            [FromQuery] bool includeRelations = true,
+            [FromQuery] string? columns = null,
+            [FromQuery] string? dateFrom = null,
+            [FromQuery] string? dateTo = null)
+        {
+            var query = _context.Notes.AsQueryable();
+
+            // Filtrowanie po dacie
+            if (!string.IsNullOrEmpty(dateFrom) && DateTime.TryParse(dateFrom, out var fromDate))
+            {
+                query = query.Where(n => n.CreatedAt >= fromDate);
+            }
+            if (!string.IsNullOrEmpty(dateTo) && DateTime.TryParse(dateTo, out var toDate))
+            {
+                query = query.Where(n => n.CreatedAt <= toDate);
+            }
+
+            // Include relations if requested
+            if (includeRelations)
+            {
+                query = query
+                    .Include(n => n.Customer)
+                    .Include(n => n.User);
+            }
+
+            var notes = await query.ToListAsync();
+
+            // Parse columns
+            var selectedColumns = !string.IsNullOrEmpty(columns) 
+                ? columns.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                : new[] { "id", "content", "customerName", "createdBy", "createdAt" };
+
+            byte[] fileBytes;
+            string contentType;
+            if (format.ToLower() == "xlsx")
+            {
+                fileBytes = _csvExportService.ExportNotesToCsvAdvanced(notes, selectedColumns, includeRelations);
+                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            }
+            else if (format.ToLower() == "pdf")
+            {
+                fileBytes = _csvExportService.ExportNotesToCsvAdvanced(notes, selectedColumns, includeRelations);
+                contentType = "text/csv";
+            }
+            else
+            {
+                fileBytes = _csvExportService.ExportNotesToCsvAdvanced(notes, selectedColumns, includeRelations);
+                contentType = "text/csv";
+            }
+            var fileName = $"notes_export_{DateTime.Now:yyyyMMdd_HHmmss}.{format.ToLower()}";
+            return File(fileBytes, contentType, fileName);
         }
 
         [HttpGet("sales-by-customer")]

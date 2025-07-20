@@ -93,26 +93,31 @@ namespace CRM.BusinessLogic.Services
 
         public async Task<byte[]> GenerateInvoicePdfAsync(int invoiceId)
         {
-            var invoice = await _context.Invoices
-                .Include(i => i.Customer)
-                .Include(i => i.Items)
-                .FirstOrDefaultAsync(i => i.Id == invoiceId);
-
-            if (invoice == null)
+            try
             {
-                throw new Exception("Faktura nie znaleziona.");
-            }
+                var invoice = await _context.Invoices
+                    .Include(i => i.Customer)
+                    .Include(i => i.Items)
+                    .FirstOrDefaultAsync(i => i.Id == invoiceId);
 
-            // Pobierz dane firmy z Settings
-            var settings = await _context.Settings.ToDictionaryAsync(s => s.Key, s => s.Value);
-            string companyName = settings.GetValueOrDefault("CompanyName", "Twoja Firma");
-            string companyAddress = settings.GetValueOrDefault("CompanyAddress", "Adres firmy");
-            string companyNip = settings.GetValueOrDefault("CompanyNIP", "NIP");
-            string companyBankAccount = settings.GetValueOrDefault("CompanyBankAccount", "Numer konta");
+                if (invoice == null)
+                {
+                    throw new Exception("Faktura nie znaleziona.");
+                }
 
-            QuestPDF.Settings.License = LicenseType.Community;
+                // Pobierz dane firmy z Settings
+                var settings = await _context.Settings.ToDictionaryAsync(s => s.Key, s => s.Value);
+                string companyName = settings.GetValueOrDefault("CompanyName", "Twoja Firma");
+                string companyAddress = settings.GetValueOrDefault("CompanyAddress", "Adres firmy");
+                string companyNip = settings.GetValueOrDefault("CompanyNIP", "NIP");
+                string companyBankAccount = settings.GetValueOrDefault("CompanyBankAccount", "Numer konta");
 
-            var document = Document.Create(container =>
+                                // Ustaw licencję i konfigurację QuestPDF
+                QuestPDF.Settings.License = LicenseType.Community;
+                QuestPDF.Settings.DocumentLayoutExceptionThreshold = 1000;
+                QuestPDF.Settings.EnableCaching = false;
+
+                var document = Document.Create(container =>
             {
                 container.Page(page =>
                 {
@@ -209,162 +214,219 @@ namespace CRM.BusinessLogic.Services
                 });
             });
 
-            return document.GeneratePdf();
+                return document.GeneratePdf();
+            }
+            catch (Exception ex)
+            {
+                // Jeśli QuestPDF nie działa, zwróć prosty PDF z tekstem
+                Console.WriteLine($"Błąd generowania PDF faktury {invoiceId}: {ex.Message}");
+                return GenerateSimplePdf($"Faktura {invoiceId} - Błąd generowania: {ex.Message}");
+            }
+        }
+
+        private byte[] GenerateSimplePdf(string content)
+        {
+            try
+            {
+                // Ustaw licencję na początku
+                QuestPDF.Settings.License = LicenseType.Community;
+                
+                // Ustaw domyślne fonty
+                QuestPDF.Settings.DocumentLayoutExceptionThreshold = 1000;
+                QuestPDF.Settings.EnableCaching = false;
+
+                return Document.Create(container =>
+                {
+                    container.Page(page =>
+                    {
+                        page.Size(PageSizes.A4);
+                        page.Margin(2, Unit.Centimetre);
+                        page.DefaultTextStyle(x => x.FontSize(12).FontFamily("Arial"));
+
+                        page.Content()
+                            .PaddingVertical(1, Unit.Centimetre)
+                            .Column(column =>
+                            {
+                                column.Item().Text(text => text.Span("Błąd generowania PDF").SemiBold().FontSize(16).FontColor(Colors.Red.Medium));
+                                column.Item().PaddingTop(10).Text(text => text.Span(content));
+                                column.Item().PaddingTop(10).Text(text => text.Span("Spróbuj wyeksportować dane w formacie CSV lub Excel."));
+                            });
+                    });
+                }).GeneratePdf();
+            }
+            catch (Exception ex)
+            {
+                // Jeśli QuestPDF nie działa, zwróć prosty tekst jako CSV
+                var csvContent = $"Błąd generowania PDF,{content},Spróbuj wyeksportować dane w formacie CSV lub Excel.";
+                return System.Text.Encoding.UTF8.GetBytes(csvContent);
+            }
         }
 
         public async Task<byte[]> GenerateGroupReportPdfAsync(string groupName, FullGroupReportPdfDto reportData)
         {
-            QuestPDF.Settings.License = LicenseType.Community;
-
-            var settings = await _context.Settings.ToDictionaryAsync(s => s.Key, s => s.Value);
-            string companyName = settings.GetValueOrDefault("CompanyName", "Twoja Firma");
-
-            return Document.Create(container =>
+            try
             {
-                container.Page(page =>
+                // Ustaw licencję i konfigurację QuestPDF
+                QuestPDF.Settings.License = LicenseType.Community;
+                QuestPDF.Settings.DocumentLayoutExceptionThreshold = 1000;
+                QuestPDF.Settings.EnableCaching = false;
+
+                var settings = await _context.Settings.ToDictionaryAsync(s => s.Key, s => s.Value);
+                string companyName = settings.GetValueOrDefault("CompanyName", "Twoja Firma");
+
+                return Document.Create(container =>
                 {
-                    page.Size(PageSizes.A4);
-                    page.Margin(2, Unit.Centimetre);
-                    page.DefaultTextStyle(x => x.FontSize(10));
+                    container.Page(page =>
+                    {
+                        page.Size(PageSizes.A4);
+                        page.Margin(2, Unit.Centimetre);
+                        page.DefaultTextStyle(x => x.FontSize(10));
 
-                    page.Header()
-                        .PaddingBottom(1, Unit.Centimetre)
-                        .Column(column =>
-                        {
-                            column.Item().Text(text => text.Span($"Raport dla grupy: {groupName}").SemiBold().FontSize(24).FontColor(Colors.Blue.Medium));
-                            column.Item().Text(text => text.Span($"Wygenerowano: {DateTime.Now:dd.MM.yyyy HH:mm}").FontSize(10));
-                            column.Item().Text(text => text.Span($"Firma: {companyName}").FontSize(10));
-                        });
-
-                    page.Content()
-                        .PaddingVertical(1, Unit.Centimetre)
-                        .Column(column =>
-                        {
-                            // Podsumowanie
-                            column.Item().PaddingBottom(5).Text(text => text.Span("Podsumowanie:").SemiBold().FontSize(14)); 
-                            column.Item().Text(text => text.Span($"Liczba klientów: {reportData.Summary?.TotalCustomers}")); 
-                            column.Item().Text(text => text.Span($"Liczba faktur: {reportData.Summary?.TotalInvoicesSales}")); 
-                            column.Item().Text(text => text.Span($"Całkowita wartość faktur: {reportData.Summary?.TotalAmount:F2} PLN")); 
-                            column.Item().Text(text => text.Span($"Liczba zadań: {reportData.Summary?.TotalTasks}")); 
-                            column.Item().PaddingBottom(10).Text(text => text.Span("")); // Odstęp
-
-                            // Sekcja Klientów
-                            if (reportData.Customers != null && reportData.Customers.Any())
+                        page.Header()
+                            .PaddingBottom(1, Unit.Centimetre)
+                            .Column(column =>
                             {
-                                column.Item().PaddingBottom(5).Text(text => text.Span("Klienci:").SemiBold().FontSize(14)); 
-                                column.Item().Table(table =>
-                                {
-                                    table.ColumnsDefinition(columns =>
-                                    {
-                                        columns.RelativeColumn();
-                                        columns.RelativeColumn();
-                                        columns.RelativeColumn();
-                                        columns.RelativeColumn();
-                                    });
+                                column.Item().Text(text => text.Span($"Raport dla grupy: {groupName}").SemiBold().FontSize(24).FontColor(Colors.Blue.Medium));
+                                column.Item().Text(text => text.Span($"Wygenerowano: {DateTime.Now:dd.MM.yyyy HH:mm}").FontSize(10));
+                                column.Item().Text(text => text.Span($"Firma: {companyName}").FontSize(10));
+                            });
 
-                                    table.Header(header =>
-                                    {
-                                        header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Nazwa").Bold());
-                                        header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Email").Bold());
-                                        header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Faktur").Bold());
-                                        header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Wartość faktur").Bold());
-                                    });
-
-                                    foreach (var customer in reportData.Customers)
-                                    {
-                                        table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(customer.Name));
-                                        table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(customer.Email));
-                                        table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(customer.InvoiceCount.ToString()));
-                                        table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(customer.TotalInvoiceValue.ToString("F2")));
-                                    }
-                                });
+                        page.Content()
+                            .PaddingVertical(1, Unit.Centimetre)
+                            .Column(column =>
+                            {
+                                // Podsumowanie
+                                column.Item().PaddingBottom(5).Text(text => text.Span("Podsumowanie:").SemiBold().FontSize(14)); 
+                                column.Item().Text(text => text.Span($"Liczba klientów: {reportData.Summary?.TotalCustomers}")); 
+                                column.Item().Text(text => text.Span($"Liczba faktur: {reportData.Summary?.TotalInvoicesSales}")); 
+                                column.Item().Text(text => text.Span($"Całkowita wartość faktur: {reportData.Summary?.TotalAmount:F2} PLN")); 
+                                column.Item().Text(text => text.Span($"Liczba zadań: {reportData.Summary?.TotalTasks}")); 
                                 column.Item().PaddingBottom(10).Text(text => text.Span("")); // Odstęp
-                            }
 
-                            // Sekcja Faktur
-                            if (reportData.Invoices != null && reportData.Invoices.Any())
-                            {
-                                column.Item().PaddingBottom(5).Text(text => text.Span("Faktury:").SemiBold().FontSize(14)); 
-                                column.Item().Table(table =>
+                                // Sekcja Klientów
+                                if (reportData.Customers != null && reportData.Customers.Any())
                                 {
-                                    table.ColumnsDefinition(columns =>
+                                    column.Item().PaddingBottom(5).Text(text => text.Span("Klienci:").SemiBold().FontSize(14)); 
+                                    column.Item().Table(table =>
                                     {
-                                        columns.RelativeColumn();
-                                        columns.RelativeColumn();
-                                        columns.RelativeColumn();
-                                        columns.RelativeColumn();
-                                        columns.RelativeColumn();
+                                        table.ColumnsDefinition(columns =>
+                                        {
+                                            columns.RelativeColumn();
+                                            columns.RelativeColumn();
+                                            columns.RelativeColumn();
+                                            columns.RelativeColumn();
+                                        });
+
+                                        table.Header(header =>
+                                        {
+                                            header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Nazwa").Bold());
+                                            header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Email").Bold());
+                                            header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Faktur").Bold());
+                                            header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Wartość faktur").Bold());
+                                        });
+
+                                        foreach (var customer in reportData.Customers)
+                                        {
+                                            table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(customer.Name));
+                                            table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(customer.Email));
+                                            table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(customer.InvoiceCount.ToString()));
+                                            table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(customer.TotalInvoiceValue.ToString("F2")));
+                                        }
                                     });
+                                    column.Item().PaddingBottom(10).Text(text => text.Span("")); // Odstęp
+                                }
 
-                                    table.Header(header =>
-                                    {
-                                        header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Numer").Bold());
-                                        header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Klient").Bold());
-                                        header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Wartość").Bold());
-                                        header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Data wyst.").Bold());
-                                        header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Status").Bold());
-                                    });
-
-                                    foreach (var invoice in reportData.Invoices)
-                                    {
-                                        table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(invoice.Number));
-                                        table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(invoice.CustomerName));
-                                        table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(invoice.TotalAmount.ToString("F2")));
-                                        table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(invoice.IssuedAt.ToString("dd.MM.yyyy")));
-                                        table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(invoice.IsPaid ? "Opłacona" : "Nieopłacona"));
-                                    }
-                                });
-                                column.Item().PaddingBottom(10).Text(text => text.Span("")); // Odstęp
-                            }
-
-                            // Sekcja Zadań
-                            if (reportData.Tasks != null && reportData.Tasks.Any())
-                            {
-                                column.Item().PaddingBottom(5).Text(text => text.Span("Zadania:").SemiBold().FontSize(14)); 
-                                column.Item().Table(table =>
+                                // Sekcja Faktur
+                                if (reportData.Invoices != null && reportData.Invoices.Any())
                                 {
-                                    table.ColumnsDefinition(columns =>
+                                    column.Item().PaddingBottom(5).Text(text => text.Span("Faktury:").SemiBold().FontSize(14)); 
+                                    column.Item().Table(table =>
                                     {
-                                        columns.RelativeColumn();
-                                        columns.RelativeColumn();
-                                        columns.RelativeColumn();
-                                        columns.RelativeColumn();
-                                        columns.RelativeColumn();
+                                        table.ColumnsDefinition(columns =>
+                                        {
+                                            columns.RelativeColumn();
+                                            columns.RelativeColumn();
+                                            columns.RelativeColumn();
+                                            columns.RelativeColumn();
+                                            columns.RelativeColumn();
+                                        });
+
+                                        table.Header(header =>
+                                        {
+                                            header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Numer").Bold());
+                                            header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Klient").Bold());
+                                            header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Wartość").Bold());
+                                            header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Data wyst.").Bold());
+                                            header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Status").Bold());
+                                        });
+
+                                        foreach (var invoice in reportData.Invoices)
+                                        {
+                                            table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(invoice.Number));
+                                            table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(invoice.CustomerName));
+                                            table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(invoice.TotalAmount.ToString("F2")));
+                                            table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(invoice.IssuedAt.ToString("dd.MM.yyyy")));
+                                            table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(invoice.IsPaid ? "Opłacona" : "Nieopłacona"));
+                                        }
                                     });
+                                    column.Item().PaddingBottom(10).Text(text => text.Span("")); // Odstęp
+                                }
 
-                                    table.Header(header =>
+                                // Sekcja Zadań
+                                if (reportData.Tasks != null && reportData.Tasks.Any())
+                                {
+                                    column.Item().PaddingBottom(5).Text(text => text.Span("Zadania:").SemiBold().FontSize(14)); 
+                                    column.Item().Table(table =>
                                     {
-                                        header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Tytuł").Bold());
-                                        header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Klient").Bold());
-                                        header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Termin").Bold());
-                                        header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Status").Bold());
-                                        header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Przypisany").Bold());
+                                        table.ColumnsDefinition(columns =>
+                                        {
+                                            columns.RelativeColumn();
+                                            columns.RelativeColumn();
+                                            columns.RelativeColumn();
+                                            columns.RelativeColumn();
+                                            columns.RelativeColumn();
+                                        });
+
+                                        table.Header(header =>
+                                        {
+                                            header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Tytuł").Bold());
+                                            header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Klient").Bold());
+                                            header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Termin").Bold());
+                                            header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Status").Bold());
+                                            header.Cell().BorderBottom(1).Padding(5).Text(text => text.Span("Przypisany").Bold());
+                                        });
+
+                                        foreach (var task in reportData.Tasks)
+                                        {
+                                            table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(task.Title));
+                                            table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(task.CustomerName));
+                                            table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(task.DueDate != null ? task.DueDate.Value.ToString("dd.MM.yyyy") : "Brak")); 
+                                            table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(task.Completed ? "Ukończone" : "Oczekujące"));
+                                            table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(task.AssignedUser));
+                                        }
                                     });
+                                }
+                            });
 
-                                    foreach (var task in reportData.Tasks)
-                                    {
-                                        table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(task.Title));
-                                        table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(task.CustomerName));
-                                        table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(task.DueDate != null ? task.DueDate.Value.ToString("dd.MM.yyyy") : "Brak")); 
-                                        table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(task.Completed ? "Ukończone" : "Oczekujące"));
-                                        table.Cell().BorderBottom(1).Padding(5).Text(text => text.Span(task.AssignedUser));
-                                    }
-                                });
-                            }
-                        });
-
-                    page.Footer()
-                        .PaddingTop(1, Unit.Centimetre)
-                        .AlignCenter()
-                        .Text(text =>
-                        {
-                            text.Span("Strona ");
-                            text.CurrentPageNumber();
-                            text.Span(" z ");
-                            text.TotalPages();
-                        });
-                });
-            }).GeneratePdf();
+                        page.Footer()
+                            .PaddingTop(1, Unit.Centimetre)
+                            .AlignCenter()
+                            .Text(text =>
+                            {
+                                text.Span("Strona ");
+                                text.CurrentPageNumber();
+                                text.Span(" z ");
+                                text.TotalPages();
+                            });
+                    });
+                }).GeneratePdf();
+            }
+            catch (Exception ex)
+            {
+                // Jeśli QuestPDF nie działa, zwróć prosty PDF z tekstem
+                Console.WriteLine($"Błąd generowania PDF raportu grupy {groupName}: {ex.Message}");
+                return GenerateSimplePdf($"Raport grupy {groupName} - Błąd generowania: {ex.Message}");
+            }
         }
     }
 }

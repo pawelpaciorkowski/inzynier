@@ -515,23 +515,20 @@ using (var scope = app.Services.CreateScope())
                 new CRM.Data.Models.Reminder
                 {
                     Note = "Przypomnienie o spotkaniu z klientem VIP",
-                    DueDate = DateTime.Now.AddDays(1),
-                    UserId = users.FirstOrDefault()?.Id ?? 1,
-                    IsCompleted = false
+                    RemindAt = DateTime.Now.AddDays(1),
+                    UserId = users.FirstOrDefault()?.Id ?? 1
                 },
                 new CRM.Data.Models.Reminder
                 {
                     Note = "Sprawdzić status płatności za fakturę F/2024/002",
-                    DueDate = DateTime.Now.AddDays(3),
-                    UserId = users.FirstOrDefault()?.Id ?? 1,
-                    IsCompleted = false
+                    RemindAt = DateTime.Now.AddDays(3),
+                    UserId = users.FirstOrDefault()?.Id ?? 1
                 },
                 new CRM.Data.Models.Reminder
                 {
                     Note = "Przygotować raport miesięczny",
-                    DueDate = DateTime.Now.AddDays(7),
-                    UserId = users.FirstOrDefault()?.Id ?? 1,
-                    IsCompleted = false
+                    RemindAt = DateTime.Now.AddDays(7),
+                    UserId = users.FirstOrDefault()?.Id ?? 1
                 }
             };
 

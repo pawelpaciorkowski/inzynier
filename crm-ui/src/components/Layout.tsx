@@ -6,7 +6,7 @@ import HomeIcon from '@heroicons/react/24/solid/HomeIcon';
 import UsersIcon from '@heroicons/react/24/solid/UsersIcon';
 import UserCircleIcon from '@heroicons/react/24/solid/UserCircleIcon';
 import CheckCircleIcon from '@heroicons/react/24/solid/CheckCircleIcon';
-import { ClipboardDocumentListIcon, CalendarDaysIcon, DocumentDuplicateIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, BellIcon, DocumentMagnifyingGlassIcon } from "@heroicons/react/24/solid";
+import { ClipboardDocumentListIcon, CalendarDaysIcon, DocumentDuplicateIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, BellIcon } from "@heroicons/react/24/solid";
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
@@ -232,7 +232,6 @@ export default function Layout() {
                         {renderMenu("klienci", <UsersIcon className="h-5 w-5 inline mr-2" />, "Klienci", [
                             { to: "/klienci", text: "Lista klientów" },
                             { to: "/klienci/tagi", text: "Tagi" },
-                            { to: "/klienci/dodaj", text: "Dodaj klienta" },
                         ])}
 
                         {user?.role !== 'Sprzedawca' && renderMenu("uzytkownicy", <UserCircleIcon className="h-5 w-5 inline mr-2" />, "Użytkownicy", [

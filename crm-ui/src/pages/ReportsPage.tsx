@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import api from '../api';
-import { UsersIcon, DocumentTextIcon, CurrencyDollarIcon, CheckCircleIcon, ClockIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { UsersIcon, DocumentTextIcon, CurrencyDollarIcon, CheckCircleIcon, ClockIcon, ArrowDownTrayIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
 
 // --- HELPER: Rozpakowywanie $values z obiektów .NET --- 
@@ -274,6 +274,41 @@ export function ReportsPage() {
         }
     };
 
+    const handleExportFromReport = async (type: string, filters: { groupId?: number | null; tagId?: number | null }) => {
+        try {
+            const params = new URLSearchParams({
+                format: 'csv',
+                includeRelations: 'true',
+                columns: 'id,name,email,phone,company,createdAt'
+            });
+
+            if (filters.groupId) {
+                params.append('groupId', filters.groupId.toString());
+            }
+            if (filters.tagId) {
+                params.append('tagId', filters.tagId.toString());
+            }
+
+            const response = await api.get(`/reports/export-${type}?${params}`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+
+            const fileName = `${type}_${new Date().toISOString().split('T')[0]}.csv`;
+            link.setAttribute('download', fileName);
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+
+            openToast(`Dane ${type} zostały wyeksportowane.`, 'success');
+        } catch (error: unknown) {
+            console.error('Błąd eksportu:', error);
+            openToast('Nie udało się wyeksportować danych', 'error');
+        }
+    };
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -343,6 +378,68 @@ export function ReportsPage() {
             {/* --- SEKCJA WYNIKÓW FILTROWANIA --- */}
             {groupReport && <GroupReportDisplay report={groupReport} groupName={groups.find(g => g.id === selectedGroup)?.name || 'Wybrana Grupa'} onDownloadPdf={() => handleDownloadGroupReportPdf(selectedGroup!, groups.find(g => g.id === selectedGroup)?.name || 'raport_grupy')} />}
             {tagReport && <TagReportDisplay report={tagReport} tagName={tags.find(t => t.id === selectedTag)?.name || 'Wybrany Tag'} />}
+
+            {/* --- SEKCJA EKSPORTU Z RAPORTÓW --- */}
+            {(groupReport || tagReport) && (
+                <div className="bg-gray-800 p-6 rounded-lg shadow-lg mt-6">
+                    <h2 className="text-xl font-semibold mb-4 flex items-center">
+                        <DocumentArrowDownIcon className="w-6 h-6 mr-2" />
+                        Eksport danych z raportu
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {groupReport && (
+                            <>
+                                <button
+                                    onClick={() => handleExportFromReport('customers', { groupId: selectedGroup })}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center justify-center"
+                                >
+                                    <DocumentArrowDownIcon className="w-4 h-4 mr-2" />
+                                    Eksportuj klientów
+                                </button>
+                                <button
+                                    onClick={() => handleExportFromReport('invoices', { groupId: selectedGroup })}
+                                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded flex items-center justify-center"
+                                >
+                                    <DocumentArrowDownIcon className="w-4 h-4 mr-2" />
+                                    Eksportuj faktury
+                                </button>
+                                <button
+                                    onClick={() => handleExportFromReport('tasks', { groupId: selectedGroup })}
+                                    className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded flex items-center justify-center"
+                                >
+                                    <DocumentArrowDownIcon className="w-4 h-4 mr-2" />
+                                    Eksportuj zadania
+                                </button>
+                            </>
+                        )}
+                        {tagReport && (
+                            <>
+                                <button
+                                    onClick={() => handleExportFromReport('customers', { tagId: selectedTag })}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center justify-center"
+                                >
+                                    <DocumentArrowDownIcon className="w-4 h-4 mr-2" />
+                                    Eksportuj klientów
+                                </button>
+                                <button
+                                    onClick={() => handleExportFromReport('invoices', { tagId: selectedTag })}
+                                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded flex items-center justify-center"
+                                >
+                                    <DocumentArrowDownIcon className="w-4 h-4 mr-2" />
+                                    Eksportuj faktury
+                                </button>
+                                <button
+                                    onClick={() => handleExportFromReport('tasks', { tagId: selectedTag })}
+                                    className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded flex items-center justify-center"
+                                >
+                                    <DocumentArrowDownIcon className="w-4 h-4 mr-2" />
+                                    Eksportuj zadania
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
 
         </div>
     );
