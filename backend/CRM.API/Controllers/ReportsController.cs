@@ -121,6 +121,11 @@ namespace CRM.API.Controllers
                 contentType = "text/csv";
             }
             var fileName = $"customers_export_{DateTime.Now:yyyyMMdd_HHmmss}.{format.ToLower()}";
+            
+            // Dodaj nagłówki dla lepszego pobierania
+            Response.Headers.Add("Content-Disposition", $"attachment; filename=\"{fileName}\"");
+            Response.Headers.Add("Access-Control-Expose-Headers", "Content-Disposition");
+            
             return File(fileBytes, contentType, fileName);
         }
 

@@ -214,12 +214,32 @@ namespace CRM.BusinessLogic.Services
                 });
             });
 
-                return document.GeneratePdf();
+                var pdfBytes = document.GeneratePdf();
+                
+                // Sprawdź czy PDF nie jest pusty
+                if (pdfBytes == null || pdfBytes.Length == 0)
+                {
+                    Console.WriteLine("Wygenerowany PDF jest pusty - używam fallback CSV");
+                    var csvContent = $"Faktura {invoiceId},Pusta odpowiedź PDF,Spróbuj wyeksportować w formacie CSV";
+                    return System.Text.Encoding.UTF8.GetBytes(csvContent);
+                }
+                
+                return pdfBytes;
             }
             catch (Exception ex)
             {
                 // Jeśli QuestPDF nie działa, zwróć prosty PDF z tekstem
                 Console.WriteLine($"Błąd generowania PDF faktury {invoiceId}: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                
+                // Sprawdź czy to problem z fontami
+                if (ex.Message.Contains("font") || ex.Message.Contains("Font"))
+                {
+                    Console.WriteLine("Wykryto problem z fontami - używam fallback CSV");
+                    var csvContent = $"Faktura {invoiceId},Błąd generowania PDF: {ex.Message},Spróbuj wyeksportować w formacie CSV";
+                    return System.Text.Encoding.UTF8.GetBytes(csvContent);
+                }
+                
                 return GenerateSimplePdf($"Faktura {invoiceId} - Błąd generowania: {ex.Message}");
             }
         }

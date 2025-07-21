@@ -45,7 +45,8 @@ builder.Services.AddCors(options =>
         // Bezpośrednio podajemy dozwolone adresy, omijając pliki konfiguracyjne
         policy.WithOrigins("http://localhost:5173", "http://localhost:8081")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
@@ -136,7 +137,9 @@ using (var scope = app.Services.CreateScope())
         {
             context.Roles.AddRange(
                 new CRM.Data.Models.Role { Name = "Admin", Description = "Administrator systemu", Users = new List<CRM.Data.Models.User>() },
-                new CRM.Data.Models.Role { Name = "User", Description = "Standardowy użytkownik", Users = new List<CRM.Data.Models.User>() }
+                new CRM.Data.Models.Role { Name = "User", Description = "Standardowy użytkownik", Users = new List<CRM.Data.Models.User>() },
+                new CRM.Data.Models.Role { Name = "Manager", Description = "Menedżer", Users = new List<CRM.Data.Models.User>() },
+                new CRM.Data.Models.Role { Name = "Sprzedawca", Description = "Sprzedawca", Users = new List<CRM.Data.Models.User>() }
             );
             context.SaveChanges();
         }
@@ -146,7 +149,10 @@ using (var scope = app.Services.CreateScope())
         {
             var userRole = context.Roles.FirstOrDefault(r => r.Name == "User");
             var adminRole = context.Roles.FirstOrDefault(r => r.Name == "Admin");
-            if (userRole != null && adminRole != null)
+            var managerRole = context.Roles.FirstOrDefault(r => r.Name == "Manager");
+            var sprzedawcaRole = context.Roles.FirstOrDefault(r => r.Name == "Sprzedawca");
+            
+            if (userRole != null && adminRole != null && managerRole != null && sprzedawcaRole != null)
             {
                 var hashedPassword = BCrypt.Net.BCrypt.HashPassword("user123");
                 context.Users.AddRange(
@@ -165,6 +171,22 @@ using (var scope = app.Services.CreateScope())
                         PasswordHash = hashedPassword,
                         RoleId = adminRole.Id,
                         Role = adminRole
+                    },
+                    new CRM.Data.Models.User
+                    {
+                        Username = "manager",
+                        Email = "manager@example.com",
+                        PasswordHash = hashedPassword,
+                        RoleId = managerRole.Id,
+                        Role = managerRole
+                    },
+                    new CRM.Data.Models.User
+                    {
+                        Username = "sprzedawca",
+                        Email = "sprzedawca@example.com",
+                        PasswordHash = hashedPassword,
+                        RoleId = sprzedawcaRole.Id,
+                        Role = sprzedawcaRole
                     }
                 );
                 context.SaveChanges();

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useModal } from '../context/ModalContext';
+import { useAuth } from '../context/AuthContext';
 import {
     DocumentArrowDownIcon,
     FunnelIcon,
@@ -129,6 +130,7 @@ export function ExportsPage() {
     const [loading, setLoading] = useState(false);
     const [dataLoading, setDataLoading] = useState(true);
     const { openModal, openToast } = useModal();
+    const { user } = useAuth();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -175,27 +177,77 @@ export function ExportsPage() {
 
             const response = await axios.get(`/api/reports/export-${config.type}?${params}`, {
                 responseType: 'blob',
+                headers: {
+                    'Accept': '*/*',
+                },
+                timeout: 30000, // 30 sekund timeout
             });
 
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
+            // Sprawdź czy odpowiedź jest poprawna
+            if (response.status !== 200) {
+                throw new Error(`Błąd serwera: ${response.status}`);
+            }
 
-            const fileName = `${config.type}_${new Date().toISOString().split('T')[0]}.${config.format}`;
-            link.setAttribute('download', fileName);
+            const blob = new Blob([response.data], {
+                type: response.headers['content-type'] || 'application/octet-stream'
+            });
 
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
+            // Metoda 1: Standardowe pobieranie
+            try {
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.style.display = 'none';
+
+                const fileName = `${config.type}_${new Date().toISOString().split('T')[0]}.${config.format}`;
+                link.setAttribute('download', fileName);
+
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+            } catch (downloadError) {
+                console.warn('Standardowe pobieranie nie działa, próbuję alternatywnej metody:', downloadError);
+
+                // Metoda 2: Otwórz w nowej karcie
+                const url = window.URL.createObjectURL(blob);
+                window.open(url, '_blank');
+
+                // Wyczyść URL po 5 sekundach
+                setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+            }
 
             openToast(`Dane ${config.type} zostały wyeksportowane w formacie ${config.format.toUpperCase()}.`, 'success');
+
+            // Dodaj informację o możliwych problemach z rozszerzeniami
+            if (config.format === 'pdf') {
+                setTimeout(() => {
+                    openModal({
+                        type: 'info',
+                        title: 'Wskazówka',
+                        message: 'Jeśli PDF nie pobiera się, spróbuj wyłączyć rozszerzenia przeglądarki (AdBlock, uBlock) lub użyj trybu incognito.'
+                    });
+                }, 2000);
+            }
         } catch (error: any) {
             console.error('Błąd eksportu:', error);
+            console.error('Status:', error.response?.status);
+            console.error('Headers:', error.response?.headers);
+            console.error('Data:', error.response?.data);
+
+            let errorMessage = 'Nie udało się wyeksportować danych.';
+            if (error.response?.status === 403) {
+                errorMessage = 'Brak uprawnień do eksportu. Zaloguj się jako Admin, Manager lub Sprzedawca.';
+            } else if (error.response?.status === 401) {
+                errorMessage = 'Sesja wygasła. Zaloguj się ponownie.';
+            } else if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            }
+
             openModal({
                 type: 'error',
                 title: 'Błąd eksportu',
-                message: error.response?.data?.message || 'Nie udało się wyeksportować danych.'
+                message: errorMessage
             });
         } finally {
             setLoading(false);
@@ -226,8 +278,24 @@ export function ExportsPage() {
 
     const TypeIcon = getTypeIcon(config.type);
 
+    // Sprawdź czy użytkownik ma uprawnienia do eksportu
+    const hasExportPermission = user && ['Admin', 'Manager', 'Sprzedawca'].includes(user.role);
+
     if (dataLoading) {
         return <div className="p-6 text-white text-center">Ładowanie opcji eksportu...</div>;
+    }
+
+    if (!hasExportPermission) {
+        return (
+            <div className="p-6 text-white text-center">
+                <h1 className="text-3xl font-bold mb-6">📤 Eksport Danych</h1>
+                <div className="bg-red-900 p-6 rounded-lg shadow-lg">
+                    <h2 className="text-xl font-semibold mb-4">Brak uprawnień</h2>
+                    <p>Nie masz uprawnień do eksportu danych. Zaloguj się jako Admin, Manager lub Sprzedawca.</p>
+                    <p className="mt-2 text-sm text-gray-300">Twoja rola: {user?.role || 'Nieznana'}</p>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -245,6 +313,13 @@ export function ExportsPage() {
                         </h2>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {config.format === 'pdf' && (
+                                <div className="md:col-span-2 mb-4 p-3 bg-yellow-900 border border-yellow-600 rounded-md">
+                                    <p className="text-yellow-200 text-sm">
+                                        ⚠️ PDF ma problemy na systemie Linux. Zostanie wyeksportowany jako CSV z informacją o problemie.
+                                    </p>
+                                </div>
+                            )}
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-2">
                                     Typ danych
@@ -275,6 +350,7 @@ export function ExportsPage() {
                                 >
                                     <option value="csv">CSV</option>
                                     <option value="xlsx">Excel (XLSX)</option>
+                                    <option value="pdf">PDF (CSV fallback)</option>
                                 </select>
                             </div>
                         </div>
