@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
+using CRM.Data;
 
 namespace CRM.API.Controllers
 {
@@ -12,18 +15,59 @@ namespace CRM.API.Controllers
     public class CustomersController : ControllerBase
     {
         private readonly ICustomerService _customerService;
+        private readonly ApplicationDbContext _context;
 
-        public CustomersController(ICustomerService customerService)
+        public CustomersController(ICustomerService customerService, ApplicationDbContext context)
         {
             _customerService = customerService;
+            _context = context;
+        }
+
+        // Pomocnicza metoda do pobierania ID aktualnego użytkownika
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            return userIdClaim != null ? int.Parse(userIdClaim.Value) : 0;
+        }
+
+        // Pomocnicza metoda do sprawdzania czy użytkownik jest adminem
+        private async Task<bool> IsUserAdmin(int userId)
+        {
+            var user = await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+            return user?.Role?.Name?.ToLower() == "admin";
         }
 
         [Authorize]
         [HttpGet]
         public async Task<ActionResult<List<Customer>>> GetAll()
         {
-            var customers = await _customerService.GetAllAsync();
-            return Ok(customers);
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == 0) return Unauthorized();
+
+            var isAdmin = await IsUserAdmin(currentUserId);
+            
+            if (isAdmin)
+            {
+                // Admin widzi wszystkich klientów
+                var customers = await _customerService.GetAllAsync();
+                return Ok(customers);
+            }
+            else
+            {
+                // Zwykły użytkownik widzi tylko klientów ze swoich grup
+                var userGroups = await _context.UserGroups
+                    .Where(ug => ug.UserId == currentUserId)
+                    .Select(ug => ug.GroupId)
+                    .ToListAsync();
+
+                var customers = await _context.Customers
+                    .Where(c => c.AssignedGroupId.HasValue && userGroups.Contains(c.AssignedGroupId.Value))
+                    .ToListAsync();
+
+                return Ok(customers);
+            }
         }
 
         [Authorize]

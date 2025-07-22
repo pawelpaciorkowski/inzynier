@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Button, ActivityIndicator, TextInput, Alert, ScrollView } from 'react-native';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 
 interface UserProfile {

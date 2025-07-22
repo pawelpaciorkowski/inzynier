@@ -24,7 +24,7 @@ interface InvoiceDetails {
     totalAmount: number;
     netAmount: number;
     taxAmount: number;
-    issuedAt: string;
+    issueDate: string;
     dueDate: string;
     isPaid: boolean;
     items: {
@@ -58,14 +58,8 @@ export default function InvoiceDetailScreen() {
                 const response = await axios.get(`/api/Invoices/${id}`);
                 if (!response.data) throw new Error(`Nie udało się pobrać danych faktury (status: ${response.status})`);
                 const data = response.data;
-                console.log("Dane faktury z backendu:", data);
-                console.log("totalAmount:", data.totalAmount);
-                console.log("netAmount:", data.netAmount);
-                console.log("taxAmount:", data.taxAmount);
-                console.log("Items:", data.items);
                 setInvoice(data);
             } catch (err: any) {
-                console.error("Błąd podczas pobierania faktury:", err);
                 setError(err.message);
             } finally {
                 setLoading(false);
@@ -110,7 +104,7 @@ export default function InvoiceDetailScreen() {
                 <View style={styles.card}>
                     <InfoRow label="Numer faktury" value={invoice.invoiceNumber} />
                     <InfoRow label="Klient" value={invoice.customerName} />
-                    <InfoRow label="Data wystawienia" value={new Date(invoice.issuedAt).toLocaleDateString('pl-PL')} />
+                    <InfoRow label="Data wystawienia" value={new Date(invoice.issueDate).toLocaleDateString('pl-PL')} />
                     <InfoRow label="Termin płatności" value={new Date(invoice.dueDate).toLocaleDateString('pl-PL')} />
                     <InfoRow label="Status" value={invoice.isPaid ? 'Zapłacona' : 'Oczekuje'} />
                 </View>

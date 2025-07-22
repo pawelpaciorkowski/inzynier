@@ -30,9 +30,34 @@ namespace CRM.API.Controllers.User
         public async Task<ActionResult<IEnumerable<TaskItem>>> GetTasks()
         {
             int userId = GetUserId();
-            var tasks = await _context.Tasks
-                .Where(t => t.UserId == userId)
-                .ToListAsync();
+            
+            // Sprawdź czy użytkownik jest adminem
+            var user = await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+            
+            var isAdmin = user?.Role?.Name?.ToLower() == "admin";
+            
+            IQueryable<TaskItem> tasksQuery;
+            
+            if (isAdmin)
+            {
+                // Admin widzi wszystkie zadania
+                tasksQuery = _context.Tasks;
+            }
+            else
+            {
+                // Zwykły użytkownik widzi zadania ze swoich grup
+                var userGroups = await _context.UserGroups
+                    .Where(ug => ug.UserId == userId)
+                    .Select(ug => ug.GroupId)
+                    .ToListAsync();
+
+                tasksQuery = _context.Tasks
+                    .Where(t => t.AssignedGroupId.HasValue && userGroups.Contains(t.AssignedGroupId.Value));
+            }
+            
+            var tasks = await tasksQuery.ToListAsync();
             return Ok(tasks);
         }
 

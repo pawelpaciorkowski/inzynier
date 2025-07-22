@@ -307,7 +307,7 @@ export default function Layout() {
                             { to: "/uzytkownicy", text: "Lista użytkowników" },
                             { to: "/uzytkownicy/dodaj", text: "Dodaj użytkownika" },
                             { to: "/role", text: "Role" },
-                            { to: "/grupy", text: "Grupy" },
+                            { to: "/grupy", text: "Działy/Zespoły" },
                         ])}
 
                         {renderMenu("zadania", <CheckCircleIcon className="h-5 w-5 inline mr-2" />, "Zadania", [

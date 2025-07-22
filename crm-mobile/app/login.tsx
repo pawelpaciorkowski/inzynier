@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { View, TextInput, Button, StyleSheet, Text, Alert } from 'react-native';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen() {
-    const [username, setUsername] = useState('Admin');
-    const [password, setPassword] = useState('Password123!');
+    const [username, setUsername] = useState('user');
+    const [password, setPassword] = useState('user123');
     const { login } = useAuth();
 
     const onLoginPress = async () => {
@@ -61,4 +61,4 @@ const styles = StyleSheet.create({
         color: 'white',
         backgroundColor: '#1f2937'
     },
-}); 
+});

@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { useModal } from '../context/ModalContext';
+import Pagination from '../components/Pagination';
 
 interface Payment {
     id: number;
@@ -22,6 +23,8 @@ export function PaymentsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { openModal, openToast } = useModal();
+    const [currentPage, setCurrentPage] = useState(1);
+    const resultsPerPage = 10;
 
     const fetchPayments = useCallback(async () => {
         setLoading(true);
@@ -52,6 +55,15 @@ export function PaymentsPage() {
         );
         setFilteredPayments(filtered);
     }, [payments, search]);
+
+    // PAGINACJA
+    const totalPages = Math.ceil(filteredPayments.length / resultsPerPage);
+    const paginatedPayments = filteredPayments.slice((currentPage - 1) * resultsPerPage, currentPage * resultsPerPage);
+
+    // Resetuj stronę do 1 po zmianie wyszukiwania
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search]);
 
     const handleDeletePayment = async (id: number) => {
         openModal({
@@ -90,8 +102,8 @@ export function PaymentsPage() {
 
     return (
         <div className="p-6 text-white">
-            <h1 className="text-3xl font-bold mb-6">Płatności</h1>
-            <div className="mb-4">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-bold">💳 Płatności</h1>
                 <Link
                     to="/platnosci/dodaj"
                     className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded inline-flex items-center"
@@ -100,6 +112,7 @@ export function PaymentsPage() {
                     Dodaj Płatność
                 </Link>
             </div>
+
 
             {/* Wyszukiwarka */}
             <div className="mb-6">
@@ -118,7 +131,7 @@ export function PaymentsPage() {
                     </div>
                 </div>
             </div>
-            {filteredPayments.length === 0 ? (
+            {paginatedPayments.length === 0 ? (
                 <div className="bg-gray-800 p-10 rounded-lg text-center flex flex-col items-center shadow-lg">
                     <CreditCardIcon className="w-16 h-16 text-blue-400 mb-4" />
                     <h2 className="text-2xl font-semibold mb-2">Brak Płatności</h2>
@@ -150,7 +163,7 @@ export function PaymentsPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredPayments.map((payment) => (
+                            {paginatedPayments.map((payment) => (
                                 <tr key={payment.id} className="hover:bg-gray-700">
                                     <td className="px-5 py-5 border-b border-gray-700 bg-gray-800 text-sm">
                                         {payment.id}
@@ -190,6 +203,13 @@ export function PaymentsPage() {
                         </tbody>
                     </table>
                 </div>
+            )}
+            {paginatedPayments.length > 0 && (
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                />
             )}
         </div>
     );

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, Text, View, TouchableOpacity, Pressable } from 'react-native';
 import { Link, Stack, useRouter } from 'expo-router';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import axios from 'axios';
 
@@ -9,7 +9,6 @@ interface Invoice {
     id: number;
     invoiceNumber: string;
     customerName: string;
-    customerNip: string;
     totalAmount: number;
     issueDate: string;
     isPaid: boolean;
@@ -126,9 +125,6 @@ export default function InvoicesScreen() {
                                     <PaymentStatus isPaid={item.isPaid} />
                                 </View>
                                 <Text style={styles.itemSubtitle}>{item.customerName}</Text>
-                                {item.customerNip && (
-                                    <Text style={styles.itemNip}>NIP: {item.customerNip}</Text>
-                                )}
                                 <View style={styles.itemFooter}>
                                     <Text style={styles.itemDate}>
                                         Wystawiono: {new Date(item.issueDate).toLocaleDateString('pl-PL')}
@@ -158,7 +154,6 @@ const styles = StyleSheet.create({
     itemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
     itemTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
     itemSubtitle: { fontSize: 14, color: '#9ca3af', marginBottom: 15 },
-    itemNip: { fontSize: 12, color: '#6b7280', marginBottom: 5 },
     itemFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#374151', paddingTop: 10 },
     itemDate: { fontSize: 12, color: '#6b7280' },
     itemAmount: { fontSize: 16, fontWeight: 'bold', color: '#3b82f6' },

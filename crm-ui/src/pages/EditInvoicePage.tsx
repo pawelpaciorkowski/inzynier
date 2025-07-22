@@ -30,7 +30,7 @@ export default function EditInvoicePage() {
     const [showServiceModal, setShowServiceModal] = useState(false);
 
     const navigate = useNavigate();
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
     const api = import.meta.env.VITE_API_URL;
 
     useEffect(() => {
@@ -119,12 +119,8 @@ export default function EditInvoicePage() {
         };
         try {
             await axios.put(`${api}/invoices/${id}`, invoiceData, { headers: { Authorization: `Bearer ${token}` } });
-            openModal({
-                type: 'success',
-                title: 'Sukces!',
-                message: 'Faktura została zaktualizowana.',
-                onConfirm: () => navigate(`/faktury/${id}`)
-            });
+            openToast('Faktura została zaktualizowana.', 'success');
+            navigate(`/faktury/${id}`);
         } catch (err: unknown) {
             let errorMessage = 'Wystąpił błąd podczas zapisywania faktury.';
             if (axios.isAxiosError(err) && err.response) {

@@ -27,7 +27,7 @@ export function AddContractPage() {
 
     const [customers, setCustomers] = useState<Customer[]>([]);
     const navigate = useNavigate();
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
     const api = import.meta.env.VITE_API_URL;
     const [showClientModal, setShowClientModal] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -80,12 +80,8 @@ export function AddContractPage() {
             await axios.post(`${api}/contracts`, newContract, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            openModal({
-                type: 'success',
-                title: 'Sukces!',
-                message: 'Nowy kontrakt został pomyślnie dodany.',
-                onConfirm: () => navigate('/kontrakty')
-            });
+            openToast('Nowy kontrakt został pomyślnie dodany.', 'success');
+            navigate('/kontrakty');
         } catch (err: any) {
             openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się dodać kontraktu.' });
         }

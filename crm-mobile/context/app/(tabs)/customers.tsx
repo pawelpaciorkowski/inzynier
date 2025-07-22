@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, Text, View, TouchableOpacity, Pressable } from 'react-native';
 import { Link, Stack, useRouter } from 'expo-router';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import axios from 'axios';
 
@@ -14,7 +14,7 @@ interface Customer {
 }
 
 export default function CustomersScreen() {
-    const { token, isLoading } = useAuth();
+    const { token } = useAuth();
     const router = useRouter();
 
     const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
@@ -76,14 +76,6 @@ export default function CustomersScreen() {
         }
     }, [searchQuery, allCustomers]);
 
-    if (isLoading) {
-        return (
-            <View style={[styles.container, styles.centered]}>
-                <ActivityIndicator size="large" color="#fff" />
-            </View>
-        );
-    }
-
     if (loading) {
         return (
             <View style={[styles.container, styles.centered]}>
@@ -116,37 +108,42 @@ export default function CustomersScreen() {
                             )}
                         </Pressable>
                     </Link>
-                )
+                ),
             }} />
             <View style={styles.container}>
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="Szukaj klientów..."
-                    placeholderTextColor="#9ca3af"
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                />
+                <View style={styles.searchContainer}>
+                    <FontAwesome name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Szukaj po nazwie lub NIP..."
+                        placeholderTextColor="#9ca3af"
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
+                </View>
                 <FlatList
                     data={filteredCustomers}
                     keyExtractor={(item) => item.id.toString()}
                     renderItem={({ item }) => (
-                        <Link href={`/customer/${item.id}`} asChild>
-                            <TouchableOpacity style={styles.customerItem}>
-                                <View style={styles.customerInfo}>
-                                    <Text style={styles.customerName}>{item.name}</Text>
-                                    {item.nip && <Text style={styles.customerNip}>NIP: {item.nip}</Text>}
-                                </View>
-                                <FontAwesome name="chevron-right" size={16} color="#6b7280" />
-                            </TouchableOpacity>
-                        </Link>
+                        <TouchableOpacity
+                            onPress={() =>
+                                router.push({
+                                    pathname: "/customer/[id]",
+                                    params: { id: item.id },
+                                })
+                            }
+                        >
+                            <View style={styles.customerItem}>
+                                <Text style={styles.customerName}>{item.name}</Text>
+                                <Text style={styles.customerNip}>NIP: {item.nip}</Text>
+                            </View>
+                        </TouchableOpacity>
                     )}
                     refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={onRefresh}
-                            colors={['#ffffff']}
-                            tintColor="#ffffff"
-                        />
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+                    }
+                    ListEmptyComponent={
+                        <Text style={styles.noResultsText}>Brak wyników</Text>
                     }
                 />
             </View>
@@ -163,44 +160,50 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    searchInput: {
-        height: 50,
-        borderColor: '#374151',
-        borderWidth: 1,
-        borderRadius: 8,
-        margin: 15,
-        paddingHorizontal: 15,
-        color: 'white',
-        backgroundColor: '#1f2937',
-    },
-    customerItem: {
+    searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#374151',
         backgroundColor: '#1f2937',
-        marginHorizontal: 15,
-        marginVertical: 2,
         borderRadius: 8,
+        margin: 16,
+        paddingHorizontal: 10,
     },
-    customerInfo: {
+    searchIcon: {
+        marginRight: 8,
+    },
+    searchInput: {
         flex: 1,
+        height: 45,
+        color: '#fff',
+        fontSize: 16,
+    },
+    customerItem: {
+        backgroundColor: '#1f2937',
+        padding: 20,
+        marginVertical: 8,
+        marginHorizontal: 16,
+        borderRadius: 10,
+        borderLeftWidth: 4,
+        borderLeftColor: '#3b82f6',
     },
     customerName: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
-        color: 'white',
-        marginBottom: 4,
+        color: '#fff',
     },
     customerNip: {
         fontSize: 14,
         color: '#9ca3af',
+        marginTop: 4,
     },
     errorText: {
         color: '#ef4444',
         fontSize: 16,
-        textAlign: 'center',
     },
+    noResultsText: {
+        textAlign: 'center',
+        marginTop: 20,
+        fontSize: 16,
+        color: '#6b7280',
+    }
 });
-

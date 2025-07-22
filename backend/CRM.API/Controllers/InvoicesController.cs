@@ -95,15 +95,16 @@ public class InvoicesController : ControllerBase
     {
         var invoices = await _context.Invoices
             .Include(i => i.Customer)
+            .Include(i => i.Items) // Dodajemy Items aby móc obliczyć TotalAmount
             .OrderByDescending(i => i.IssuedAt)
             .Select(i => new InvoiceListItemDto
             {
                 Id = i.Id,
                 InvoiceNumber = i.Number,
                 IssuedAt = i.IssuedAt,
-                TotalAmount = i.TotalAmount,
+                TotalAmount = i.Items.Sum(item => item.GrossAmount), // Obliczamy jako sumę pozycji
                 CustomerName = i.Customer != null ? i.Customer.Name : "Brak klienta",
-                IsPaid = i.IsPaid // Dodajemy pole
+                IsPaid = i.IsPaid
             })
             .ToListAsync();
 

@@ -85,7 +85,7 @@ export function AddInvoicePage() {
     const [selectedService, setSelectedService] = useState<Service | null>(null);
 
     const navigate = useNavigate();
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
     const api = import.meta.env.VITE_API_URL;
 
     useEffect(() => {
@@ -170,12 +170,8 @@ export function AddInvoicePage() {
 
         try {
             await createInvoice(invoiceData);
-            openModal({
-                type: 'success',
-                title: 'Sukces!',
-                message: 'Faktura została pomyślnie utworzona.',
-                onConfirm: () => navigate('/faktury')
-            });
+            openToast('Faktura została pomyślnie utworzona.', 'success');
+            navigate('/faktury');
         } catch (err: any) {
             openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Wystąpił błąd podczas zapisywania faktury.' });
         } finally {

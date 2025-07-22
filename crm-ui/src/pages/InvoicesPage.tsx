@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { getInvoices, deleteInvoice, type InvoiceListItemDto } from '../services/invoiceService';
 import { EyeIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
+import Pagination from '../components/Pagination';
 
 export function InvoicesPage() {
     const [invoices, setInvoices] = useState<InvoiceListItemDto[]>([]);
@@ -12,6 +13,8 @@ export function InvoicesPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { openModal, openToast } = useModal();
+    const [currentPage, setCurrentPage] = useState(1);
+    const resultsPerPage = 10;
 
     useEffect(() => {
         const fetchInvoices = async () => {
@@ -48,6 +51,15 @@ export function InvoicesPage() {
         );
         setFilteredInvoices(filtered);
     }, [invoices, search]);
+
+    // PAGINACJA
+    const totalPages = Math.ceil(filteredInvoices.length / resultsPerPage);
+    const paginatedInvoices = filteredInvoices.slice((currentPage - 1) * resultsPerPage, currentPage * resultsPerPage);
+
+    // Resetuj stronę do 1 po zmianie wyszukiwania
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search]);
 
     const handleDelete = (invoiceId: number) => {
         openModal({
@@ -124,8 +136,8 @@ export function InvoicesPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredInvoices.length > 0 ? (
-                                    filteredInvoices.map((invoice) => (
+                                {paginatedInvoices.length > 0 ? (
+                                    paginatedInvoices.map((invoice) => (
                                         <tr key={invoice.id} className="hover:bg-gray-700">
                                             <td className="px-5 py-4 border-b border-gray-700">{invoice.invoiceNumber}</td>
                                             <td className="px-5 py-4 border-b border-gray-700">{invoice.customerName}</td>
@@ -157,6 +169,11 @@ export function InvoicesPage() {
                             </tbody>
                         </table>
                     </div>
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={setCurrentPage}
+                    />
                 </>
             )}
         </div>

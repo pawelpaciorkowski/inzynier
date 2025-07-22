@@ -6,12 +6,13 @@ using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
 using System;
+using System.Security.Claims;
 
 namespace CRM.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // Dostęp dla wszystkich zalogowanych użytkowników
+    [Authorize]
     public class GroupsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -19,6 +20,29 @@ namespace CRM.API.Controllers
         public GroupsController(ApplicationDbContext context)
         {
             _context = context;
+        }
+
+        // Pomocnicza metoda do pobierania ID aktualnego użytkownika
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            return userIdClaim != null ? int.Parse(userIdClaim.Value) : 0;
+        }
+
+        // Pomocnicza metoda do sprawdzania czy użytkownik jest adminem
+        private async Task<bool> IsUserAdmin(int userId)
+        {
+            var user = await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+            return user?.Role?.Name?.ToLower() == "admin";
+        }
+
+        // Pomocnicza metoda do sprawdzania czy użytkownik należy do grupy
+        private async Task<bool> IsUserInGroup(int userId, int groupId)
+        {
+            return await _context.UserGroups
+                .AnyAsync(ug => ug.UserId == userId && ug.GroupId == groupId);
         }
 
         [HttpGet]
@@ -37,6 +61,45 @@ namespace CRM.API.Controllers
                     MeetingCount = g.AssignedMeetings.Count()
                 })
                 .ToListAsync();
+            return Ok(groups);
+        }
+
+        [HttpGet("my-groups")]
+        public async Task<IActionResult> GetMyGroups()
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == 0) return Unauthorized();
+
+            var isAdmin = await IsUserAdmin(currentUserId);
+            
+            IQueryable<Group> groupsQuery;
+            
+            if (isAdmin)
+            {
+                // Admin widzi wszystkie grupy
+                groupsQuery = _context.Groups;
+            }
+            else
+            {
+                // Zwykły użytkownik widzi tylko swoje grupy
+                groupsQuery = _context.Groups
+                    .Where(g => g.UserGroups.Any(ug => ug.UserId == currentUserId));
+            }
+
+            var groups = await groupsQuery
+                .Select(g => new { 
+                    g.Id, 
+                    g.Name, 
+                    g.Description, 
+                    MemberCount = g.UserGroups.Count(),
+                    CustomerCount = g.AssignedCustomers.Count(),
+                    TaskCount = g.AssignedTasks.Count(),
+                    ContractCount = g.ResponsibleContracts.Count(),
+                    InvoiceCount = g.AssignedInvoices.Count(),
+                    MeetingCount = g.AssignedMeetings.Count()
+                })
+                .ToListAsync();
+                
             return Ok(groups);
         }
 
@@ -73,6 +136,7 @@ namespace CRM.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateGroup([FromBody] Group newGroup)
         {
             if (string.IsNullOrWhiteSpace(newGroup.Name))
@@ -84,6 +148,7 @@ namespace CRM.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateGroup(int id, [FromBody] Group updatedGroup)
         {
             var group = await _context.Groups.FindAsync(id);
@@ -97,6 +162,7 @@ namespace CRM.API.Controllers
         }
 
         [HttpPost("{groupId}/members/{userId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddMemberToGroup(int groupId, int userId)
         {
             var group = await _context.Groups.FindAsync(groupId);
@@ -118,6 +184,7 @@ namespace CRM.API.Controllers
         }
 
         [HttpDelete("{groupId}/members/{userId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RemoveMemberFromGroup(int groupId, int userId)
         {
             var membership = await _context.UserGroups
@@ -134,6 +201,16 @@ namespace CRM.API.Controllers
         [HttpPost("{groupId}/customers/{customerId}")]
         public async Task<IActionResult> AddCustomerToGroup(int groupId, int customerId)
         {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == 0) return Unauthorized();
+
+            // Sprawdź czy użytkownik jest adminem lub należy do grupy
+            var isAdmin = await IsUserAdmin(currentUserId);
+            var isInGroup = await IsUserInGroup(currentUserId, groupId);
+
+            if (!isAdmin && !isInGroup)
+                return Forbid("Możesz przypisywać klientów tylko do swoich grup.");
+
             var group = await _context.Groups.FindAsync(groupId);
             if (group == null) return NotFound("Grupa nie została znaleziona.");
 
@@ -149,6 +226,16 @@ namespace CRM.API.Controllers
         [HttpDelete("{groupId}/customers/{customerId}")]
         public async Task<IActionResult> RemoveCustomerFromGroup(int groupId, int customerId)
         {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == 0) return Unauthorized();
+
+            // Sprawdź czy użytkownik jest adminem lub należy do grupy
+            var isAdmin = await IsUserAdmin(currentUserId);
+            var isInGroup = await IsUserInGroup(currentUserId, groupId);
+
+            if (!isAdmin && !isInGroup)
+                return Forbid("Możesz usuwać klientów tylko ze swoich grup.");
+
             var customer = await _context.Customers.FirstOrDefaultAsync(c => c.Id == customerId && c.AssignedGroupId == groupId);
             if (customer == null) return NotFound("Klient nie jest przypisany do tej grupy.");
 
@@ -190,6 +277,7 @@ namespace CRM.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteGroup(int id)
         {
             var group = await _context.Groups.FindAsync(id);

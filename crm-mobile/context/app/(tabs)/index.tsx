@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl, Alert, TextInput } from 'react-native';
-import { useAuth } from '../../../context/AuthContext';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { useFocusEffect, Link } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
@@ -17,12 +17,10 @@ interface Task {
 interface UpdateTaskDto {
   title: string;
   description?: string;
+
   dueDate?: string;
   completed: boolean;
 }
-
-// Typy filtrów
-type CompletionFilter = 'all' | 'completed' | 'pending';
 
 // ❌ Usunięto stałą API_URL, ponieważ jest już globalnie w axios
 // const API_URL = 'http://10.0.2.2:5167'; 
@@ -30,14 +28,9 @@ type CompletionFilter = 'all' | 'completed' | 'pending';
 export default function TabOneScreen() {
   const { token, logout } = useAuth(); // Token jest już dostępny z kontekstu
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Nowe stany dla filtrowania
-  const [searchQuery, setSearchQuery] = useState('');
-  const [completionFilter, setCompletionFilter] = useState<CompletionFilter>('all');
 
   const fetchTasks = useCallback(async () => {
     if (!token) return;
@@ -64,41 +57,6 @@ export default function TabOneScreen() {
       setIsRefreshing(false);
     }
   }, [token, logout]);
-
-  // Funkcja filtrowania zadań
-  const filterTasks = useCallback(() => {
-    let filtered = tasks;
-
-    // Filtrowanie po tytule
-    if (searchQuery.trim() !== '') {
-      const lowercasedQuery = searchQuery.toLowerCase();
-      filtered = filtered.filter(task =>
-        task.title.toLowerCase().includes(lowercasedQuery) ||
-        (task.description && task.description.toLowerCase().includes(lowercasedQuery))
-      );
-    }
-
-    // Filtrowanie po wykonalności
-    switch (completionFilter) {
-      case 'completed':
-        filtered = filtered.filter(task => task.completed);
-        break;
-      case 'pending':
-        filtered = filtered.filter(task => !task.completed);
-        break;
-      case 'all':
-      default:
-        // Brak filtrowania - pokazujemy wszystkie
-        break;
-    }
-
-    setFilteredTasks(filtered);
-  }, [tasks, searchQuery, completionFilter]);
-
-  // Efekt do filtrowania zadań
-  useEffect(() => {
-    filterTasks();
-  }, [filterTasks]);
 
   useFocusEffect(useCallback(() => { fetchTasks(); }, [fetchTasks]));
 
@@ -174,48 +132,8 @@ export default function TabOneScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Wyszukiwarka */}
-      <View style={styles.searchContainer}>
-        <FontAwesome name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Szukaj po tytule..."
-          placeholderTextColor="#9ca3af"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      {/* Przyciski filtrowania po wykonalności */}
-      <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={[styles.filterButton, completionFilter === 'all' && styles.filterButtonActive]}
-          onPress={() => setCompletionFilter('all')}
-        >
-          <Text style={[styles.filterButtonText, completionFilter === 'all' && styles.filterButtonTextActive]}>
-            Wszystkie
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterButton, completionFilter === 'pending' && styles.filterButtonActive]}
-          onPress={() => setCompletionFilter('pending')}
-        >
-          <Text style={[styles.filterButtonText, completionFilter === 'pending' && styles.filterButtonTextActive]}>
-            Do wykonania
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterButton, completionFilter === 'completed' && styles.filterButtonActive]}
-          onPress={() => setCompletionFilter('completed')}
-        >
-          <Text style={[styles.filterButtonText, completionFilter === 'completed' && styles.filterButtonTextActive]}>
-            Ukończone
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       <FlatList
-        data={filteredTasks}
+        data={tasks}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <View style={styles.taskContainer}>
@@ -309,48 +227,5 @@ const styles = StyleSheet.create({
   actionButton: {
     padding: 5,
     marginLeft: 10,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#263238',
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    marginBottom: 15,
-    marginHorizontal: 20,
-  },
-  searchIcon: {
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    color: 'white',
-    fontSize: 16,
-    paddingVertical: 10,
-  },
-  filterContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 15,
-    marginHorizontal: 20,
-  },
-  filterButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#4b5563',
-  },
-  filterButtonActive: {
-    backgroundColor: '#facc15',
-    borderColor: '#facc15',
-  },
-  filterButtonText: {
-    color: '#9ca3af',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  filterButtonTextActive: {
-    color: 'black',
   },
 });

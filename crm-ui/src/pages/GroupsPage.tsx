@@ -25,14 +25,74 @@ export function GroupsPage() {
     const [newGroupName, setNewGroupName] = useState('');
     const [newGroupDesc, setNewGroupDesc] = useState('');
     const [search, setSearch] = useState('');
+    const [userRole, setUserRole] = useState<string>('');
     const api = import.meta.env.VITE_API_URL;
     const { openToast } = useModal();
+
+    // Sprawdzenie roli użytkownika
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+
+                // Sprawdź różne możliwe klucze roli
+                const possibleRoleKeys = [
+                    'role',
+                    'Role',
+                    'ROLE',
+                    'userRole',
+                    'UserRole',
+                    'roles',
+                    'Roles',
+                    'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
+                ];
+                let foundRole = '';
+
+                for (const key of possibleRoleKeys) {
+                    if (payload[key]) {
+                        foundRole = payload[key];
+                        break;
+                    }
+                }
+
+                // Jeśli nie znaleziono roli, sprawdź czy jest w claims
+                if (!foundRole && payload.claims) {
+                    for (const claim of payload.claims) {
+                        if (claim.type && claim.type.includes('role')) {
+                            foundRole = claim.value;
+                            break;
+                        }
+                    }
+                }
+
+                // Tymczasowe rozwiązanie - jeśli nie ma roli, sprawdź ID użytkownika
+                if (!foundRole && payload.nameid) {
+                    // Jeśli ID użytkownika to 1, prawdopodobnie to admin
+                    if (payload.nameid === '1') {
+                        foundRole = 'Admin';
+                    }
+                }
+
+                setUserRole(foundRole);
+            } catch (error) {
+                console.error('Error parsing token:', error);
+                setUserRole('');
+            }
+        }
+    }, []);
+
+    const isAdmin = userRole.toLowerCase() === 'admin' ||
+        userRole.toLowerCase() === 'administrator' ||
+        userRole.toLowerCase() === 'superadmin';
 
     const fetchGroups = async () => {
         const token = localStorage.getItem('token');
         setLoading(true);
         try {
-            const response = await axios.get(`${api}/groups`, { headers: { Authorization: `Bearer ${token}` } });
+            // Użyj endpointu my-groups dla nie-adminów
+            const endpoint = isAdmin ? 'groups' : 'groups/my-groups';
+            const response = await axios.get(`${api}/${endpoint}`, { headers: { Authorization: `Bearer ${token}` } });
             const groupsData = response.data.$values || response.data;
             setGroups(groupsData);
             setFilteredGroups(groupsData);
@@ -67,20 +127,20 @@ export function GroupsPage() {
             setNewGroupName('');
             setNewGroupDesc('');
             fetchGroups();
-            openToast('Grupa została utworzona pomyślnie', 'success');
+            openToast('Dział/zespół został utworzony pomyślnie', 'success');
         } catch {
             openToast('Wystąpił błąd podczas tworzenia grupy', 'error');
         }
     };
 
     const handleDeleteGroup = async (id: number) => {
-        if (!confirm("Czy na pewno chcesz usunąć tę grupę? Spowoduje to usunięcie wszystkich powiązań z użytkownikami.")) return;
+        if (!confirm("Czy na pewno chcesz usunąć ten dział/zespół? Spowoduje to usunięcie wszystkich powiązań z użytkownikami.")) return;
 
         const token = localStorage.getItem('token');
         try {
             await axios.delete(`${api}/groups/${id}`, { headers: { Authorization: `Bearer ${token}` } });
             fetchGroups();
-            openToast('Grupa została usunięta pomyślnie', 'success');
+            openToast('Dział/zespół został usunięty pomyślnie', 'success');
         } catch {
             openToast('Wystąpił błąd podczas usuwania grupy', 'error');
         }
@@ -91,39 +151,49 @@ export function GroupsPage() {
 
     return (
         <div className="p-6">
-            <h1 className="text-3xl font-bold text-white mb-6">Grupy użytkowników</h1>
+            <h1 className="text-3xl font-bold text-white mb-6">🏢 Działy/Zespoły</h1>
+            {!isAdmin && (
+                <div className="bg-blue-900/50 border border-blue-600 rounded-lg p-4 mb-6">
+                    <p className="text-blue-200 text-sm">
+                        <strong>ℹ️ Informacja:</strong> Widzisz tylko działy/zespoły, do których należysz.
+                        Tylko administrator może zarządzać grupami i dodawać nowe działy.
+                    </p>
+                </div>
+            )}
 
             {/* Formularz dodawania grupy */}
-            <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
-                <h2 className="text-xl text-white font-semibold mb-4">Stwórz nową grupę</h2>
-                <form onSubmit={handleAddGroup} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                    <div className="md:col-span-1">
-                        <label className="block text-sm font-medium text-gray-300">Nazwa grupy</label>
-                        <input
-                            type="text"
-                            value={newGroupName}
-                            onChange={e => setNewGroupName(e.target.value)}
-                            placeholder="np. Sprzedawcy"
-                            className="mt-1 w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                            required
-                        />
-                    </div>
-                    <div className="md:col-span-1">
-                        <label className="block text-sm font-medium text-gray-300">Opis (opcjonalnie)</label>
-                        <input
-                            type="text"
-                            value={newGroupDesc}
-                            onChange={e => setNewGroupDesc(e.target.value)}
-                            placeholder="np. Dostęp do modułu sprzedaży"
-                            className="mt-1 w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-                        />
-                    </div>
-                    <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold p-2 rounded-md flex justify-center items-center h-10">
-                        <PlusIcon className="w-5 h-5 mr-2" />
-                        Dodaj
-                    </button>
-                </form>
-            </div>
+            {isAdmin && (
+                <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
+                    <h2 className="text-xl font-semibold text-white mb-4">➕ Dodaj nowy dział/zespół</h2>
+                    <form onSubmit={handleAddGroup} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div className="md:col-span-1">
+                            <label className="block text-sm font-medium text-gray-300">Nazwa działu/zespołu</label>
+                            <input
+                                type="text"
+                                value={newGroupName}
+                                onChange={e => setNewGroupName(e.target.value)}
+                                placeholder="np. Sprzedaż, Support, Finanse"
+                                className="mt-1 w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white"
+                                required
+                            />
+                        </div>
+                        <div className="md:col-span-1">
+                            <label className="block text-sm font-medium text-gray-300">Opis (opcjonalnie)</label>
+                            <input
+                                type="text"
+                                value={newGroupDesc}
+                                onChange={e => setNewGroupDesc(e.target.value)}
+                                placeholder="np. Zespół sprzedaży i obsługi klienta"
+                                className="mt-1 w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white"
+                            />
+                        </div>
+                        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold p-2 rounded-md flex justify-center items-center h-10">
+                            <PlusIcon className="w-5 h-5 mr-2" />
+                            Dodaj
+                        </button>
+                    </form>
+                </div>
+            )}
 
             {/* Wyszukiwarka */}
             <div className="mb-6">
@@ -181,9 +251,11 @@ export function GroupsPage() {
                                 <ChartBarIcon className="w-4 h-4 mr-1" />
                                 Statystyki
                             </Link>
-                            <button onClick={() => handleDeleteGroup(group.id)} className="p-2 bg-red-800 hover:bg-red-700 rounded-md">
-                                <TrashIcon className="w-4 h-4 text-white" />
-                            </button>
+                            {isAdmin && (
+                                <button onClick={() => handleDeleteGroup(group.id)} className="p-2 bg-red-800 hover:bg-red-700 rounded-md">
+                                    <TrashIcon className="w-4 h-4 text-white" />
+                                </button>
+                            )}
                         </div>
                     </div>
                 ))}

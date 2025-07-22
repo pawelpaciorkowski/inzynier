@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, FlatList, ActivityIndicator, Text, View } from 'react-native';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { Stack } from 'expo-router';
 import axios from 'axios';
 

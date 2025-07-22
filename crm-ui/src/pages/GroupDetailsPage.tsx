@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeftIcon, ChartBarIcon, UserPlusIcon, XCircleIcon, UsersIcon } from '@heroicons/react/24/outline';
+import { ChartBarIcon, UserPlusIcon, XCircleIcon, UsersIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
 
 // --- INTERFEJSY DANYCH ---
@@ -16,6 +16,7 @@ interface Customer {
     id: number;
     name: string;
     email: string;
+    assignedGroupId?: number | null;
 }
 
 interface GroupDetails {
@@ -24,6 +25,12 @@ interface GroupDetails {
     description: string | null;
     members: User[];
     assignedCustomers: Customer[];
+    memberCount: number;
+    customerCount: number;
+    taskCount: number;
+    contractCount: number;
+    invoiceCount: number;
+    meetingCount: number;
 }
 
 export function GroupDetailsPage() {
@@ -31,7 +38,8 @@ export function GroupDetailsPage() {
     const [group, setGroup] = useState<GroupDetails | null>(null);
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [availableCustomers, setAvailableCustomers] = useState<Customer[]>([]);
-    
+    const [userRole, setUserRole] = useState<string>('');
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +51,63 @@ export function GroupDetailsPage() {
 
     const api = import.meta.env.VITE_API_URL;
     const { openToast } = useModal();
+
+    // Sprawdzenie roli użytkownika
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+
+                // Sprawdź różne możliwe klucze roli
+                const possibleRoleKeys = [
+                    'role',
+                    'Role',
+                    'ROLE',
+                    'userRole',
+                    'UserRole',
+                    'roles',
+                    'Roles',
+                    'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
+                ];
+                let foundRole = '';
+
+                for (const key of possibleRoleKeys) {
+                    if (payload[key]) {
+                        foundRole = payload[key];
+                        break;
+                    }
+                }
+
+                // Jeśli nie znaleziono roli, sprawdź czy jest w claims
+                if (!foundRole && payload.claims) {
+                    for (const claim of payload.claims) {
+                        if (claim.type && claim.type.includes('role')) {
+                            foundRole = claim.value;
+                            break;
+                        }
+                    }
+                }
+
+                // Tymczasowe rozwiązanie - jeśli nie ma roli, sprawdź ID użytkownika
+                if (!foundRole && payload.nameid) {
+                    // Jeśli ID użytkownika to 1, prawdopodobnie to admin
+                    if (payload.nameid === '1') {
+                        foundRole = 'Admin';
+                    }
+                }
+
+                setUserRole(foundRole);
+            } catch (error) {
+                console.error('Error parsing token:', error);
+                setUserRole('');
+            }
+        }
+    }, []);
+
+    const isAdmin = userRole.toLowerCase() === 'admin' ||
+        userRole.toLowerCase() === 'administrator' ||
+        userRole.toLowerCase() === 'superadmin';
 
     // --- POBIERANIE DANYCH ---
     const fetchAllData = async () => {
@@ -68,7 +133,7 @@ export function GroupDetailsPage() {
 
             // Przetwarzanie danych klientów
             const allCustomersData = customersResponse.data.$values || customersResponse.data;
-            setAvailableCustomers(allCustomersData.filter((c: any) => c.assignedGroupId === null));
+            setAvailableCustomers(allCustomersData.filter((c: Customer) => !c.assignedGroupId));
 
             setError(null);
         } catch (err) {
@@ -141,10 +206,43 @@ export function GroupDetailsPage() {
                     <h1 className="text-3xl font-bold text-white">{group.name}</h1>
                     <p className="text-gray-400 mt-1">{group.description || 'Brak opisu'}</p>
                 </div>
-                <Link to={`/grupy/${id}/statystyki`} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center">
-                    <ChartBarIcon className="w-5 h-5 mr-2" />
-                    Statystyki
-                </Link>
+                <div className="flex gap-2">
+                    <Link to={`/grupy/${id}/statystyki`} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md flex items-center">
+                        <ChartBarIcon className="w-5 h-5 mr-2" />
+                        Statystyki
+                    </Link>
+                </div>
+            </div>
+
+            {/* SEKCJA STATYSTYK */}
+            <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
+                <h3 className="text-lg font-semibold text-white mb-4">📊 Statystyki działu/zespołu</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div className="bg-blue-600 p-4 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-white">{group.memberCount}</div>
+                        <div className="text-blue-100 text-sm">Członkowie</div>
+                    </div>
+                    <div className="bg-green-600 p-4 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-white">{group.customerCount}</div>
+                        <div className="text-green-100 text-sm">Klienci</div>
+                    </div>
+                    <div className="bg-yellow-600 p-4 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-white">{group.taskCount}</div>
+                        <div className="text-yellow-100 text-sm">Zadania</div>
+                    </div>
+                    <div className="bg-purple-600 p-4 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-white">{group.contractCount}</div>
+                        <div className="text-purple-100 text-sm">Umowy</div>
+                    </div>
+                    <div className="bg-indigo-600 p-4 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-white">{group.invoiceCount}</div>
+                        <div className="text-indigo-100 text-sm">Faktury</div>
+                    </div>
+                    <div className="bg-pink-600 p-4 rounded-lg text-center">
+                        <div className="text-2xl font-bold text-white">{group.meetingCount}</div>
+                        <div className="text-pink-100 text-sm">Spotkania</div>
+                    </div>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -152,10 +250,12 @@ export function GroupDetailsPage() {
                 <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold text-white">Członkowie grupy ({group.members.length})</h3>
-                        <button onClick={() => setShowAddMemberModal(true)} className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-md text-sm flex items-center">
-                            <UserPlusIcon className="w-4 h-4 mr-1" />
-                            Dodaj członka
-                        </button>
+                        {isAdmin && (
+                            <button onClick={() => setShowAddMemberModal(true)} className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-md text-sm flex items-center">
+                                <UserPlusIcon className="w-4 h-4 mr-1" />
+                                Dodaj członka
+                            </button>
+                        )}
                     </div>
                     <div className="space-y-2">
                         {group.members.map(member => (
@@ -164,9 +264,11 @@ export function GroupDetailsPage() {
                                     <div className="text-white font-medium">{member.username}</div>
                                     <div className="text-gray-400 text-sm">{member.email}</div>
                                 </div>
-                                <button onClick={() => handleRemoveMember(member.id)} className="p-2 bg-red-800 hover:bg-red-700 rounded-md">
-                                    <XCircleIcon className="w-5 h-5 text-white" />
-                                </button>
+                                {isAdmin && (
+                                    <button onClick={() => handleRemoveMember(member.id)} className="p-2 bg-red-800 hover:bg-red-700 rounded-md">
+                                        <XCircleIcon className="w-5 h-5 text-white" />
+                                    </button>
+                                )}
                             </div>
                         ))}
                         {group.members.length === 0 && <p className="text-gray-400 text-center py-4">Brak członków w grupie.</p>}
@@ -177,10 +279,12 @@ export function GroupDetailsPage() {
                 <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold text-white">Przypisani Klienci ({group.assignedCustomers.length})</h3>
-                        <button onClick={() => setShowAddCustomerModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm flex items-center">
-                            <UsersIcon className="w-4 h-4 mr-1" />
-                            Dodaj klienta
-                        </button>
+                        {isAdmin && (
+                            <button onClick={() => setShowAddCustomerModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm flex items-center">
+                                <UsersIcon className="w-4 h-4 mr-1" />
+                                Dodaj klienta
+                            </button>
+                        )}
                     </div>
                     <div className="space-y-2">
                         {group.assignedCustomers.map(customer => (
@@ -189,9 +293,11 @@ export function GroupDetailsPage() {
                                     <div className="text-white font-medium">{customer.name}</div>
                                     <div className="text-gray-400 text-sm">{customer.email}</div>
                                 </div>
-                                <button onClick={() => handleRemoveCustomer(customer.id)} className="p-2 bg-red-800 hover:bg-red-700 rounded-md">
-                                    <XCircleIcon className="w-5 h-5 text-white" />
-                                </button>
+                                {isAdmin && (
+                                    <button onClick={() => handleRemoveCustomer(customer.id)} className="p-2 bg-red-800 hover:bg-red-700 rounded-md">
+                                        <XCircleIcon className="w-5 h-5 text-white" />
+                                    </button>
+                                )}
                             </div>
                         ))}
                         {group.assignedCustomers.length === 0 && <p className="text-gray-400 text-center py-4">Brak przypisanych klientów.</p>}
