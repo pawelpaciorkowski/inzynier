@@ -23,6 +23,7 @@ export function AllTasksPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
+    const [completionFilter, setCompletionFilter] = useState<'all' | 'completed' | 'pending'>('all');
     const api = import.meta.env.VITE_API_URL;
     const token = localStorage.getItem('token');
 
@@ -60,13 +61,34 @@ export function AllTasksPage() {
 
     // Filtrowanie zadań na podstawie wyszukiwania
     useEffect(() => {
-        const filtered = tasks.filter(task =>
-            task.title.toLowerCase().includes(search.toLowerCase()) ||
-            task.user.username.toLowerCase().includes(search.toLowerCase()) ||
-            (task.customer?.name && task.customer.name.toLowerCase().includes(search.toLowerCase()))
-        );
+        let filtered = tasks;
+
+        // Filtrowanie po wyszukiwaniu
+        if (search.trim() !== '') {
+            const lowercasedSearch = search.toLowerCase();
+            filtered = filtered.filter(task =>
+                task.title.toLowerCase().includes(lowercasedSearch) ||
+                task.user.username.toLowerCase().includes(lowercasedSearch) ||
+                (task.customer?.name && task.customer.name.toLowerCase().includes(lowercasedSearch))
+            );
+        }
+
+        // Filtrowanie po statusie ukończenia
+        switch (completionFilter) {
+            case 'completed':
+                filtered = filtered.filter(task => task.completed);
+                break;
+            case 'pending':
+                filtered = filtered.filter(task => !task.completed);
+                break;
+            case 'all':
+            default:
+                // Brak dodatkowego filtrowania
+                break;
+        }
+
         setFilteredTasks(filtered);
-    }, [tasks, search]);
+    }, [tasks, search, completionFilter]);
 
     if (loading) return <p className="p-6 text-gray-400">Ładowanie...</p>;
     if (error) return <p className="p-6 text-red-500">{error}</p>;
@@ -91,6 +113,28 @@ export function AllTasksPage() {
                         </svg>
                     </div>
                 </div>
+            </div>
+
+            {/* Przyciski filtrowania po wykonalności */}
+            <div className="flex justify-start gap-4 mb-6">
+                <button
+                    className={`px-4 py-2 rounded-md font-semibold transition ${completionFilter === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                    onClick={() => setCompletionFilter('all')}
+                >
+                    Wszystkie
+                </button>
+                <button
+                    className={`px-4 py-2 rounded-md font-semibold transition ${completionFilter === 'pending' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                    onClick={() => setCompletionFilter('pending')}
+                >
+                    Do wykonania
+                </button>
+                <button
+                    className={`px-4 py-2 rounded-md font-semibold transition ${completionFilter === 'completed' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                    onClick={() => setCompletionFilter('completed')}
+                >
+                    Ukończone
+                </button>
             </div>
 
             <div className="bg-gray-800 shadow-md rounded-lg overflow-x-auto">

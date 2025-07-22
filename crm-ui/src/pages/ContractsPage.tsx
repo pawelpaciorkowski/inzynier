@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { TrashIcon, PencilIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
+import Pagination from '../components/Pagination';
 
 interface Contract {
     id: number;
@@ -25,6 +26,8 @@ export function ContractsPage() {
     const [error, setError] = useState<string | null>(null);
     const { openModal, openToast } = useModal();
     const api = import.meta.env.VITE_API_URL;
+    const [currentPage, setCurrentPage] = useState(1);
+    const resultsPerPage = 10;
 
     const fetchData = useCallback(async () => {
         const token = localStorage.getItem('token');
@@ -57,7 +60,12 @@ export function ContractsPage() {
             (contract.netAmount && contract.netAmount.toString().includes(search))
         );
         setFilteredContracts(filtered);
+        setCurrentPage(1); // Resetuj stronę do 1 po zmianie wyszukiwania
     }, [contracts, search]);
+
+    // PAGINACJA
+    const totalPages = Math.ceil(filteredContracts.length / resultsPerPage);
+    const paginatedContracts = filteredContracts.slice((currentPage - 1) * resultsPerPage, currentPage * resultsPerPage);
 
     const handleDeleteContract = async (id: number) => {
         openModal({
@@ -155,8 +163,8 @@ export function ContractsPage() {
                             </thead>
                             {/* Zaktualizowane ciało tabeli */}
                             <tbody>
-                                {filteredContracts.length > 0 ? (
-                                    filteredContracts.map((contract) => (
+                                {paginatedContracts.length > 0 ? (
+                                    paginatedContracts.map((contract) => (
                                         <tr key={contract.id} className="hover:bg-gray-700">
                                             <td className="px-5 py-4 border-b border-gray-700">
                                                 <p className="font-semibold">{contract.title}</p>
@@ -191,6 +199,13 @@ export function ContractsPage() {
                             </tbody>
                         </table>
                     </div>
+                    {paginatedContracts.length > 0 && (
+                        <Pagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            onPageChange={setCurrentPage}
+                        />
+                    )}
                 </>
             )}
         </div>

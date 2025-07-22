@@ -27,6 +27,7 @@ export default function TasksPage() {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [completionFilter, setCompletionFilter] = useState<'all' | 'completed' | 'pending'>('all');
     const api = import.meta.env.VITE_API_URL;
 
     const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -83,13 +84,34 @@ export default function TasksPage() {
 
     // Filtrowanie zadań na podstawie wyszukiwania
     useEffect(() => {
-        const filtered = tasks.filter(task =>
-            task.title.toLowerCase().includes(search.toLowerCase()) ||
-            (task.description && task.description.toLowerCase().includes(search.toLowerCase())) ||
-            (task.user && task.user.username.toLowerCase().includes(search.toLowerCase()))
-        );
+        let filtered = tasks;
+
+        // Filtrowanie po tytule
+        if (search.trim() !== '') {
+            const lowercasedQuery = search.toLowerCase();
+            filtered = filtered.filter(task =>
+                task.title.toLowerCase().includes(lowercasedQuery) ||
+                (task.description && task.description.toLowerCase().includes(lowercasedQuery)) ||
+                (task.user && task.user.username.toLowerCase().includes(lowercasedQuery))
+            );
+        }
+
+        // Filtrowanie po wykonalności
+        switch (completionFilter) {
+            case 'completed':
+                filtered = filtered.filter(task => task.completed);
+                break;
+            case 'pending':
+                filtered = filtered.filter(task => !task.completed);
+                break;
+            case 'all':
+            default:
+                // Brak filtrowania - pokazujemy wszystkie
+                break;
+        }
+
         setFilteredTasks(filtered);
-    }, [tasks, search]);
+    }, [tasks, search, completionFilter]);
 
     const addTask = async () => {
         const token = localStorage.getItem("token");
@@ -222,6 +244,28 @@ export default function TasksPage() {
                         </svg>
                     </div>
                 </div>
+            </div>
+
+            {/* Przyciski filtrowania po wykonalności */}
+            <div className="flex justify-start gap-4 mb-6">
+                <button
+                    className={`px-4 py-2 rounded-md font-semibold transition ${completionFilter === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                    onClick={() => setCompletionFilter('all')}
+                >
+                    Wszystkie
+                </button>
+                <button
+                    className={`px-4 py-2 rounded-md font-semibold transition ${completionFilter === 'pending' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                    onClick={() => setCompletionFilter('pending')}
+                >
+                    Do wykonania
+                </button>
+                <button
+                    className={`px-4 py-2 rounded-md font-semibold transition ${completionFilter === 'completed' ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                    onClick={() => setCompletionFilter('completed')}
+                >
+                    Ukończone
+                </button>
             </div>
 
             <ul className="space-y-3">
