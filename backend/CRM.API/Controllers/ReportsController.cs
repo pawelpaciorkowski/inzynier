@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CRM.BusinessLogic.Services;
 using System;
+using System.Collections.Generic; // Added for List<string>
 
 namespace CRM.API.Controllers
 {
@@ -893,6 +894,146 @@ namespace CRM.API.Controllers
             return File(pdfBytes, "application/pdf", $"raport_grupy_{group.Name.Replace(" ", "_")}.pdf");
         }
 
+        [HttpGet("tags/{tagId}/pdf")]
+        public async Task<IActionResult> GetTagReportPdf(int tagId)
+        {
+            var tag = await _context.Tags.FindAsync(tagId);
+            if (tag == null) return NotFound("Tag nie znaleziony.");
+
+            // Pobieramy wszystkie dane raportu dla taga
+            var customersData = await _context.Customers
+                .Where(c => c.CustomerTags.Any(ct => ct.TagId == tagId))
+                .Select(c => new
+                {
+                    c.Id,
+                    c.Name,
+                    c.Email,
+                    c.Company,
+                    c.CreatedAt,
+                    c.Phone,
+                    GroupName = c.AssignedGroup != null ? c.AssignedGroup.Name : "Brak grupy"
+                })
+                .ToListAsync();
+
+            var invoicesData = await _context.Invoices
+                .Where(i => i.InvoiceTags.Any(it => it.TagId == tagId) || i.Customer.CustomerTags.Any(ct => ct.TagId == tagId))
+                .Include(i => i.Customer)
+                .Select(i => new
+                {
+                    i.Id,
+                    i.Number,
+                    i.TotalAmount,
+                    i.IsPaid,
+                    i.IssuedAt,
+                    i.DueDate,
+                    CustomerName = i.Customer.Name
+                })
+                .ToListAsync();
+
+            var tasksData = await _context.Tasks
+                .Where(t => t.TaskTags.Any(tt => tt.TagId == tagId) || t.Customer.CustomerTags.Any(ct => ct.TagId == tagId))
+                .Include(t => t.Customer)
+                .Select(t => new
+                {
+                    t.Id,
+                    t.Title,
+                    t.Description,
+                    t.DueDate,
+                    t.Completed,
+                    CustomerName = t.Customer.Name
+                })
+                .ToListAsync();
+
+            var contractsData = await _context.Contracts
+                .Where(c => c.ContractTags.Any(ct => ct.TagId == tagId) || c.Customer.CustomerTags.Any(ct => ct.TagId == tagId))
+                .Include(c => c.Customer)
+                .Select(c => new
+                {
+                    c.Id,
+                    c.Title,
+                    c.ContractNumber,
+                    CustomerName = c.Customer.Name
+                })
+                .ToListAsync();
+
+            var meetingsData = await _context.Meetings
+                .Where(m => m.MeetingTags.Any(mt => mt.TagId == tagId))
+                .Include(m => m.Customer)
+                .Select(m => new
+                {
+                    m.Id,
+                    m.Topic,
+                    m.ScheduledAt,
+                    CustomerName = m.Customer.Name
+                })
+                .ToListAsync();
+
+            var reportSummary = new GroupReportSummaryPdfDto
+            {
+                TotalCustomers = customersData.Count,
+                TotalInvoicesSales = invoicesData.Count,
+                TotalAmount = invoicesData.Sum(i => i.TotalAmount),
+                TotalTasks = tasksData.Count,
+                PaidAmount = invoicesData.Where(i => i.IsPaid).Sum(i => i.TotalAmount),
+                UnpaidAmount = invoicesData.Where(i => !i.IsPaid).Sum(i => i.TotalAmount),
+                PaidCount = invoicesData.Count(i => i.IsPaid),
+                UnpaidCount = invoicesData.Count(i => !i.IsPaid),
+                CompletedTasks = tasksData.Count(t => t.Completed),
+                PendingTasks = tasksData.Count(t => !t.Completed),
+                CompletionRate = tasksData.Count > 0 ? (double)tasksData.Count(t => t.Completed) / tasksData.Count * 100 : 0,
+                TotalContracts = contractsData.Count,
+                TotalInvoiceValue = invoicesData.Sum(i => i.TotalAmount),
+                TotalPaidValue = invoicesData.Where(i => i.IsPaid).Sum(i => i.TotalAmount)
+            };
+
+            var fullReportData = new FullGroupReportPdfDto
+            {
+                Summary = reportSummary,
+                Customers = customersData.Select(c => new GroupReportCustomerPdfDto
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    Email = c.Email,
+                    Company = c.Company,
+                    CreatedAt = c.CreatedAt,
+                    Phone = c.Phone,
+                    AssignedUser = "",
+                    Tags = new List<string> { tag.Name },
+                    ContractCount = contractsData.Count(contract => contract.CustomerName == c.Name),
+                    InvoiceCount = invoicesData.Count(invoice => invoice.CustomerName == c.Name),
+                    TotalInvoiceValue = invoicesData.Where(invoice => invoice.CustomerName == c.Name).Sum(invoice => invoice.TotalAmount),
+                    PaidInvoiceValue = invoicesData.Where(invoice => invoice.CustomerName == c.Name && invoice.IsPaid).Sum(invoice => invoice.TotalAmount)
+                }).ToList(),
+                Invoices = invoicesData.Select(i => new GroupReportInvoicePdfDto
+                {
+                    Id = i.Id,
+                    Number = i.Number,
+                    TotalAmount = i.TotalAmount,
+                    IsPaid = i.IsPaid,
+                    IssuedAt = i.IssuedAt,
+                    DueDate = i.DueDate,
+                    CustomerName = i.CustomerName,
+                    CustomerEmail = "",
+                    CreatedBy = "",
+                    Tags = new List<string> { tag.Name }
+                }).ToList(),
+                Tasks = tasksData.Select(t => new GroupReportTaskPdfDto
+                {
+                    Id = t.Id,
+                    Title = t.Title,
+                    Description = t.Description,
+                    DueDate = t.DueDate,
+                    Completed = t.Completed,
+                    AssignedUser = "",
+                    CustomerName = t.CustomerName,
+                    Tags = new List<string> { tag.Name }
+                }).ToList()
+            };
+
+            var pdfBytes = await _invoicePdfService.GenerateGroupReportPdfAsync($"Tag: {tag.Name}", fullReportData);
+            return File(pdfBytes, "application/pdf", $"raport_taga_{tag.Name.Replace(" ", "_")}.pdf");
+        }
+
         // ✅ NOWE RAPORTY Z FILTROWANIEM PO TAGACH
 
         [HttpGet("tags/{tagId}/customers")]
@@ -925,6 +1066,8 @@ namespace CRM.API.Controllers
                     i.Number,
                     i.TotalAmount,
                     i.IsPaid,
+                    i.IssuedAt,
+                    i.DueDate,
                     CustomerName = i.Customer.Name
                 })
                 .ToListAsync();
@@ -942,6 +1085,8 @@ namespace CRM.API.Controllers
                 {
                     t.Id,
                     t.Title,
+                    t.Description,
+                    t.DueDate,
                     t.Completed,
                     CustomerName = t.Customer.Name
                 })

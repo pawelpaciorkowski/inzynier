@@ -18,7 +18,7 @@ export function MeetingsPage() {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
 
     useEffect(() => {
         const fetchMeetings = async () => {
@@ -64,6 +64,7 @@ export function MeetingsPage() {
                     await axios.delete(`/api/Meetings/${id}`);
                     // Odśwież listę po usunięciu
                     setMeetings(prevMeetings => prevMeetings.filter(meeting => meeting.id !== id));
+                    openToast('Spotkanie zostało pomyślnie usunięte.', 'success');
                 } catch (err) {
                     alert('Nie udało się usunąć spotkania.');
                     console.error('Błąd usuwania spotkania:', err);

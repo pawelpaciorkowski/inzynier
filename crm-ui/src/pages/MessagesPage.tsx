@@ -96,6 +96,7 @@ export function MessagesPage() {
                 try {
                     await axios.delete(`/api/Messages/${id}`);
                     fetchMessages(); // Odśwież listę
+                    openToast('Wiadomość została pomyślnie usunięta.', 'success');
                 } catch (err: any) {
                     console.error('Błąd usuwania wiadomości:', err);
                     openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się usunąć wiadomości.' });

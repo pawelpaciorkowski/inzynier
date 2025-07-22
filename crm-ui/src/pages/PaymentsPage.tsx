@@ -21,7 +21,7 @@ export function PaymentsPage() {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
 
     const fetchPayments = useCallback(async () => {
         setLoading(true);
@@ -63,6 +63,7 @@ export function PaymentsPage() {
                 try {
                     await axios.delete(`/api/Payments/${id}`);
                     fetchPayments(); // Odśwież listę po usunięciu
+                    openToast('Płatność została pomyślnie usunięta.', 'success');
                 } catch (err) {
                     alert('Nie udało się usunąć płatności.');
                     console.error('Błąd usuwania płatności:', err);

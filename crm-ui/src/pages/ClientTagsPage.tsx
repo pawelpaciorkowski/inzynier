@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import axios from 'axios';
-import { TagIcon, TrashIcon, PlusIcon, EyeIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { TagIcon, TrashIcon, PlusIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
 
 interface Tag {
@@ -40,7 +40,7 @@ export function ClientTagsPage() {
     const [editColor, setEditColor] = useState('');
     const [editDescription, setEditDescription] = useState('');
     const api = import.meta.env.VITE_API_URL;
-    const { openToast, openConfirmModal } = useModal();
+    const { openToast } = useModal();
 
     const fetchTags = async () => {
         const token = localStorage.getItem('token');
@@ -89,8 +89,7 @@ export function ClientTagsPage() {
     };
 
     const handleDeleteTag = async (id: number) => {
-        const confirmed = await openConfirmModal("Potwierdź usunięcie", "Czy na pewno chcesz usunąć ten tag? Spowoduje to usunięcie wszystkich powiązań.");
-        if (!confirmed) return;
+        if (!confirm("Czy na pewno chcesz usunąć ten tag? Spowoduje to usunięcie wszystkich powiązań.")) return;
 
         const token = localStorage.getItem('token');
         try {
@@ -102,15 +101,6 @@ export function ClientTagsPage() {
         }
     };
 
-    const handleViewTagDetails = async (tagId: number) => {
-        const token = localStorage.getItem('token');
-        try {
-            const response = await axios.get(`${api}/tags/${tagId}`, { headers: { Authorization: `Bearer ${token}` } });
-            setSelectedTag(response.data);
-        } catch {
-            openToast('Nie udało się pobrać szczegółów tagu', 'error');
-        }
-    };
 
     const handleEditTag = (tag: Tag) => {
         setEditingTag(tag);

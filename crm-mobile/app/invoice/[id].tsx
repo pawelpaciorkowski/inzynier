@@ -21,6 +21,7 @@ interface InvoiceDetails {
     id: number;
     invoiceNumber: string;
     customerName: string;
+    customerNip: string;
     totalAmount: number;
     netAmount: number;
     taxAmount: number;
@@ -104,6 +105,7 @@ export default function InvoiceDetailScreen() {
                 <View style={styles.card}>
                     <InfoRow label="Numer faktury" value={invoice.invoiceNumber} />
                     <InfoRow label="Klient" value={invoice.customerName} />
+                    <InfoRow label="NIP" value={invoice.customerNip} />
                     <InfoRow label="Data wystawienia" value={new Date(invoice.issueDate).toLocaleDateString('pl-PL')} />
                     <InfoRow label="Termin płatności" value={new Date(invoice.dueDate).toLocaleDateString('pl-PL')} />
                     <InfoRow label="Status" value={invoice.isPaid ? 'Zapłacona' : 'Oczekuje'} />

@@ -28,7 +28,7 @@ export function NotesPage() {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
 
     const fetchNotes = useCallback(async () => {
         setLoading(true);
@@ -71,6 +71,7 @@ export function NotesPage() {
                 try {
                     await axios.delete(`/api/Notes/${id}`);
                     fetchNotes(); // Odśwież listę
+                    openToast('Notatka została pomyślnie usunięta.', 'success');
                 } catch (err: unknown) {
                     let errorMessage = 'Nie udało się usunąć notatki.';
                     if (axios.isAxiosError(err) && err.response) {

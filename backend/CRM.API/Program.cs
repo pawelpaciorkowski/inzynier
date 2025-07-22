@@ -37,13 +37,13 @@ builder.Services.AddScoped<ICsvExportService, CsvExportService>();
 
 // Plik: backend/CRM.API/Program.cs
 
-// 4. CORS (Cross-Origin Resource Sharing) - WERSJA Z HARDKODOWANIEM
+// 4. CORS (Cross-Origin Resource Sharing) - POPRAWIONA WERSJA
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        // Bezpośrednio podajemy dozwolone adresy, omijając pliki konfiguracyjne
-        policy.WithOrigins("http://localhost:5173", "http://localhost:8081")
+        // Dozwolone origins dla aplikacji webowej i mobilnej
+        policy.WithOrigins("http://localhost:5173", "http://localhost:8081", "http://localhost:5000")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();

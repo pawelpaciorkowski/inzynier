@@ -14,7 +14,7 @@ interface Customer {
 }
 
 export default function CustomersScreen() {
-    const { token } = useAuth();
+    const { token, isLoading } = useAuth();
     const router = useRouter();
 
     const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
@@ -23,6 +23,14 @@ export default function CustomersScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+
+    if (isLoading) {
+        return (
+            <View style={[styles.container, styles.centered]}>
+                <ActivityIndicator size="large" color="#fff" />
+            </View>
+        );
+    }
 
     const fetchCustomers = useCallback(async () => {
         if (!token) {

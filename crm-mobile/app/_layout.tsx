@@ -10,13 +10,11 @@ export {
 } from 'expo-router';
 
 const InitialLayout = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoading) return;
-
     const inAuthGroup = segments[0] === 'login'; // Sprawdzamy, czy jesteśmy na ekranie logowania
 
     if (isAuthenticated && inAuthGroup) {
@@ -26,7 +24,7 @@ const InitialLayout = () => {
       // Jeśli niezalogowany i nie na ekranie logowania, przekieruj do login
       router.replace('/login');
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, segments]);
 
   return (
     <Stack screenOptions={{
@@ -48,6 +46,8 @@ export default function RootLayout() {
     ...FontAwesome.font,
   });
 
+  const { isLoading } = useAuth();
+
   useEffect(() => {
     if (error) throw error;
   }, [error]);
@@ -58,7 +58,8 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <InitialLayout />
+      {/* Render InitialLayout only when authentication state is not loading */}
+      {!isLoading && <InitialLayout />}
     </AuthProvider>
   );
 }

@@ -20,7 +20,7 @@ interface UpdateTaskDto { title: string; description?: string; dueDate?: string;
 
 export default function TasksPage() {
     const { user } = useAuth();
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
     const [tasks, setTasks] = useState<TaskItem[]>([]);
     const [filteredTasks, setFilteredTasks] = useState<TaskItem[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
@@ -149,6 +149,7 @@ export default function TasksPage() {
                 try {
                     await axios.delete(`${api}/user/tasks/${task.id}`, { headers: { Authorization: `Bearer ${token}` } });
                     setTasks(prev => prev.filter(t => t.id !== task.id));
+                    openToast('Zadanie zostało pomyślnie usunięte.', 'success');
                 } catch {
                     openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się usunąć zadania.' });
                 }

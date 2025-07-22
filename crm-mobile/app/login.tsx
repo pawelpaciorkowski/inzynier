@@ -3,8 +3,8 @@ import { View, TextInput, Button, StyleSheet, Text, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen() {
-    const [username, setUsername] = useState('user');
-    const [password, setPassword] = useState('user123');
+    const [username, setUsername] = useState('Admin');
+    const [password, setPassword] = useState('Password123!');
     const { login } = useAuth();
 
     const onLoginPress = async () => {

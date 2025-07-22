@@ -11,7 +11,7 @@ export function InvoicesPage() {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
 
     useEffect(() => {
         const fetchInvoices = async () => {
@@ -59,6 +59,7 @@ export function InvoicesPage() {
                 try {
                     await deleteInvoice(invoiceId);
                     setInvoices(prev => prev.filter(invoice => invoice.id !== invoiceId));
+                    openToast('Faktura została pomyślnie usunięta.', 'success');
                 } catch (err) {
                     setError('Nie udało się usunąć faktury.');
                 }

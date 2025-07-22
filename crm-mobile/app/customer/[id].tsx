@@ -17,6 +17,7 @@ interface CustomerDetails {
     city: string;
     postalCode: string;
     country: string;
+    nip: string;
 }
 
 const InfoRow = ({ label, value }: { label: string, value: string | number | null | undefined }) => {
@@ -71,6 +72,7 @@ export default function CustomerDetailScreen() {
                     <InfoRow label="Miasto" value={customer.city} />
                     <InfoRow label="Kod pocztowy" value={customer.postalCode} />
                     <InfoRow label="Kraj" value={customer.country} />
+                    <InfoRow label="NIP" value={customer.nip} />
                 </View>
             </ScrollView>
         </>

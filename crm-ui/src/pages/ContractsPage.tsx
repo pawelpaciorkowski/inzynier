@@ -23,7 +23,7 @@ export function ContractsPage() {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { openModal } = useModal();
+    const { openModal, openToast } = useModal();
     const api = import.meta.env.VITE_API_URL;
 
     const fetchData = useCallback(async () => {
@@ -70,6 +70,7 @@ export function ContractsPage() {
                     await axios.delete(`/api/Contracts/${id}`);
                     // Odśwież listę po usunięciu
                     setContracts(prevContracts => prevContracts.filter(contract => contract.id !== id));
+                    openToast('Kontrakt został pomyślnie usunięty.', 'success');
                 } catch (err) {
                     alert('Nie udało się usunąć kontraktu.');
                     console.error('Błąd usuwania kontraktu:', err);

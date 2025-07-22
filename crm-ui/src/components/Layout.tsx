@@ -38,7 +38,20 @@ export default function Layout() {
     const [reminders, setReminders] = useState<Reminder[]>([]);
     const [activeReminder, setActiveReminder] = useState<Reminder | null>(null);
     const [shownReminders, setShownReminders] = useState<number[]>([]);
+    const [lastCheckedDate, setLastCheckedDate] = useState<string>('');
     const [clock, setClock] = useState<string>("");
+
+    // Funkcja do resetowania pokazanych przypomnień każdego dnia
+    const resetShownRemindersIfNewDay = useCallback(() => {
+        const today = new Date().toDateString();
+        if (lastCheckedDate !== today) {
+            console.log('🔄 Nowy dzień - resetuję pokazane przypomnienia');
+            console.log('  - Poprzedni dzień:', lastCheckedDate);
+            console.log('  - Dzisiejszy dzień:', today);
+            setShownReminders([]);
+            setLastCheckedDate(today);
+        }
+    }, [lastCheckedDate]);
 
     useEffect(() => {
         const updateClock = () => {
@@ -80,40 +93,96 @@ export default function Layout() {
     useEffect(() => {
         const fetchReminders = async () => {
             try {
+                console.log('🔄 Pobieram przypomnienia z API...');
                 const response = await axios.get('/api/Reminders');
                 const data = response.data.$values || response.data;
+                console.log('📥 Otrzymane przypomnienia:', data);
                 setReminders(data);
-            } catch {
-                // ignoruj błąd
+            } catch (error) {
+                console.error('❌ Błąd pobierania przypomnień:', error);
             }
         };
         fetchReminders();
-        const interval = setInterval(fetchReminders, 1 * 60 * 100);
+        const interval = setInterval(fetchReminders, 2 * 60 * 1000); // 2 minuty
         return () => clearInterval(interval);
     }, []);
 
     // Sprawdzaj, czy jest przypomnienie na teraz
     useEffect(() => {
-        const interval = setInterval(() => {
+        const checkReminders = () => {
+            // Resetuj pokazane przypomnienia jeśli to nowy dzień
+            resetShownRemindersIfNewDay();
+
             const now = new Date();
-            const nowStr = now.toISOString().slice(0, 16); // yyyy-MM-ddTHH:mm
-            console.log('Aktualny czas:', nowStr);
-            reminders.forEach(r => {
-                console.log('Przypomnienie:', r.id, r.remindAt.slice(0, 16), r.note);
+            const currentMinute = now.getMinutes();
+            const currentHour = now.getHours();
+            const currentDate = now.toDateString();
+
+            console.log('=== SPRAWDZANIE PRZYPOMNIEŃ ===');
+            console.log('Aktualny czas:', currentHour + ':' + currentMinute, 'dnia:', currentDate);
+            console.log('Liczba przypomnień w pamięci:', reminders.length);
+            console.log('Pokazane przypomnienia:', shownReminders);
+
+            if (reminders.length === 0) {
+                console.log('Brak przypomnień do sprawdzenia');
+                return;
+            }
+
+            const found = reminders.find(r => {
+                if (shownReminders.includes(r.id)) {
+                    console.log('Przypomnienie', r.id, 'już pokazane - pomijam');
+                    return false;
+                }
+
+                const reminderDate = new Date(r.remindAt);
+                const reminderMinute = reminderDate.getMinutes();
+                const reminderHour = reminderDate.getHours();
+                const reminderDateStr = reminderDate.toDateString();
+
+                console.log('Sprawdzam przypomnienie ID:', r.id);
+                console.log('  - Treść:', r.note);
+                console.log('  - Czas przypomnienia:', reminderHour + ':' + reminderMinute, 'dnia:', reminderDateStr);
+                console.log('  - Surowa data z API:', r.remindAt);
+
+                // Sprawdź czy to ten sam dzień i ta sama godzina/minuta
+                const dateMatches = reminderDateStr === currentDate;
+                const hourMatches = reminderHour === currentHour;
+                const minuteMatches = reminderMinute === currentMinute;
+
+                console.log('  - Porównania:');
+                console.log('    * Dzień pasuje:', dateMatches, `(${reminderDateStr} === ${currentDate})`);
+                console.log('    * Godzina pasuje:', hourMatches, `(${reminderHour} === ${currentHour})`);
+                console.log('    * Minuta pasuje:', minuteMatches, `(${reminderMinute} === ${currentMinute})`);
+
+                const matches = dateMatches && hourMatches && minuteMatches;
+
+                if (matches) {
+                    console.log('  ✅ ZNALEZIONO DOPASOWANIE!');
+                } else {
+                    console.log('  ❌ Brak dopasowania');
+                }
+
+                return matches;
             });
-            const found = reminders.find(r =>
-                !shownReminders.includes(r.id) &&
-                r.remindAt.slice(0, 16) === nowStr
-            );
+
             if (found) {
+                console.log('🎉 Znaleziono przypomnienie do wyświetlenia jako toast:', found);
                 setActiveReminder(found);
                 setShownReminders(prev => [...prev, found.id]);
-                console.log('Znaleziono przypomnienie do wyświetlenia jako toast:', found);
-                console.log('Ustawiam activeReminder:', found);
+            } else {
+                console.log('Nie znaleziono żadnego przypomnienia do wyświetlenia');
             }
-        }, 30 * 1000); // sprawdzaj co 30 sekund
+            console.log('=== KONIEC SPRAWDZANIA ===');
+        };
+
+        // Sprawdź od razu przy załadowaniu
+        checkReminders();
+
+        // Sprawdź co minutę
+        const interval = setInterval(checkReminders, 60 * 1000);
+
         return () => clearInterval(interval);
-    }, [reminders, shownReminders]);
+    }, [reminders, shownReminders, resetShownRemindersIfNewDay]);
 
     useEffect(() => {
         fetchNotifications();
@@ -285,15 +354,18 @@ export default function Layout() {
                 </main>
             </div>
             {/* Toast w prawym górnym rogu */}
-            {activeReminder && (console.log('Renderuje toast:', activeReminder), (
-                <div className="fixed top-4 right-4 bg-blue-700 text-white p-4 rounded-lg shadow-lg z-50 animate-fade-in">
-                    <strong>⏰ Przypomnienie!</strong>
-                    <div className="mt-2">{activeReminder.note}</div>
-                    <button className="mt-3 bg-white text-blue-700 px-3 py-1 rounded" onClick={() => setActiveReminder(null)}>
-                        Zamknij
-                    </button>
-                </div>
-            ))}
+            {activeReminder && (() => {
+                console.log('Renderuje toast:', activeReminder);
+                return (
+                    <div className="fixed top-4 right-4 bg-blue-700 text-white p-4 rounded-lg shadow-lg z-50 animate-fade-in">
+                        <strong>⏰ Przypomnienie!</strong>
+                        <div className="mt-2">{activeReminder.note}</div>
+                        <button className="mt-3 bg-white text-blue-700 px-3 py-1 rounded" onClick={() => setActiveReminder(null)}>
+                            Zamknij
+                        </button>
+                    </div>
+                );
+            })()}
         </div>
     );
 }
