@@ -17,11 +17,9 @@ type UserFormData = {
 };
 
 export function AddUserPage() {
+    // 1. WSZYSTKIE HOOKI SĄ WYWOŁYWANE NA NAJWYŻSZYM POZIOMIE
     const { user } = useAuth();
     const navigate = useNavigate();
-    if (user?.role === 'Sprzedawca') {
-        return <div className="p-6 text-center text-red-500">Brak dostępu do tej sekcji.</div>;
-    }
     const [formData, setFormData] = useState<UserFormData>({});
     const [roles, setRoles] = useState<Role[]>([]);
     const [success, setSuccess] = useState<string | null>(null);
@@ -35,6 +33,7 @@ export function AddUserPage() {
         })
             .then(res => {
                 const data = res.data;
+                // Obsługa różnych formatów odpowiedzi z API (.NET)
                 if (data && Array.isArray((data as any).$values)) {
                     setRoles((data as any).$values);
                 } else if (Array.isArray(data)) {
@@ -47,6 +46,11 @@ export function AddUserPage() {
             .catch(() => setError('Błąd ładowania ról'));
 
     }, [api, token]);
+
+    // 2. WARUNKOWY RETURN ZNAJDUJE SIĘ PO HOOKACH
+    if (user?.role === 'Sprzedawca') {
+        return <div className="p-6 text-center text-red-500">Brak dostępu do tej sekcji.</div>;
+    }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -78,7 +82,7 @@ export function AddUserPage() {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setSuccess('Użytkownik dodany!');
-            setFormData({});
+            setFormData({}); // Resetuj formularz po sukcesie
         } catch (err) {
             console.error('Błąd dodawania użytkownika:', err);
             setError('❌ Błąd dodawania użytkownika');
@@ -140,7 +144,7 @@ export function AddUserPage() {
                     </button>
                     <button
                         type="submit"
-                        className="bg-blue-600 text-white px-4 py-2 rounded font-bold"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
                     >
                         ➕ Dodaj użytkownika
                     </button>

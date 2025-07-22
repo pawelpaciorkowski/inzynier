@@ -1,0 +1,26 @@
+feat: Ulepszenia zarządzania grupami i klientami w backendzie oraz refaktoryzacja aplikacji mobilnej i UI
+
+Backend:
+- Zaimplementowano filtrowanie klientów i zadań dla użytkowników niebędących administratorami, aby widzieli tylko klientów i zadania przypisane do ich grup.
+- Dodano endpoint `my-groups` dla użytkowników, aby mogli pobierać tylko grupy, do których należą.
+- Zaktualizowano logikę obliczania `TotalAmount` dla faktur, aby sumowała `GrossAmount` z pozycji faktury.
+- Zabezpieczono endpointy grupowe (tworzenie, aktualizacja, dodawanie/usuwanie członków, usuwanie grup) rolą "Admin".
+- Dodano pomocnicze metody do pobierania ID użytkownika i sprawdzania roli administratora.
+
+Aplikacja mobilna (crm-mobile):
+- Zrefaktoryzowano strukturę routingu, przenosząc chronione trasy do `(tabs)` i upraszczając `_layout.tsx`.
+- Dodano nowe ekrany dla zakładek: `customers.tsx`, `index.tsx` (Moje Zadania), `invoices.tsx`.
+- Ulepszono ekran dodawania klienta z walidacją email i nowym UI.
+- Ulepszono ekran dodawania zadania z modalem wyboru klienta i wyszukiwaniem.
+- Dodano możliwość edycji danych klienta na ekranie szczegółów klienta.
+- Zaktualizowano ekran szczegółów faktury, aby wyświetlał poprawne dane z backendu.
+- Dodano funkcjonalność powiadomień z licznikiem nieprzeczytanych wiadomości.
+- Zaktualizowano ekran profilu użytkownika.
+
+Aplikacja UI (crm-ui):
+- Zmieniono nazwę "Grupy" na "Działy/Zespoły" w nawigacji.
+- Zastąpiono modale sukcesu toastami w formularzach dodawania/edycji kontraktów i faktur.
+- Dodano statystyki dla grup na stronie szczegółów grupy.
+- Ograniczono możliwość dodawania/usuwania członków i klientów w grupach tylko dla administratorów.
+- Dodano paginację do list faktur i płatności.
+- Zaimplementowano filtrowanie grup na podstawie roli użytkownika (admin widzi wszystkie, inni tylko swoje).
