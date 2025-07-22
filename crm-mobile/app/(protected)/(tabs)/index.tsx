@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl, Alert, TextInput } from 'react-native';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../../context/AuthContext';
 import axios from 'axios';
 import { useFocusEffect, Link } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';

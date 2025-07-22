@@ -1,65 +1,57 @@
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useFonts } from 'expo-font';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { SplashScreen, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
-import { AuthProvider, useAuth } from '../context/AuthContext';
-import { Stack } from 'expo-router';
+import { AuthProvider, useAuth } from '../context/AuthContext'; // Upewnij się, że ścieżka jest poprawna
+import { Slot } from 'expo-router';
+import { ActivityIndicator, View } from 'react-native';
 
-export {
-  ErrorBoundary,
-} from 'expo-router';
+// Zapobiegaj automatycznemu ukrywaniu ekranu powitalnego
+SplashScreen.preventAutoHideAsync();
 
-const InitialLayout = () => {
-  const { isAuthenticated } = useAuth();
+function InitialLayout() {
+  // ✅ POPRAWKA: Używamy `isAuthenticated` i `isLoading` - zgodnie z Twoim AuthContext.
+  const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    const inAuthGroup = segments[0] === 'login'; // Sprawdzamy, czy jesteśmy na ekranie logowania
-
-    if (isAuthenticated && inAuthGroup) {
-      // Jeśli zalogowany i na ekranie logowania, przekieruj do (tabs)
-      router.replace('/(tabs)');
-    } else if (!isAuthenticated && !inAuthGroup) {
-      // Jeśli niezalogowany i nie na ekranie logowania, przekieruj do login
-      router.replace('/login');
+    // Jeśli stan ładowania się nie zakończył, nic nie rób.
+    if (isLoading) {
+      return;
     }
-  }, [isAuthenticated, segments]);
 
-  return (
-    <Stack screenOptions={{
-      headerStyle: { backgroundColor: '#1f2937' },
-      headerTintColor: '#fff',
-    }}>
-      <Stack.Screen name="login" options={{ headerShown: false }} /> {/* Ustaw login jako pierwszy ekran */}
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="add-task" options={{ presentation: 'modal', title: 'Nowe Zadanie', contentStyle: { backgroundColor: '#111827' } }} />
-      <Stack.Screen name="edit-task" options={{ presentation: 'modal', title: 'Edytuj Zadanie' }} />
-      <Stack.Screen name="notifications" options={{ presentation: 'modal', title: 'Powiadomienia' }} />
-    </Stack>
-  );
-};
+    const inAuthGroup = segments[0] === '(auth)';
 
-export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-    ...FontAwesome.font,
-  });
+    // ✅ Logika oparta o `isAuthenticated`
+    if (isAuthenticated && inAuthGroup) {
+      // Jeśli użytkownik jest uwierzytelniony i jest na ekranie logowania, przekieruj go do aplikacji.
+      router.replace('/(protected)/(tabs)/customers');
+    } else if (!isAuthenticated && !inAuthGroup) {
+      // Jeśli nie jest uwierzytelniony i jest poza ekranem logowania, przekieruj go do logowania.
+      router.replace('/(auth)/login');
+    }
 
-  const { isLoading } = useAuth();
+    // Gdy cała logika jest gotowa, ukryj ekran powitalny
+    SplashScreen.hideAsync();
+  }, [isAuthenticated, isLoading, segments]); // Obserwuj poprawną zmienną
 
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
-
-  if (!loaded) {
-    return null;
+  // Dopóki isLoading jest true, pokazuj ekran ładowania.
+  // To zapobiega błędom renderowania na chronionych ekranach.
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#111827' }}>
+        <ActivityIndicator size="large" color="#ffffff" />
+      </View>
+    );
   }
 
+  // <Slot /> renderuje odpowiednią grupę tras: (auth) lub (protected)
+  return <Slot />;
+}
+
+export default function RootLayout() {
   return (
     <AuthProvider>
-      {/* Render InitialLayout only when authentication state is not loading */}
-      {!isLoading && <InitialLayout />}
+      <InitialLayout />
     </AuthProvider>
   );
 }
