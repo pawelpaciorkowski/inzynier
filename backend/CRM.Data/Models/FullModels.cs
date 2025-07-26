@@ -101,6 +101,10 @@ namespace CRM.Data.Models
     {
         public int Id { get; set; }
         public string Message { get; set; } = default!;
+        public string? Title { get; set; }
+        public string? Details { get; set; }
+        public int? MessageId { get; set; }
+        public virtual Message? RelatedMessage { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsRead { get; set; }
         public int UserId { get; set; }

@@ -31,14 +31,21 @@ namespace CRM.API.Controllers
 
         // GET: api/Notifications/user
         [HttpGet("user")]
-        public async Task<ActionResult<IEnumerable<Notification>>> GetUserNotifications()
+        public async Task<ActionResult<IEnumerable<object>>> GetUserNotifications()
         {
             try
             {
                 var userId = GetUserId();
                 var notifications = await _context.Notifications
-                    .Where(n => n.UserId == userId) // Assuming Notification has a UserId
+                    .Where(n => n.UserId == userId)
                     .OrderByDescending(n => n.CreatedAt)
+                    .Select(n => new {
+                        n.Id,
+                        n.Message,
+                        n.CreatedAt,
+                        n.IsRead,
+                        n.MessageId
+                    })
                     .ToListAsync();
                 return Ok(notifications);
             }

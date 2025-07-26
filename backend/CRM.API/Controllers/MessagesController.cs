@@ -118,6 +118,12 @@ namespace CRM.API.Controllers
                 return BadRequest(new { message = "Odbiorca nie istnieje." });
             }
 
+            var senderUser = await _context.Users.FindAsync(senderUserId);
+            if (senderUser == null)
+            {
+                return BadRequest(new { message = "Nadawca nie istnieje." });
+            }
+
             var message = new Message
             {
                 SenderUserId = senderUserId,
@@ -135,7 +141,8 @@ namespace CRM.API.Controllers
             var notification = new Notification
             {
                 UserId = message.RecipientUserId,
-                Message = $"Nowa wiadomość od {recipientUser.Username}: {message.Subject}",
+                Message = $"Nowa wiadomość od {senderUser.Username}: {message.Subject}",
+                MessageId = message.Id,
                 CreatedAt = DateTime.UtcNow,
                 IsRead = false
             };
