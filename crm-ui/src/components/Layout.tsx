@@ -37,9 +37,28 @@ export default function Layout() {
     const api = import.meta.env.VITE_API_URL;
     const [reminders, setReminders] = useState<Reminder[]>([]);
     const [activeReminder, setActiveReminder] = useState<Reminder | null>(null);
-    const [shownReminders, setShownReminders] = useState<number[]>([]);
-    const [lastCheckedDate, setLastCheckedDate] = useState<string>('');
+    const [shownReminders, setShownReminders] = useState<number[]>(() => {
+        // Załaduj pokazane przypomnienia z localStorage
+        const stored = localStorage.getItem('shownReminders');
+        return stored ? JSON.parse(stored) : [];
+    });
+    const [lastCheckedDate, setLastCheckedDate] = useState<string>(() => {
+        // Załaduj ostatnią sprawdzoną datę z localStorage
+        return localStorage.getItem('lastCheckedDate') || '';
+    });
     const [clock, setClock] = useState<string>("");
+
+    // Zapisz shownReminders do localStorage przy każdej zmianie
+    useEffect(() => {
+        localStorage.setItem('shownReminders', JSON.stringify(shownReminders));
+    }, [shownReminders]);
+
+    // Zapisz lastCheckedDate do localStorage przy każdej zmianie
+    useEffect(() => {
+        if (lastCheckedDate) {
+            localStorage.setItem('lastCheckedDate', lastCheckedDate);
+        }
+    }, [lastCheckedDate]);
 
     // Funkcja do resetowania pokazanych przypomnień każdego dnia
     const resetShownRemindersIfNewDay = useCallback(() => {
@@ -107,9 +126,47 @@ export default function Layout() {
         return () => clearInterval(interval);
     }, []);
 
+    // Natychmiastowe sprawdzenie po załadowaniu przypomnień
+    useEffect(() => {
+        if (reminders.length > 0) {
+            console.log('📥 Przypomnienia załadowane - sprawdzam natychmiast');
+
+            // Resetuj pokazane przypomnienia jeśli to nowy dzień
+            resetShownRemindersIfNewDay();
+
+            const now = new Date();
+            const currentMinute = now.getMinutes();
+            const currentHour = now.getHours();
+            const currentDate = now.toDateString();
+
+            const found = reminders.find(r => {
+                if (shownReminders.includes(r.id)) {
+                    return false;
+                }
+
+                const reminderDate = new Date(r.remindAt);
+                const reminderMinute = reminderDate.getMinutes();
+                const reminderHour = reminderDate.getHours();
+                const reminderDateStr = reminderDate.toDateString();
+
+                return reminderDateStr === currentDate &&
+                    reminderHour === currentHour &&
+                    reminderMinute === currentMinute;
+            });
+
+            if (found) {
+                console.log('🎉 NATYCHMIASTOWE PRZYPOMNIENIE:', found);
+                setActiveReminder(found);
+                setShownReminders(prev => [...prev, found.id]);
+            }
+        }
+    }, [reminders, shownReminders, resetShownRemindersIfNewDay]);
+
     // Sprawdzaj, czy jest przypomnienie na teraz
     useEffect(() => {
         const checkReminders = () => {
+            console.log('🔄 checkReminders() wywołane o:', new Date().toLocaleTimeString());
+
             // Resetuj pokazane przypomnienia jeśli to nowy dzień
             resetShownRemindersIfNewDay();
 
@@ -122,6 +179,7 @@ export default function Layout() {
             console.log('Aktualny czas:', currentHour + ':' + currentMinute, 'dnia:', currentDate);
             console.log('Liczba przypomnień w pamięci:', reminders.length);
             console.log('Pokazane przypomnienia:', shownReminders);
+            console.log('Data ostatniego sprawdzenia:', lastCheckedDate);
 
             if (reminders.length === 0) {
                 console.log('Brak przypomnień do sprawdzenia');

@@ -4,6 +4,7 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { Stack } from 'expo-router';
+import { useReminders } from '../hooks/useReminders';
 
 export {
   ErrorBoundary,
@@ -13,6 +14,9 @@ const InitialLayout = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+
+  // Hook przypomnień - aktywny tylko gdy użytkownik jest zalogowany
+  useReminders();
 
   useEffect(() => {
     if (isLoading) return;
@@ -38,6 +42,7 @@ const InitialLayout = () => {
       <Stack.Screen name="add-task" options={{ presentation: 'modal', title: 'Nowe Zadanie', contentStyle: { backgroundColor: '#111827' } }} />
       <Stack.Screen name="edit-task" options={{ presentation: 'modal', title: 'Edytuj Zadanie' }} />
       <Stack.Screen name="notifications" options={{ presentation: 'modal', title: 'Powiadomienia' }} />
+      <Stack.Screen name="reminders" options={{ presentation: 'modal', title: 'Przypomnienia' }} />
     </Stack>
   );
 };

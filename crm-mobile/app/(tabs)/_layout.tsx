@@ -79,35 +79,47 @@ export default function TabLayout() {
         },
         headerTintColor: '#fff',
         headerRight: () => (
-          <Pressable
-            onPress={() => router.push('/notifications')}
-            style={{ marginRight: 15, position: 'relative' }}
-          >
-            <FontAwesome
-              name="bell"
-              size={25}
-              color="white"
-            />
-            {unreadCount > 0 && (
-              <View
-                style={{
-                  position: 'absolute',
-                  right: -6,
-                  top: -3,
-                  backgroundColor: 'red',
-                  borderRadius: 9,
-                  width: 18,
-                  height: 18,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
-                  {unreadCount}
-                </Text>
-              </View>
-            )}
-          </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Pressable
+              onPress={() => router.push('/reminders')}
+              style={{ marginRight: 15 }}
+            >
+              <FontAwesome
+                name="clock-o"
+                size={24}
+                color="white"
+              />
+            </Pressable>
+            <Pressable
+              onPress={() => router.push('/notifications')}
+              style={{ marginRight: 15, position: 'relative' }}
+            >
+              <FontAwesome
+                name="bell"
+                size={25}
+                color="white"
+              />
+              {unreadCount > 0 && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    right: -6,
+                    top: -3,
+                    backgroundColor: 'red',
+                    borderRadius: 9,
+                    width: 18,
+                    height: 18,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
+                    {unreadCount}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
         ),
       }}>
       <Tabs.Screen
