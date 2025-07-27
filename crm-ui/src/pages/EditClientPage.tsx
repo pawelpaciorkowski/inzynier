@@ -15,6 +15,7 @@ interface CustomerFormData {
     email: string;
     phone?: string;
     company?: string;
+    assignedGroupId?: number;
     tagIds?: number[]; // Added tagIds to the form data
 }
 
@@ -53,6 +54,7 @@ export function EditClientPage() {
                     email: clientData.email,
                     phone: clientData.phone,
                     company: clientData.company,
+                    assignedGroupId: clientData.assignedGroupId,
                 });
 
                 // Set selected tags

@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 // ### DTOs (Data Transfer Objects) ###
 
 // --- DTO dla listy faktur ---
-// POPRAWKA: Dodajemy pole IsPaid
+// POPRAWKA: Dodajemy pole IsPaid i CustomerId
 public class InvoiceListItemDto
 {
     public int Id { get; set; }
@@ -20,6 +20,7 @@ public class InvoiceListItemDto
     public DateTime IssuedAt { get; set; }
     public decimal TotalAmount { get; set; }
     public string CustomerName { get; set; } = null!;
+    public int CustomerId { get; set; } // Dodajemy ID klienta
     public bool IsPaid { get; set; } // To pole było potrzebne dla listy
 }
 
@@ -27,6 +28,7 @@ public class InvoiceListItemDto
 public class InvoiceItemDto
 {
     public int Id { get; set; }
+    public int ServiceId { get; set; }
     public string Description { get; set; } = null!;
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
@@ -129,6 +131,7 @@ public class InvoicesController : ControllerBase
                 DueDate = i.DueDate,   // Teraz to pole istnieje w DTO
                 IsPaid = i.IsPaid,     // Teraz to pole istnieje w DTO
                 CustomerName = i.Customer != null ? i.Customer.Name : "Brak klienta",
+                CustomerId = i.CustomerId, // Dodajemy ID klienta
 
                 // Obliczane sumy
                 TotalAmount = i.Items.Sum(item => item.GrossAmount),
@@ -139,6 +142,7 @@ public class InvoicesController : ControllerBase
                 Items = i.Items.Select(item => new InvoiceItemDto
                 {
                     Id = item.Id,
+                    ServiceId = item.ServiceId,
                     Description = item.Description,
                     Quantity = item.Quantity,
                     UnitPrice = item.UnitPrice,
@@ -215,6 +219,73 @@ public class InvoicesController : ControllerBase
 
         // Zwracamy nowo utworzony obiekt, który zostanie przetworzony przez GetInvoice
         return CreatedAtAction(nameof(GetInvoice), new { id = newInvoice.Id }, null);
+    }
+
+    // --- Aktualizacja istniejącej faktury ---
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateInvoice(int id, [FromBody] CreateInvoiceDto dto)
+    {
+        var invoice = await _context.Invoices
+            .Include(i => i.Items)
+            .FirstOrDefaultAsync(i => i.Id == id);
+
+        if (invoice == null)
+        {
+            return NotFound();
+        }
+
+        // Aktualizacja podstawowych danych faktury
+        invoice.Number = dto.InvoiceNumber;
+        invoice.CustomerId = dto.CustomerId;
+        // Możesz dodać inne pola do aktualizacji, np. DueDate
+
+        // Usunięcie starych pozycji
+        _context.InvoiceItems.RemoveRange(invoice.Items);
+
+        // Dodanie nowych pozycji
+        decimal total = 0;
+        foreach (var itemDto in dto.Items)
+        {
+            var service = await _context.Services.FindAsync(itemDto.ServiceId);
+            if (service == null)
+            {
+                return BadRequest($"Usługa o ID {itemDto.ServiceId} nie istnieje.");
+            }
+
+            var invoiceItem = new InvoiceItem
+            {
+                Invoice = invoice,
+                ServiceId = service.Id,
+                Description = service.Name,
+                Quantity = itemDto.Quantity,
+                UnitPrice = service.Price,
+                NetAmount = service.Price * itemDto.Quantity,
+                TaxAmount = (service.Price * itemDto.Quantity) * 0.23m, // Założony VAT 23%
+                GrossAmount = (service.Price * itemDto.Quantity) * 1.23m
+            };
+            invoice.Items.Add(invoiceItem);
+            total += invoiceItem.GrossAmount;
+        }
+
+        invoice.TotalAmount = total;
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!_context.Invoices.Any(e => e.Id == id))
+            {
+                return NotFound();
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        return NoContent();
     }
 
     // --- Usuwanie faktury ---

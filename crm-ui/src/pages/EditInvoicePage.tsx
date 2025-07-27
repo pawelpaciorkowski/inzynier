@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useModal } from '../context/ModalContext';
-import ClientSelectModal from '../components/ClientSelectModal';
 
 interface Customer { id: number; name: string; }
 interface Service { id: number; name: string; price: number; }
@@ -11,22 +10,20 @@ interface InvoiceItem { serviceId: number; name: string; quantity: number; price
 
 export default function EditInvoicePage() {
     const { id } = useParams<{ id: string }>();
-    const [customers, setCustomers] = useState<Customer[]>([]);
     const [services, setServices] = useState<Service[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
-    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [invoiceNumber, setInvoiceNumber] = useState<string>('');
+    const [invoiceCustomerId, setInvoiceCustomerId] = useState<string>('');
     const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
 
     const [selectedServiceId, setSelectedServiceId] = useState<string>('');
     const [selectedService, setSelectedService] = useState<Service | null>(null);
     const [quantity, setQuantity] = useState<number>(1);
 
-    const [showClientModal, setShowClientModal] = useState(false);
     const [showServiceModal, setShowServiceModal] = useState(false);
 
     const navigate = useNavigate();
@@ -39,27 +36,36 @@ export default function EditInvoicePage() {
             if (!token || !id) return;
             const headers = { Authorization: `Bearer ${token}` };
             try {
-                const [customersRes, servicesRes, invoiceRes] = await Promise.all([
-                    axios.get(`${api}/customers`, { headers }),
+                const [servicesRes, invoiceRes] = await Promise.all([
                     axios.get(`${api}/services`, { headers }),
                     axios.get(`${api}/invoices/${id}`, { headers }),
                 ]);
-                const customerData = customersRes.data;
-                setCustomers(Array.isArray(customerData.$values) ? customerData.$values : customerData);
+
                 const servicesData = servicesRes.data;
                 setServices(Array.isArray(servicesData.$values) ? servicesData.$values : servicesData);
+
                 const invoice = invoiceRes.data;
-                setSelectedCustomerId(invoice.customerId?.toString() || '');
-                setInvoiceNumber(invoice.invoiceNumber || invoice.number || '');
+                console.log('DEBUG: Invoice data:', invoice);
+
+                const customerId = invoice.customerId || 0;
+                const customerName = invoice.customerName || 'Klient nie znaleziony';
+                const invoiceNum = invoice.invoiceNumber || invoice.number || '';
+
+                setSelectedCustomerId(customerId.toString());
+                setInvoiceCustomerId(customerName);
+                setInvoiceNumber(invoiceNum);
+
+                console.log('DEBUG: customerId:', customerId);
+                console.log('DEBUG: customerName:', customerName);
+                console.log('DEBUG: invoiceNum:', invoiceNum);
+
                 setInvoiceItems((invoice.items?.$values || invoice.items || []).map((item: any) => ({
-                    serviceId: item.serviceId,
+                    serviceId: item.serviceId, // Dodajemy serviceId
                     name: item.name || item.description || '',
                     quantity: item.quantity,
                     price: item.unitPrice || item.price || 0,
                     total: (item.unitPrice || item.price || 0) * item.quantity,
                 }) as InvoiceItem));
-                const foundCustomer = (Array.isArray(customerData.$values) ? customerData.$values : customerData).find((c: Customer) => c.id === invoice.customerId);
-                setSelectedCustomer(foundCustomer || null);
             } catch (err: unknown) {
                 let errorMessage = 'Nie udało się załadować danych faktury.';
                 if (axios.isAxiosError(err) && err.response) {
@@ -140,21 +146,10 @@ export default function EditInvoicePage() {
                 {error && <p className="mb-4 text-center text-red-500">{error}</p>}
                 <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Wybierz klienta</label>
-                        <button type="button" onClick={() => setShowClientModal(true)} className="w-full p-2 rounded bg-gray-700 text-white border border-gray-600 text-left">
-                            {selectedCustomer ? `Klient: ${selectedCustomer.name}` : '-- Wybierz klienta --'}
-                        </button>
-                        {showClientModal && (
-                            <ClientSelectModal
-                                clients={customers}
-                                onSelect={client => {
-                                    setSelectedCustomer(client);
-                                    setSelectedCustomerId(client.id.toString());
-                                    setShowClientModal(false);
-                                }}
-                                onClose={() => setShowClientModal(false)}
-                            />
-                        )}
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Klient</label>
+                        <div className="w-full p-2 rounded bg-gray-600 text-white border border-gray-500">
+                            {invoiceCustomerId || 'Ładowanie...'}
+                        </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">Numer faktury</label>

@@ -45,8 +45,9 @@ export default function ClientsPage() {
         try {
             const response = await api.get<ApiResponse<Client> | Client[]>('/Customers');
             const data = '$values' in response.data ? response.data.$values : response.data;
+            const validClients = data.filter(client => client && client.name);
             // Sortowanie po stronie frontu na wypadek, gdyby backend nie gwarantował
-            const sorted = [...data].sort((a, b) => {
+            const sorted = [...validClients].sort((a, b) => {
                 if (a.createdAt && b.createdAt) {
                     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
                 }
@@ -87,13 +88,13 @@ export default function ClientsPage() {
     const filteredClients = clients.filter(client => {
         const q = search.toLowerCase();
         return (
-            (client.name && client.name.toLowerCase().includes(q)) ||
-            (client.email && client.email.toLowerCase().includes(q)) ||
-            (client.company && client.company.toLowerCase().includes(q)) ||
-            (client.phone && client.phone && client.phone.toLowerCase().includes(q)) ||
-            (client.address && client.address.toLowerCase().includes(q)) ||
-            (client.nip && client.nip.toLowerCase().includes(q)) ||
-            (client.representative && client.representative.toLowerCase().includes(q))
+            (client.name ?? '').toLowerCase().includes(q) ||
+            (client.email ?? '').toLowerCase().includes(q) ||
+            (client.company ?? '').toLowerCase().includes(q) ||
+            (client.phone ?? '').toLowerCase().includes(q) ||
+            (client.address ?? '').toLowerCase().includes(q) ||
+            (client.nip ?? '').toLowerCase().includes(q) ||
+            (client.representative ?? '').toLowerCase().includes(q)
         );
     });
 

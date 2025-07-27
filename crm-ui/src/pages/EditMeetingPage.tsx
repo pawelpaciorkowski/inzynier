@@ -49,7 +49,7 @@ export function EditMeetingPage() {
 
                 setTopic(meetingRes.data.topic);
                 setScheduledAt(format(new Date(meetingRes.data.scheduledAt), "yyyy-MM-dd'T'HH:mm"));
-                setCustomerId(meetingRes.data.customerId.toString());
+                setCustomerId(meetingRes.data.customerId ? meetingRes.data.customerId.toString() : '');
 
                 // Handle both wrapped and unwrapped API responses
                 const customersData = '$values' in customersRes.data ? customersRes.data.$values : customersRes.data;

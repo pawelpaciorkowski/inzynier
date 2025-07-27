@@ -90,9 +90,9 @@ export default function TasksPage() {
         if (search.trim() !== '') {
             const lowercasedQuery = search.toLowerCase();
             filtered = filtered.filter(task =>
-                task.title.toLowerCase().includes(lowercasedQuery) ||
-                (task.description && task.description.toLowerCase().includes(lowercasedQuery)) ||
-                (task.user && task.user.username.toLowerCase().includes(lowercasedQuery))
+                (task.title ?? '').toLowerCase().includes(lowercasedQuery) ||
+                (task.description ?? '').toLowerCase().includes(lowercasedQuery) ||
+                (task.user?.username ?? '').toLowerCase().includes(lowercasedQuery)
             );
         }
 

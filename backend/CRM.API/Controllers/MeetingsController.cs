@@ -14,6 +14,7 @@ public class MeetingListItemDto
     public string Topic { get; set; } = null!;
     public DateTime ScheduledAt { get; set; }
     public string CustomerName { get; set; } = null!;
+    public int CustomerId { get; set; }
 }
 
 public class CreateMeetingDto
@@ -52,7 +53,8 @@ public class MeetingsController : ControllerBase
                 Id = m.Id,
                 Topic = m.Topic,
                 ScheduledAt = m.ScheduledAt,
-                CustomerName = m.Customer != null ? m.Customer.Name : "Brak klienta"
+                CustomerName = m.Customer != null ? m.Customer.Name : "Brak klienta",
+                CustomerId = m.CustomerId
             })
             .OrderByDescending(m => m.ScheduledAt)
             .ToListAsync();
@@ -71,7 +73,8 @@ public class MeetingsController : ControllerBase
                 Id = m.Id,
                 Topic = m.Topic,
                 ScheduledAt = m.ScheduledAt,
-                CustomerName = m.Customer != null ? m.Customer.Name : "Brak klienta"
+                CustomerName = m.Customer != null ? m.Customer.Name : "Brak klienta",
+                CustomerId = m.CustomerId
             })
             .FirstOrDefaultAsync();
 

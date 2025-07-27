@@ -18,7 +18,7 @@ namespace CRM.API.Controllers
     public class CreateNoteDto
     {
         public string Content { get; set; } = null!;
-        public int CustomerId { get; set; }
+        public int? CustomerId { get; set; }
     }
 
     [ApiController]
@@ -44,8 +44,9 @@ namespace CRM.API.Controllers
         public async Task<ActionResult<IEnumerable<NoteListItemDto>>> GetNotes()
         {
             var userId = GetCurrentUserId();
+            Console.WriteLine($"DEBUG: Current user ID = {userId}");
             var notes = await _context.Notes
-                .Where(n => n.UserId == userId) // Poprawne filtrowanie po UserId
+                .Where(n => n.UserId == userId) // Filtrowanie po UserId
                 .Include(n => n.Customer)
                 .OrderByDescending(n => n.CreatedAt)
                 .Select(n => new NoteListItemDto
@@ -59,11 +60,40 @@ namespace CRM.API.Controllers
             return Ok(notes);
         }
 
+        // --- Metoda GET dla pojedynczej notatki ---
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Note>> GetNote(int id)
+        {
+            var userId = GetCurrentUserId();
+            Console.WriteLine($"DEBUG: Getting note {id} for user {userId}");
+            var note = await _context.Notes
+                .Include(n => n.Customer)
+                .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId);
+
+            if (note == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(note);
+        }
+
         // --- Metoda POST - Tworzenie notatki ---
         [HttpPost]
         public async Task<ActionResult<Note>> PostNote(CreateNoteDto createNoteDto)
         {
             var userId = GetCurrentUserId(); // Pobieramy ID zalogowanego użytkownika
+            
+            // Walidacja - sprawdź czy klient istnieje jeśli CustomerId jest podane
+            if (createNoteDto.CustomerId.HasValue)
+            {
+                var customerExists = await _context.Customers.AnyAsync(c => c.Id == createNoteDto.CustomerId.Value);
+                if (!customerExists)
+                {
+                    return BadRequest("Podany klient nie istnieje.");
+                }
+            }
+            
             var note = new Note
             {
                 Content = createNoteDto.Content,
@@ -74,7 +104,58 @@ namespace CRM.API.Controllers
 
             _context.Notes.Add(note);
             await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetNotes), new { id = note.Id }, note);
+            return CreatedAtAction(nameof(GetNote), new { id = note.Id }, note);
+        }
+
+        // --- Metoda PUT - Aktualizacja notatki ---
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutNote(int id, UpdateNoteDto updateNoteDto)
+        {
+            if (id != updateNoteDto.Id)
+            {
+                return BadRequest("ID w URL nie pasuje do ID w ciele żądania.");
+            }
+
+            var userId = GetCurrentUserId();
+            Console.WriteLine($"DEBUG: Updating note {id} for user {userId}");
+            var note = await _context.Notes
+                .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId);
+
+            if (note == null)
+            {
+                return NotFound();
+            }
+
+            // Walidacja - sprawdź czy klient istnieje jeśli CustomerId jest podane
+            if (updateNoteDto.CustomerId.HasValue)
+            {
+                var customerExists = await _context.Customers.AnyAsync(c => c.Id == updateNoteDto.CustomerId.Value);
+                if (!customerExists)
+                {
+                    return BadRequest("Podany klient nie istnieje.");
+                }
+            }
+
+            // Aktualizuj tylko dozwolone pola
+            note.Content = updateNoteDto.Content;
+            note.CustomerId = updateNoteDto.CustomerId;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!await NoteExists(id, userId))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
         }
 
         // --- Metoda DELETE - Usuwanie notatki ---
@@ -82,6 +163,7 @@ namespace CRM.API.Controllers
         public async Task<IActionResult> DeleteNote(int id)
         {
             var userId = GetCurrentUserId();
+            Console.WriteLine($"DEBUG: Deleting note {id} for user {userId}");
             var note = await _context.Notes
                 .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId);
 
@@ -93,6 +175,11 @@ namespace CRM.API.Controllers
             _context.Notes.Remove(note);
             await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        private async Task<bool> NoteExists(int id, int userId)
+        {
+            return await _context.Notes.AnyAsync(n => n.Id == id && n.UserId == userId);
         }
     }
 }

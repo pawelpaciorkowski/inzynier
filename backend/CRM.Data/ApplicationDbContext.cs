@@ -95,6 +95,8 @@ namespace CRM.Data
                       .HasForeignKey(m => m.RecipientUserId)
                       .OnDelete(DeleteBehavior.Restrict); // Zapobiega cyklicznemu usuwaniu
             });
+
+
         }
 
 
