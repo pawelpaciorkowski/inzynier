@@ -6,12 +6,15 @@ import { useModal } from '../context/ModalContext';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
-// Definicja typu dla notatki, zgodna z NoteListItemDto z API
+// Definicja typu dla notatki, zgodna z DTO z API
 interface Note {
     id: number;
     content: string;
-    customerName: string; // To pole zawiera nazwę klienta lub "Brak klienta"
     createdAt: string;
+    userId: number;
+    customerId?: number;
+    customer?: { name: string }; // Opcjonalnie, jeśli dołączamy dane klienta
+    user?: { username: string }; // Opcjonalnie, jeśli dołączamy dane użytkownika
 }
 
 // Typ dla opakowanej odpowiedzi z API
@@ -54,7 +57,7 @@ export function NotesPage() {
     useEffect(() => {
         const filtered = notes.filter(note =>
             note.content.toLowerCase().includes(search.toLowerCase()) ||
-            note.customerName.toLowerCase().includes(search.toLowerCase())
+            (note.customer?.name && note.customer.name.toLowerCase().includes(search.toLowerCase()))
         );
         setFilteredNotes(filtered);
     }, [notes, search]);
@@ -141,7 +144,7 @@ export function NotesPage() {
                                             : note.content}
                                     </td>
                                     <td className="px-5 py-4 border-b border-gray-600 font-medium text-indigo-400">
-                                        {note.customerName}
+                                        {note.customer?.name || "Brak"}
                                     </td>
                                     <td className="px-5 py-4 border-b border-gray-600">
                                         {format(new Date(note.createdAt), "dd.MM.yyyy HH:mm", {
@@ -150,7 +153,7 @@ export function NotesPage() {
                                     </td>
                                     <td className="px-5 py-4 border-b border-gray-600 text-center">
                                         <div className="flex justify-center gap-4">
-                                            <Link to={`/notatki/edytuj/${note.id}`} title="Edytuj">
+                                            <Link to={`/notatki/edytuj/:id`} title="Edytuj">
                                                 <PencilIcon className="w-5 h-5 text-gray-400 hover:text-yellow-400" />
                                             </Link>
                                             <button

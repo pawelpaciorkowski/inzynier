@@ -20,7 +20,6 @@ namespace CRM.API.Controllers.Admin
         [HttpGet]
         public async Task<IActionResult> GetAllTasks()
         {
-            // Używamy poprawnych nazw z Twojego kodu: _context.Tasks i t.Completed
             var tasks = await _context.Tasks
                 .Include(t => t.User)
                 .Include(t => t.Customer)

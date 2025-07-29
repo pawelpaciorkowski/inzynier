@@ -4,7 +4,6 @@ import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useModal } from '../context/ModalContext';
 
-interface Customer { id: number; name: string; }
 interface Service { id: number; name: string; price: number; }
 interface InvoiceItem { serviceId: number; name: string; quantity: number; price: number; total: number; }
 
