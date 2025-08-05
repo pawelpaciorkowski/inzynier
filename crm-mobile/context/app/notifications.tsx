@@ -3,7 +3,7 @@ import axios from 'axios';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { useCallback, useEffect, useState } from 'react';
 
 interface Notification {

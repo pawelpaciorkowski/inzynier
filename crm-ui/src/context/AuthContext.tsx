@@ -48,7 +48,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         setLoading(false);
 
-        // Axios Interceptor for error handling
         const interceptor = axios.interceptors.response.use(
             response => response,
             error => {

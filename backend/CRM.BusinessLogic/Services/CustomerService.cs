@@ -1,127 +1,189 @@
-using CRM.Data;
-using CRM.Data.Models;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging; // Added for logging
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using CRM.Data; // Importuje przestrzeń nazw z danymi CRM
+using CRM.Data.Models; // Importuje modele danych CRM (Customer, CustomerTag, etc.)
+using Microsoft.EntityFrameworkCore; // Importuje Entity Framework Core
+using Microsoft.Extensions.Logging; // Importuje system logowania Microsoft
+using System.Collections.Generic; // Importuje kolekcje generyczne (List, IEnumerable)
+using System.Linq; // Importuje LINQ (Language Integrated Query)
+using System.Threading.Tasks; // Importuje Task dla operacji asynchronicznych
 
-namespace CRM.BusinessLogic.Services
+namespace CRM.BusinessLogic.Services // Przestrzeń nazw dla serwisów biznesowych
 {
-    public class CustomerService : ICustomerService
+    /// <summary>
+    /// Serwis zarządzania klientami
+    /// Klasa implementująca interfejs ICustomerService, obsługuje operacje CRUD na klientach
+    /// oraz zarządzanie tagami klientów i logowanie operacji
+    /// </summary>
+    public class CustomerService : ICustomerService // Klasa publiczna implementująca interfejs ICustomerService
     {
-        private readonly ApplicationDbContext _context;
-        private readonly ILogger<CustomerService> _logger; // Added logger
+        /// <summary>
+        /// Kontekst bazy danych Entity Framework
+        /// Pozwala na wykonywanie operacji na bazie danych (zapytania, zapisywanie, usuwanie)
+        /// </summary>
+        private readonly ApplicationDbContext _context; // Pole tylko do odczytu - nie można zmienić po inicjalizacji
 
-        public CustomerService(ApplicationDbContext context, ILogger<CustomerService> logger) // Injected logger
+        /// <summary>
+        /// Logger do zapisywania informacji o operacjach
+        /// Używany do logowania operacji CRUD na klientach
+        /// </summary>
+        private readonly ILogger<CustomerService> _logger; // Pole tylko do odczytu - logger
+
+        /// <summary>
+        /// Konstruktor klasy CustomerService
+        /// Inicjalizuje serwis z kontekstem bazy danych i loggerem przekazanymi przez dependency injection
+        /// </summary>
+        /// <param name="context">Kontekst bazy danych przekazany przez system dependency injection</param>
+        /// <param name="logger">Logger przekazany przez system dependency injection</param>
+        public CustomerService(ApplicationDbContext context, ILogger<CustomerService> logger) // Konstruktor z dependency injection
         {
-            _context = context;
-            _logger = logger; // Assigned logger
+            _context = context; // Przypisuje przekazany kontekst do pola prywatnego - inicjalizacja pola
+            _logger = logger; // Przypisuje przekazany logger do pola prywatnego - inicjalizacja pola
         }
 
-        public async Task<List<Customer>> GetAllAsync()
+        /// <summary>
+        /// Metoda pobierania wszystkich klientów z systemu
+        /// Zwraca listę wszystkich klientów wraz z ich tagami, posortowaną według daty utworzenia (od najnowszych)
+        /// </summary>
+        /// <returns>Lista wszystkich klientów z tagami</returns>
+        public async Task<List<Customer>> GetAllAsync() // Metoda asynchroniczna zwracająca listę klientów
         {
-            return await _context.Customers
-                .Include(c => c.CustomerTags)
-                    .ThenInclude(ct => ct.Tag)
-                .OrderByDescending(c => c.CreatedAt)
-                .ToListAsync();
+            // Wykonuje zapytanie do bazy danych - pobiera wszystkich klientów z tagami
+            return await _context.Customers // Rozpoczyna zapytanie LINQ na tabeli Customers
+                .Include(c => c.CustomerTags) // Dołącza tagi klienta (relacja jeden-do-wielu)
+                    .ThenInclude(ct => ct.Tag) // Dołącza szczegóły tagów (relacja jeden-do-jednego)
+                .OrderByDescending(c => c.CreatedAt) // Sortuje według daty utworzenia (od najnowszych do najstarszych)
+                .ToListAsync(); // Wykonuje zapytanie asynchronicznie i zwraca listę wyników
         }
 
-        public async Task<Customer?> GetByIdAsync(int id)
+        /// <summary>
+        /// Metoda pobierania klienta po ID
+        /// Wyszukuje klienta w systemie na podstawie jego unikalnego identyfikatora wraz z tagami
+        /// </summary>
+        /// <param name="id">ID klienta do wyszukania</param>
+        /// <returns>Obiekt klienta z tagami lub null jeśli klient nie został znaleziony</returns>
+        public async Task<Customer?> GetByIdAsync(int id) // Metoda asynchroniczna zwracająca klienta lub null
         {
-            return await _context.Customers
-                .Include(c => c.CustomerTags)
-                    .ThenInclude(ct => ct.Tag)
-                .FirstOrDefaultAsync(c => c.Id == id);
+            // Wyszukuje klienta po ID w bazie danych wraz z tagami
+            return await _context.Customers // Rozpoczyna zapytanie LINQ na tabeli Customers
+                .Include(c => c.CustomerTags) // Dołącza tagi klienta (relacja jeden-do-wielu)
+                    .ThenInclude(ct => ct.Tag) // Dołącza szczegóły tagów (relacja jeden-do-jednego)
+                .FirstOrDefaultAsync(c => c.Id == id); // Wyszukuje klienta o podanym ID lub zwraca null
         }
 
-        public async Task<Customer> CreateAsync(CreateCustomerDto customerDto)
+        /// <summary>
+        /// Metoda tworzenia nowego klienta w systemie
+        /// Tworzy nowego klienta z podanymi danymi i przypisuje mu tagi
+        /// </summary>
+        /// <param name="customerDto">Dane nowego klienta (nazwa, email, telefon, firma, adres, NIP, przedstawiciel, grupa, użytkownik, tagi)</param>
+        /// <returns>Nowo utworzony klient z tagami</returns>
+        public async Task<Customer> CreateAsync(CreateCustomerDto customerDto) // Metoda asynchroniczna zwracająca nowego klienta
         {
-            _logger.LogInformation("CreateAsync: Received TagIds: {TagIds}", customerDto.TagIds != null ? string.Join(", ", customerDto.TagIds) : "null");
+            // Loguje informację o otrzymanych tagach
+            _logger.LogInformation("CreateAsync: Received TagIds: {TagIds}", customerDto.TagIds != null ? string.Join(", ", customerDto.TagIds) : "null"); // Zapisuje log o otrzymanych ID tagów
 
-            var customer = new Customer
+            // Tworzy nowy obiekt klienta z danymi z DTO
+            var customer = new Customer // Tworzy nowy obiekt Customer
             {
-                Name = customerDto.Name,
-                Email = customerDto.Email,
-                Phone = customerDto.Phone,
-                Company = customerDto.Company,
-                Address = customerDto.Address,
-                NIP = customerDto.NIP,
-                Representative = customerDto.Representative,
-                AssignedGroupId = customerDto.AssignedGroupId,
-                AssignedUserId = customerDto.AssignedUserId,
-                CreatedAt = DateTime.UtcNow
+                Name = customerDto.Name, // Ustawia nazwę klienta z DTO
+                Email = customerDto.Email, // Ustawia adres email z DTO
+                Phone = customerDto.Phone, // Ustawia telefon z DTO
+                Company = customerDto.Company, // Ustawia firmę z DTO
+                Address = customerDto.Address, // Ustawia adres z DTO
+                NIP = customerDto.NIP, // Ustawia NIP z DTO
+                Representative = customerDto.Representative, // Ustawia przedstawiciela z DTO
+                AssignedGroupId = customerDto.AssignedGroupId, // Ustawia ID przypisanej grupy z DTO
+                AssignedUserId = customerDto.AssignedUserId, // Ustawia ID przypisanego użytkownika z DTO
+                CreatedAt = DateTime.UtcNow // Ustawia datę utworzenia na aktualny czas UTC
             };
 
-            _context.Customers.Add(customer);
-            await _context.SaveChangesAsync();
+            _context.Customers.Add(customer); // Dodaje nowego klienta do kontekstu Entity Framework
+            await _context.SaveChangesAsync(); // Zapisuje klienta w bazie danych (pierwszy SaveChanges - klient otrzymuje ID)
 
-            // Handle tags
-            if (customerDto.TagIds != null && customerDto.TagIds.Any())
+            // Obsługuje tagi klienta
+            if (customerDto.TagIds != null && customerDto.TagIds.Any()) // Sprawdza czy podano tagi i czy lista nie jest pusta
             {
-                foreach (var tagId in customerDto.TagIds)
+                foreach (var tagId in customerDto.TagIds) // Iteruje przez wszystkie ID tagów
                 {
-                    customer.CustomerTags.Add(new CustomerTag { CustomerId = customer.Id, TagId = tagId });
+                    // Dodaje nowy tag do klienta
+                    customer.CustomerTags.Add(new CustomerTag { CustomerId = customer.Id, TagId = tagId }); // Tworzy nowy obiekt CustomerTag i dodaje do kolekcji
                 }
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(); // Zapisuje tagi w bazie danych (drugi SaveChanges - tagi)
             }
 
-            _logger.LogInformation("CreateAsync: Customer {CustomerId} created with {TagCount} tags.", customer.Id, customer.CustomerTags.Count);
+            // Loguje informację o utworzonym kliencie
+            _logger.LogInformation("CreateAsync: Customer {CustomerId} created with {TagCount} tags.", customer.Id, customer.CustomerTags.Count); // Zapisuje log o utworzonym kliencie
 
-            return customer;
+            return customer; // Zwraca nowo utworzonego klienta z tagami
         }
 
-        public async Task<bool> UpdateAsync(int id, UpdateCustomerDto customerDto)
+        /// <summary>
+        /// Metoda aktualizacji istniejącego klienta
+        /// Aktualizuje dane klienta o podanym ID z nowymi informacjami i tagami
+        /// </summary>
+        /// <param name="id">ID klienta do aktualizacji</param>
+        /// <param name="customerDto">Nowe dane klienta</param>
+        /// <returns>True jeśli aktualizacja się powiodła, false w przeciwnym przypadku</returns>
+        public async Task<bool> UpdateAsync(int id, UpdateCustomerDto customerDto) // Metoda asynchroniczna zwracająca status operacji
         {
-            _logger.LogInformation("UpdateAsync: Received TagIds for customer {CustomerId}: {TagIds}", id, customerDto.TagIds != null ? string.Join(", ", customerDto.TagIds) : "null");
+            // Loguje informację o otrzymanych tagach dla aktualizacji
+            _logger.LogInformation("UpdateAsync: Received TagIds for customer {CustomerId}: {TagIds}", id, customerDto.TagIds != null ? string.Join(", ", customerDto.TagIds) : "null"); // Zapisuje log o otrzymanych ID tagów
 
-            var existingCustomer = await _context.Customers
-                .Include(c => c.CustomerTags)
-                .FirstOrDefaultAsync(c => c.Id == id);
+            // Wyszukuje istniejącego klienta po ID wraz z tagami
+            var existingCustomer = await _context.Customers // Rozpoczyna zapytanie LINQ na tabeli Customers
+                .Include(c => c.CustomerTags) // Dołącza tagi klienta (relacja jeden-do-wielu)
+                .FirstOrDefaultAsync(c => c.Id == id); // Wyszukuje klienta o podanym ID lub zwraca null
 
-            if (existingCustomer == null) 
+            if (existingCustomer == null) // Jeśli klient nie istnieje
             {
-                _logger.LogWarning("UpdateAsync: Customer {CustomerId} not found.", id);
-                return false;
+                _logger.LogWarning("UpdateAsync: Customer {CustomerId} not found.", id); // Zapisuje ostrzeżenie o nieznalezionym kliencie
+                return false; // Zwraca false - klient nie został znaleziony
             }
 
-            _logger.LogInformation("UpdateAsync: Customer {CustomerId} has {ExistingTagCount} existing tags.", id, existingCustomer.CustomerTags.Count);
+            // Loguje informację o istniejących tagach klienta
+            _logger.LogInformation("UpdateAsync: Customer {CustomerId} has {ExistingTagCount} existing tags.", id, existingCustomer.CustomerTags.Count); // Zapisuje log o liczbie istniejących tagów
 
-            existingCustomer.Name = customerDto.Name;
-            existingCustomer.Email = customerDto.Email;
-            existingCustomer.Phone = customerDto.Phone;
-            existingCustomer.Company = customerDto.Company;
-            existingCustomer.Address = customerDto.Address;
-            existingCustomer.NIP = customerDto.NIP;
-            existingCustomer.Representative = customerDto.Representative;
-            existingCustomer.AssignedGroupId = customerDto.AssignedGroupId;
-            existingCustomer.AssignedUserId = customerDto.AssignedUserId;
+            // Aktualizuje dane klienta
+            existingCustomer.Name = customerDto.Name; // Aktualizuje nazwę klienta
+            existingCustomer.Email = customerDto.Email; // Aktualizuje adres email
+            existingCustomer.Phone = customerDto.Phone; // Aktualizuje telefon
+            existingCustomer.Company = customerDto.Company; // Aktualizuje firmę
+            existingCustomer.Address = customerDto.Address; // Aktualizuje adres
+            existingCustomer.NIP = customerDto.NIP; // Aktualizuje NIP
+            existingCustomer.Representative = customerDto.Representative; // Aktualizuje przedstawiciela
+            existingCustomer.AssignedGroupId = customerDto.AssignedGroupId; // Aktualizuje ID przypisanej grupy
+            existingCustomer.AssignedUserId = customerDto.AssignedUserId; // Aktualizuje ID przypisanego użytkownika
 
-            // Handle tags
-            existingCustomer.CustomerTags.Clear(); // Remove existing tags
-            if (customerDto.TagIds != null && customerDto.TagIds.Any())
+            // Obsługuje tagi klienta
+            existingCustomer.CustomerTags.Clear(); // Usuwa wszystkie istniejące tagi klienta
+            if (customerDto.TagIds != null && customerDto.TagIds.Any()) // Sprawdza czy podano nowe tagi i czy lista nie jest pusta
             {
-                foreach (var tagId in customerDto.TagIds)
+                foreach (var tagId in customerDto.TagIds) // Iteruje przez wszystkie ID tagów
                 {
-                    existingCustomer.CustomerTags.Add(new CustomerTag { CustomerId = existingCustomer.Id, TagId = tagId });
+                    // Dodaje nowy tag do klienta
+                    existingCustomer.CustomerTags.Add(new CustomerTag { CustomerId = existingCustomer.Id, TagId = tagId }); // Tworzy nowy obiekt CustomerTag i dodaje do kolekcji
                 }
             }
 
-            await _context.SaveChangesAsync();
-            _logger.LogInformation("UpdateAsync: Customer {CustomerId} updated with {NewTagCount} tags.", id, existingCustomer.CustomerTags.Count);
+            await _context.SaveChangesAsync(); // Zapisuje wszystkie zmiany w bazie danych
+            _logger.LogInformation("UpdateAsync: Customer {CustomerId} updated with {NewTagCount} tags.", id, existingCustomer.CustomerTags.Count); // Zapisuje log o zaktualizowanym kliencie
 
-            return true;
+            return true; // Zwraca true - aktualizacja się powiodła
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        /// <summary>
+        /// Metoda usuwania klienta z systemu
+        /// Usuwa klienta o podanym ID z bazy danych
+        /// </summary>
+        /// <param name="id">ID klienta do usunięcia</param>
+        /// <returns>True jeśli usunięcie się powiodło, false w przeciwnym przypadku</returns>
+        public async Task<bool> DeleteAsync(int id) // Metoda asynchroniczna zwracająca status operacji
         {
-            var customer = await _context.Customers.FindAsync(id);
-            if (customer == null) return false;
+            // Wyszukuje klienta po ID w bazie danych
+            var customer = await _context.Customers.FindAsync(id); // Wyszukuje klienta o podanym ID
+            if (customer == null) return false; // Jeśli klient nie istnieje, zwraca false
 
-            _context.Customers.Remove(customer);
-            await _context.SaveChangesAsync();
-            return true;
+            _context.Customers.Remove(customer); // Usuwa klienta z kontekstu Entity Framework
+            await _context.SaveChangesAsync(); // Zapisuje zmiany w bazie danych (fizyczne usunięcie klienta)
+            return true; // Zwraca true - usunięcie się powiodło
         }
     }
 }

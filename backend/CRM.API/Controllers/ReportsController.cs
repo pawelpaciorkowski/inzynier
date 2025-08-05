@@ -1,133 +1,188 @@
-using CRM.Data;
-using CRM.Data.Models;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Linq;
-using System.Threading.Tasks;
-using CRM.BusinessLogic.Services;
-using System;
-using System.Collections.Generic; // Added for List<string>
+using CRM.Data; // Importuje przestrzeń nazw z danymi CRM
+using CRM.Data.Models; // Importuje modele danych CRM
+using Microsoft.AspNetCore.Authorization; // Importuje funkcjonalności autoryzacji
+using Microsoft.AspNetCore.Mvc; // Importuje podstawowe klasy kontrolerów MVC
+using Microsoft.EntityFrameworkCore; // Importuje Entity Framework Core
+using System.Linq; // Importuje metody LINQ
+using System.Threading.Tasks; // Importuje klasy do programowania asynchronicznego
+using CRM.BusinessLogic.Services; // Importuje serwisy biznesowe CRM
+using System; // Importuje podstawowe typy systemowe
+using System.Collections.Generic; // Importuje kolekcje (List, IEnumerable)
 
-namespace CRM.API.Controllers
+namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    [Authorize]
-    public class ReportsController : ControllerBase
+    /// <summary>
+    /// Kontroler do zarządzania raportami w systemie CRM
+    /// Klasa obsługuje generowanie raportów sprzedaży, klientów, zadań oraz eksport danych do różnych formatów
+    /// </summary>
+    [ApiController] // Oznacza klasę jako kontroler API - automatycznie waliduje model i zwraca odpowiednie błędy
+    [Route("api/[controller]")] // Definiuje ścieżkę routingu - [controller] zostanie zastąpione nazwą klasy (Reports)
+    [Authorize] // Wymaga autoryzacji - dostęp tylko dla zalogowanych użytkowników
+    public class ReportsController : ControllerBase // Dziedziczy po ControllerBase - podstawowa klasa dla kontrolerów API
     {
-        private readonly ApplicationDbContext _context;
-        private readonly ICsvExportService _csvExportService;
-        private readonly InvoicePdfService _invoicePdfService;
+        /// <summary>
+        /// Kontekst bazy danych Entity Framework
+        /// Pozwala na wykonywanie operacji na bazie danych (zapytania, zapisywanie, usuwanie)
+        /// </summary>
+        private readonly ApplicationDbContext _context; // Pole tylko do odczytu - nie można zmienić po inicjalizacji
 
+        /// <summary>
+        /// Serwis do eksportu danych do formatu CSV
+        /// Obsługuje konwersję danych z bazy do formatów CSV, XLSX i PDF
+        /// </summary>
+        private readonly ICsvExportService _csvExportService; // Interfejs serwisu eksportu CSV
+
+        /// <summary>
+        /// Serwis do generowania dokumentów PDF
+        /// Obsługuje tworzenie raportów PDF z danych CRM
+        /// </summary>
+        private readonly InvoicePdfService _invoicePdfService; // Serwis generowania PDF
+
+        /// <summary>
+        /// Konstruktor klasy ReportsController
+        /// Inicjalizuje kontroler z kontekstem bazy danych i serwisami przekazanymi przez dependency injection
+        /// </summary>
+        /// <param name="context">Kontekst bazy danych przekazany przez system dependency injection</param>
+        /// <param name="csvExportService">Serwis eksportu CSV przekazany przez system dependency injection</param>
+        /// <param name="invoicePdfService">Serwis generowania PDF przekazany przez system dependency injection</param>
         public ReportsController(ApplicationDbContext context, ICsvExportService csvExportService, InvoicePdfService invoicePdfService)
         {
-            _context = context;
-            _csvExportService = csvExportService;
-            _invoicePdfService = invoicePdfService;
+            _context = context; // Przypisuje przekazany kontekst do pola prywatnego - inicjalizacja pola
+            _csvExportService = csvExportService; // Przypisuje przekazany serwis CSV do pola prywatnego
+            _invoicePdfService = invoicePdfService; // Przypisuje przekazany serwis PDF do pola prywatnego
         }
 
-        [HttpGet("customer-growth")]
-        public async Task<IActionResult> GetCustomerGrowthReport()
+        /// <summary>
+        /// Metoda HTTP GET - generuje raport wzrostu liczby klientów w czasie
+        /// Endpoint: GET /api/Reports/customer-growth
+        /// Analizuje przyrost klientów według miesięcy i lat
+        /// </summary>
+        /// <returns>Lista danych o wzroście liczby klientów w czasie</returns>
+        [HttpGet("customer-growth")] // Oznacza metodę jako obsługującą żądania HTTP GET na ścieżce customer-growth
+        public async Task<IActionResult> GetCustomerGrowthReport() // Metoda asynchroniczna zwracająca IActionResult
         {
+            // Wykonuje zapytanie do bazy danych - grupuje klientów według roku i miesiąca utworzenia
             var rawData = await _context.Customers
-                .GroupBy(c => new { c.CreatedAt.Year, c.CreatedAt.Month })
-                .Select(g => new
+                .GroupBy(c => new { c.CreatedAt.Year, c.CreatedAt.Month }) // Grupuje klientów według roku i miesiąca utworzenia
+                .Select(g => new // Projektuje wyniki do anonimowego typu
                 {
-                    g.Key.Year,
-                    g.Key.Month,
-                    Count = g.Count()
+                    g.Key.Year, // Rok utworzenia klienta
+                    g.Key.Month, // Miesiąc utworzenia klienta
+                    Count = g.Count() // Liczba klientów w tej grupie (roku/miesiącu)
                 })
-                .ToListAsync();
+                .ToListAsync(); // Wykonuje zapytanie asynchronicznie i zwraca listę wyników
 
+            // Przetwarza surowe dane do formatu odpowiedniego dla raportu
             var reportData = rawData
-                .Select(r => new
+                .Select(r => new // Projektuje dane do formatu raportu
                 {
-                    Month = $"{r.Year}-{r.Month.ToString("00")}",
-                    r.Count
+                    Month = $"{r.Year}-{r.Month.ToString("00")}", // Formatuje miesiąc jako "YYYY-MM" (np. "2024-01")
+                    r.Count // Liczba klientów w tym miesiącu
                 })
-                .OrderBy(r => r.Month)
-                .ToList();
+                .OrderBy(r => r.Month) // Sortuje według miesiąca (chronologicznie)
+                .ToList(); // Konwertuje do listy
 
-            return Ok(reportData);
+            return Ok(reportData); // Zwraca status HTTP 200 OK z danymi raportu
         }
 
-        [Authorize(Roles = "Admin,Manager,Sprzedawca")]
-        [HttpGet("export-customers")]
-        public async Task<IActionResult> ExportCustomers(
-            [FromQuery] string? format = "csv",
-            [FromQuery] bool includeRelations = true,
-            [FromQuery] string? columns = null,
-            [FromQuery] string? dateFrom = null,
-            [FromQuery] string? dateTo = null,
-            [FromQuery] int? groupId = null,
-            [FromQuery] int? tagId = null)
+        /// <summary>
+        /// Metoda HTTP GET - eksportuje dane klientów do różnych formatów (CSV, XLSX, PDF)
+        /// Endpoint: GET /api/Reports/export-customers
+        /// Umożliwia eksport danych klientów z filtrowaniem i wyborem kolumn
+        /// </summary>
+        /// <param name="format">Format eksportu (csv, xlsx, pdf) - domyślnie csv</param>
+        /// <param name="includeRelations">Czy dołączyć powiązane dane (grupy, użytkownicy, tagi)</param>
+        /// <param name="columns">Lista kolumn do eksportu (oddzielone przecinkami)</param>
+        /// <param name="dateFrom">Data początkowa filtrowania (opcjonalna)</param>
+        /// <param name="dateTo">Data końcowa filtrowania (opcjonalna)</param>
+        /// <param name="groupId">ID grupy do filtrowania (opcjonalne)</param>
+        /// <param name="tagId">ID tagu do filtrowania (opcjonalne)</param>
+        /// <returns>Plik z danymi klientów w wybranym formacie</returns>
+        [Authorize(Roles = "Admin,Manager,Sprzedawca")] // Wymaga roli Admin, Manager lub Sprzedawca
+        [HttpGet("export-customers")] // Oznacza metodę jako obsługującą żądania HTTP GET na ścieżce export-customers
+        public async Task<IActionResult> ExportCustomers( // Metoda asynchroniczna zwracająca IActionResult
+            [FromQuery] string? format = "csv", // Parametr z query string - format eksportu
+            [FromQuery] bool includeRelations = true, // Parametr z query string - czy dołączyć relacje
+            [FromQuery] string? columns = null, // Parametr z query string - kolumny do eksportu
+            [FromQuery] string? dateFrom = null, // Parametr z query string - data początkowa
+            [FromQuery] string? dateTo = null, // Parametr z query string - data końcowa
+            [FromQuery] int? groupId = null, // Parametr z query string - ID grupy
+            [FromQuery] int? tagId = null) // Parametr z query string - ID tagu
         {
-            var query = _context.Customers.AsQueryable();
+            // Tworzy podstawowe zapytanie do bazy danych dla klientów
+            var query = _context.Customers.AsQueryable(); // Rozpoczyna zapytanie LINQ
 
-            // Filtrowanie po dacie
-            if (!string.IsNullOrEmpty(dateFrom) && DateTime.TryParse(dateFrom, out var fromDate))
+            // Filtrowanie po dacie początkowej
+            if (!string.IsNullOrEmpty(dateFrom) && DateTime.TryParse(dateFrom, out var fromDate)) // Sprawdza czy data jest podana i czy można ją sparsować
             {
-                query = query.Where(c => c.CreatedAt >= fromDate);
+                query = query.Where(c => c.CreatedAt >= fromDate); // Filtruje klientów utworzonych od podanej daty
             }
-            if (!string.IsNullOrEmpty(dateTo) && DateTime.TryParse(dateTo, out var toDate))
+            
+            // Filtrowanie po dacie końcowej
+            if (!string.IsNullOrEmpty(dateTo) && DateTime.TryParse(dateTo, out var toDate)) // Sprawdza czy data jest podana i czy można ją sparsować
             {
-                query = query.Where(c => c.CreatedAt <= toDate);
+                query = query.Where(c => c.CreatedAt <= toDate); // Filtruje klientów utworzonych do podanej daty
             }
 
             // Filtrowanie po grupie
-            if (groupId.HasValue)
+            if (groupId.HasValue) // Sprawdza czy ID grupy zostało podane
             {
-                query = query.Where(c => c.AssignedGroupId == groupId);
+                query = query.Where(c => c.AssignedGroupId == groupId); // Filtruje klientów przypisanych do podanej grupy
             }
 
             // Filtrowanie po tagu
-            if (tagId.HasValue)
+            if (tagId.HasValue) // Sprawdza czy ID tagu zostało podane
             {
-                query = query.Where(c => c.CustomerTags.Any(ct => ct.TagId == tagId));
+                query = query.Where(c => c.CustomerTags.Any(ct => ct.TagId == tagId)); // Filtruje klientów mających podany tag
             }
 
-            // Include relations if requested
-            if (includeRelations)
+            // Dołączanie relacji jeśli zostało żądane
+            if (includeRelations) // Sprawdza czy użytkownik chce dołączyć powiązane dane
             {
                 query = query
-                    .Include(c => c.AssignedGroup)
-                    .Include(c => c.AssignedUser)
-                    .Include(c => c.CustomerTags)
-                        .ThenInclude(ct => ct.Tag);
+                    .Include(c => c.AssignedGroup) // Dołącza dane przypisanej grupy
+                    .Include(c => c.AssignedUser) // Dołącza dane przypisanego użytkownika
+                    .Include(c => c.CustomerTags) // Dołącza tagi klienta
+                        .ThenInclude(ct => ct.Tag); // Dołącza szczegóły tagów
             }
 
-            var customers = await query.ToListAsync();
+            // Wykonuje zapytanie i pobiera listę klientów
+            var customers = await query.ToListAsync(); // Wykonuje zapytanie asynchronicznie
 
-            // Parse columns
-            var selectedColumns = !string.IsNullOrEmpty(columns) 
-                ? columns.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                : new[] { "id", "name", "email", "phone", "company", "createdAt" };
+            // Parsuje listę kolumn do eksportu
+            var selectedColumns = !string.IsNullOrEmpty(columns) // Sprawdza czy kolumny zostały podane
+                ? columns.Split(',', StringSplitOptions.RemoveEmptyEntries) // Dzieli string na tablicę kolumn
+                : new[] { "id", "name", "email", "phone", "company", "createdAt" }; // Domyślne kolumny jeśli nie podano
 
-            byte[] fileBytes;
-            string contentType;
-            if (format.ToLower() == "xlsx")
-            {
-                fileBytes = _csvExportService.ExportCustomersToXlsx(customers, selectedColumns, includeRelations);
-                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            }
-            else if (format.ToLower() == "pdf")
-            {
-                fileBytes = _csvExportService.ExportCustomersToCsvAdvanced(customers, selectedColumns, includeRelations);
-                contentType = "text/csv";
-            }
-            else
-            {
-                fileBytes = _csvExportService.ExportCustomersToCsvAdvanced(customers, selectedColumns, includeRelations);
-                contentType = "text/csv";
-            }
-            var fileName = $"customers_export_{DateTime.Now:yyyyMMdd_HHmmss}.{format.ToLower()}";
+            // Przygotowuje dane pliku do eksportu
+            byte[] fileBytes; // Tablica bajtów z danymi pliku
+            string contentType; // Typ MIME pliku
             
-            // Dodaj nagłówki dla lepszego pobierania
-            Response.Headers.Add("Content-Disposition", $"attachment; filename=\"{fileName}\"");
-            Response.Headers.Add("Access-Control-Expose-Headers", "Content-Disposition");
+            // Wybiera format eksportu i generuje odpowiedni plik
+            if (format.ToLower() == "xlsx") // Jeśli format to XLSX
+            {
+                fileBytes = _csvExportService.ExportCustomersToXlsx(customers, selectedColumns, includeRelations); // Generuje plik XLSX
+                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"; // Ustawia typ MIME dla XLSX
+            }
+            else if (format.ToLower() == "pdf") // Jeśli format to PDF
+            {
+                fileBytes = _csvExportService.ExportCustomersToCsvAdvanced(customers, selectedColumns, includeRelations); // Generuje plik CSV (PDF nie jest jeszcze zaimplementowane)
+                contentType = "text/csv"; // Ustawia typ MIME dla CSV
+            }
+            else // Domyślnie CSV
+            {
+                fileBytes = _csvExportService.ExportCustomersToCsvAdvanced(customers, selectedColumns, includeRelations); // Generuje plik CSV
+                contentType = "text/csv"; // Ustawia typ MIME dla CSV
+            }
             
-            return File(fileBytes, contentType, fileName);
+            // Generuje nazwę pliku z aktualną datą i czasem
+            var fileName = $"customers_export_{DateTime.Now:yyyyMMdd_HHmmss}.{format.ToLower()}"; // Format: customers_export_20241201_143022.csv
+            
+            // Dodaje nagłówki HTTP dla lepszego pobierania pliku
+            Response.Headers.Add("Content-Disposition", $"attachment; filename=\"{fileName}\""); // Wymusza pobranie pliku
+            Response.Headers.Add("Access-Control-Expose-Headers", "Content-Disposition"); // Umożliwia dostęp do nagłówka w CORS
+            
+            return File(fileBytes, contentType, fileName); // Zwraca plik do pobrania
         }
 
         [Authorize(Roles = "Admin,Manager,Sprzedawca")]
