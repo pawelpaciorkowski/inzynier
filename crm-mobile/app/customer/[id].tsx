@@ -5,20 +5,26 @@ import { useAuth } from '../../context/AuthContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import axios from 'axios';
 
+// Definicja interfejsu dla szczegółowych danych klienta.
 interface CustomerDetails {
-    id: number;
-    name: string;
-    email: string;
-    phone?: string;
-    company?: string;
-    address?: string;
-    nip?: string;
-    representative?: string;
-    createdAt: string;
-    assignedGroupId?: number;
-    assignedUserId?: number;
+    id: number; // Unikalny identyfikator klienta.
+    name: string; // Imię i nazwisko lub nazwa firmy.
+    email: string; // Adres email.
+    phone?: string; // Numer telefonu (opcjonalny).
+    company?: string; // Nazwa firmy (opcjonalna).
+    address?: string; // Adres (opcjonalny).
+    nip?: string; // Numer NIP (opcjonalny).
+    representative?: string; // Przedstawiciel (opcjonalny).
+    createdAt: string; // Data utworzenia rekordu.
+    assignedGroupId?: number; // ID przypisanej grupy (opcjonalne).
+    assignedUserId?: number; // ID przypisanego użytkownika (opcjonalne).
 }
 
+/**
+ * Komponent pomocniczy do wyświetlania wiersza z informacją (etykieta i wartość).
+ * @param {{ label: string, value: string | number | null | undefined }} props - Właściwości komponentu.
+ * @returns {JSX.Element | null} - Zwraca widok wiersza lub null, jeśli wartość jest pusta.
+ */
 const InfoRow = ({ label, value }: { label: string, value: string | number | null | undefined }) => {
     if (value === null || value === undefined || value === "") return null;
     return (
@@ -31,16 +37,30 @@ const InfoRow = ({ label, value }: { label: string, value: string | number | nul
     );
 };
 
+/**
+ * Komponent ekranu szczegółów klienta.
+ * Wyświetla dane klienta, umożliwia ich edycję i usuwanie.
+ * @returns {JSX.Element} - Zwraca widok szczegółów klienta.
+ */
 export default function CustomerDetailScreen() {
+    // Pobranie ID klienta z parametrów URL.
     const { id } = useLocalSearchParams<{ id: string }>();
+    // Pobranie tokena z kontekstu autentykacji.
     const { token } = useAuth();
+    // Inicjalizacja hooka do nawigacji.
     const router = useRouter();
+    // Stan przechowujący dane klienta.
     const [customer, setCustomer] = useState<CustomerDetails | null>(null);
+    // Stan wskazujący, czy trwa ładowanie danych.
     const [loading, setLoading] = useState(true);
+    // Stan przechowujący ewentualny błąd.
     const [error, setError] = useState<string | null>(null);
+    // Stan kontrolujący tryb edycji.
     const [isEditing, setIsEditing] = useState(false);
+    // Stan przechowujący dane formularza edycji.
     const [editForm, setEditForm] = useState<Partial<CustomerDetails>>({});
 
+    // Efekt do pobierania szczegółów klienta z API.
     useEffect(() => {
         const fetchCustomerDetails = async () => {
             if (!id || !token) {
@@ -52,7 +72,7 @@ export default function CustomerDetailScreen() {
                 if (!response.data) throw new Error('Nie udało się pobrać danych klienta.');
                 const data = response.data;
                 setCustomer(data);
-                setEditForm(data);
+                setEditForm(data); // Inicjalizacja formularza edycji danymi klienta.
             } catch (err: any) {
                 console.error("Błąd podczas pobierania klienta:", err);
                 setError(err.message || "Błąd podczas pobierania danych");
@@ -63,14 +83,15 @@ export default function CustomerDetailScreen() {
         fetchCustomerDetails();
     }, [id, token]);
 
+    // Funkcja do zapisywania zmian w danych klienta.
     const handleSave = async () => {
         if (!customer || !token) return;
 
         try {
             const response = await axios.put(`/api/Customers/${customer.id}`, editForm);
-            if (response.status === 204) {
+            if (response.status === 204) { // Status 204 No Content oznacza sukces.
                 setCustomer({ ...customer, ...editForm });
-                setIsEditing(false);
+                setIsEditing(false); // Wyłączenie trybu edycji.
                 Alert.alert("Sukces", "Dane klienta zostały zaktualizowane");
             }
         } catch (err: any) {
@@ -79,6 +100,7 @@ export default function CustomerDetailScreen() {
         }
     };
 
+    // Funkcja do usuwania klienta.
     const handleDelete = () => {
         Alert.alert(
             "Usuń klienta",
@@ -93,7 +115,7 @@ export default function CustomerDetailScreen() {
                         try {
                             await axios.delete(`/api/Customers/${customer.id}`);
                             Alert.alert("Sukces", "Klient został usunięty");
-                            router.back();
+                            router.back(); // Powrót do poprzedniego ekranu.
                         } catch (err: any) {
                             console.error("Błąd podczas usuwania:", err);
                             Alert.alert("Błąd", "Nie udało się usunąć klienta");
@@ -104,20 +126,24 @@ export default function CustomerDetailScreen() {
         );
     };
 
+    // Widok ładowania.
     if (loading) return (
         <View style={styles.centered}>
             <ActivityIndicator size="large" color="#fff" />
         </View>
     );
 
+    // Widok błędu lub braku klienta.
     if (error || !customer) return (
         <View style={styles.centered}>
             <Text style={styles.errorText}>{error || 'Nie znaleziono klienta.'}</Text>
         </View>
     );
 
+    // Główny widok komponentu.
     return (
         <>
+            {/* Konfiguracja nagłówka ekranu. */}
             <Stack.Screen
                 options={{
                     title: customer.name,
@@ -140,6 +166,7 @@ export default function CustomerDetailScreen() {
             <ScrollView style={styles.container}>
                 <View style={styles.card}>
                     {isEditing ? (
+                        // Formularz edycji danych.
                         <View style={styles.editForm}>
                             <View style={styles.inputGroup}>
                                 <Text style={styles.inputLabel}>Nazwa *</Text>
@@ -223,6 +250,7 @@ export default function CustomerDetailScreen() {
                             </View>
                         </View>
                     ) : (
+                        // Widok szczegółów klienta.
                         <>
                             <InfoRow label="Nazwa" value={customer.name} />
                             <InfoRow label="Email" value={customer.email} />
@@ -237,6 +265,7 @@ export default function CustomerDetailScreen() {
                 </View>
 
                 {!isEditing && (
+                    // Przycisk usuwania klienta.
                     <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
                         <FontAwesome name="trash" size={16} color="#fff" />
                         <Text style={styles.deleteButtonText}>Usuń klienta</Text>
@@ -247,7 +276,7 @@ export default function CustomerDetailScreen() {
     );
 }
 
-// Style dopasowane do ciemnego motywu
+// Definicje stylów dla komponentu.
 const styles = StyleSheet.create({
     container: {
         flex: 1,

@@ -447,7 +447,7 @@ namespace CRM.BusinessLogic.Services // Przestrzeń nazw dla serwisów biznesowy
                 {
                     Console.WriteLine("Wygenerowany PDF jest pusty - używam fallback CSV"); // Wypisuje komunikat o użyciu fallbacku
                     var csvContent = $"Faktura {invoiceId},Pusta odpowiedź PDF,Spróbuj wyeksportować w formacie CSV"; // Tworzy treść CSV
-                    return System.Text.Encoding.UTF8.GetBytes(csvContent); // Zwraca treść CSV jako bajty
+                    return System.Text.Encoding.UTF8.GetBytes(csvContent); // Zwraca treść CSV jako bajty 
                 }
                 
                 return pdfBytes; // Zwraca wygenerowany PDF jako bajty

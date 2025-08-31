@@ -4,24 +4,35 @@ import { useAuth } from '../../context/AuthContext';
 import { Stack } from 'expo-router';
 import axios from 'axios';
 
-// Interfejs dla aktywności
+// Definiuje strukturę obiektu aktywności
 interface Activity {
-  id: number;
-  note: string;
-  createdAt: string;
-  userName: string;
-  customerName: string;
+  id: number; // Unikalny identyfikator aktywności
+  note: string; // Treść (opis) aktywności
+  createdAt: string; // Data utworzenia aktywności
+  userName: string; // Nazwa użytkownika, który wykonał aktywność
+  customerName: string; // Nazwa klienta, którego dotyczyła aktywność
 }
 
+/**
+ * Komponent ekranu wyświetlającego listę aktywności.
+ * Pobiera i wyświetla aktywności z API.
+ * @returns {JSX.Element} - Zwraca widok z listą aktywności.
+ */
 export default function ActivitiesScreen() {
-  // POPRAWKA: Używamy 'token' zamiast 'authToken' dla spójności
+  // Pobiera token uwierzytelniający z kontekstu
   const { token } = useAuth();
+  // Stan przechowujący listę aktywności
   const [activities, setActivities] = useState<Activity[]>([]);
+  // Stan wskazujący, czy trwa ładowanie danych
   const [loading, setLoading] = useState(true);
+  // Stan przechowujący ewentualny błąd
   const [error, setError] = useState<string | null>(null);
 
+  // Efekt pobierający aktywności po zamontowaniu komponentu
   useEffect(() => {
+    // Asynchroniczna funkcja do pobierania aktywności
     const fetchActivities = async () => {
+      // Sprawdza, czy token jest dostępny
       if (!token) {
         setError('Brak tokena autoryzacyjnego.');
         setLoading(false);
@@ -29,16 +40,18 @@ export default function ActivitiesScreen() {
       }
 
       try {
+        // Wykonuje zapytanie GET do API w celu pobrania aktywności
         const response = await axios.get('/api/Activities');
 
+        // Sprawdza, czy odpowiedź zawiera dane
         if (!response.data) {
           throw new Error('Nie udało się pobrać aktywności.');
         }
 
-        // POPRAWKA: Przetwarzamy JSON tylko raz
+        // Przetwarza dane odpowiedzi
         const responseData = response.data;
 
-        // Sprawdzamy, czy dane są 'opakowane' i wyciągamy tablicę z pola $values
+        // Sprawdza format danych i wyciąga tablicę z pola $values, jeśli istnieje
         if (responseData && Array.isArray((responseData as any).$values)) {
           setActivities((responseData as any).$values);
         } else if (Array.isArray(responseData)) {
@@ -47,15 +60,19 @@ export default function ActivitiesScreen() {
           setActivities([]);
         }
       } catch (err: any) {
+        // Ustawia błąd w przypadku niepowodzenia
         setError(err.message);
       } finally {
+        // Kończy stan ładowania
         setLoading(false);
       }
     };
 
+    // Wywołuje funkcję pobierającą aktywności
     fetchActivities();
-  }, [token]);
+  }, [token]); // Efekt uruchamia się ponownie, gdy zmieni się token
 
+  // Jeśli dane się ładują, wyświetla wskaźnik aktywności
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -64,6 +81,7 @@ export default function ActivitiesScreen() {
     );
   }
 
+  // Jeśli wystąpił błąd, wyświetla komunikat o błędzie
   if (error) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -72,8 +90,10 @@ export default function ActivitiesScreen() {
     );
   }
 
+  // Renderuje główny widok komponentu
   return (
     <>
+      {/* Konfiguracja nagłówka ekranu */}
       <Stack.Screen options={{ title: 'Aktywności' }} />
       <View style={styles.container}>
         <FlatList
@@ -97,7 +117,7 @@ export default function ActivitiesScreen() {
   );
 }
 
-// Style dopasowane do ciemnego motywu
+// Definicje stylów dla komponentu
 const styles = StyleSheet.create({
   container: {
     flex: 1,

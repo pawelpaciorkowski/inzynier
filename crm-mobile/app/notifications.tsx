@@ -6,33 +6,49 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useAuth } from '../context/AuthContext';
 import { useCallback, useEffect, useState } from 'react';
 
+// Definiuje strukturę obiektu powiadomienia
 interface Notification {
-    id: number;
-    message: string;
-    createdAt: string;
-    isRead: boolean;
-    messageId?: number;
+    id: number; // Unikalny identyfikator powiadomienia
+    message: string; // Treść powiadomienia
+    createdAt: string; // Data utworzenia
+    isRead: boolean; // Status przeczytania
+    messageId?: number; // Opcjonalne ID powiązanej wiadomości
 }
 
+// Definiuje strukturę obiektu szczegółów wiadomości
 interface MessageDetails {
-    id: number;
-    subject: string;
-    body: string;
-    sentAt: string;
-    senderUsername: string;
-    recipientUsername: string;
+    id: number; // ID wiadomości
+    subject: string; // Temat wiadomości
+    body: string; // Treść wiadomości
+    sentAt: string; // Data wysłania
+    senderUsername: string; // Nazwa nadawcy
+    recipientUsername: string; // Nazwa odbiorcy
 }
 
+/**
+ * Komponent strony z powiadomieniami.
+ * Wyświetla listę powiadomień użytkownika, pozwala na ich odczytywanie i przeglądanie szczegółów.
+ * @returns {JSX.Element} - Zwraca widok strony z powiadomieniami.
+ */
 export default function NotificationsPage() {
+    // Stan przechowujący listę powiadomień
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    // Stan wskazujący, czy trwa ładowanie powiadomień
     const [loading, setLoading] = useState(true);
+    // Stan przechowujący ewentualny błąd
     const [error, setError] = useState<string | null>(null);
+    // Stan kontrolujący widoczność modala
     const [modalVisible, setModalVisible] = useState(false);
+    // Stan przechowujący wybrane powiadomienie
     const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+    // Stan przechowujący szczegóły wiadomości
     const [messageDetails, setMessageDetails] = useState<MessageDetails | null>(null);
+    // Stan wskazujący, czy trwa ładowanie szczegółów wiadomości
     const [loadingDetails, setLoadingDetails] = useState(false);
+    // Pobranie tokena z kontekstu autentykacji
     const { token } = useAuth();
 
+    // Funkcja do pobierania powiadomień z API
     const fetchNotifications = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -55,22 +71,25 @@ export default function NotificationsPage() {
         }
     }, [token]);
 
+    // Efekt uruchamiający pobieranie powiadomień po zamontowaniu komponentu
     useEffect(() => {
         fetchNotifications();
     }, [fetchNotifications]);
 
+    // Funkcja do oznaczania powiadomienia jako przeczytane
     const handleMarkAsRead = async (id: number) => {
         if (!token) return;
         try {
             await axios.post(`/api/Notifications/mark-as-read/${id}`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            fetchNotifications(); // Odśwież listę powiadomień
+            fetchNotifications(); // Odświeża listę powiadomień
         } catch (err) {
             console.error("Błąd oznaczania jako przeczytane:", err);
         }
     };
 
+    // Funkcja do oznaczania wszystkich powiadomień jako przeczytane
     const handleMarkAllAsRead = async () => {
         const unreadNotifications = notifications.filter(n => !n.isRead);
         if (unreadNotifications.length === 0) return;
@@ -88,6 +107,7 @@ export default function NotificationsPage() {
         }
     };
 
+    // Funkcja do pobierania szczegółów wiadomości
     const fetchMessageDetails = async (messageId: number) => {
         if (!token) return null;
         try {
@@ -104,12 +124,13 @@ export default function NotificationsPage() {
         }
     };
 
+    // Funkcja obsługująca naciśnięcie powiadomienia
     const handleNotificationPress = async (notification: Notification) => {
         setSelectedNotification(notification);
         setMessageDetails(null);
         setModalVisible(true);
 
-        // Jeśli powiadomienie ma MessageId, pobierz szczegóły wiadomości
+        // Jeśli powiadomienie ma MessageId, pobiera szczegóły wiadomości
         if (notification.messageId) {
             const details = await fetchMessageDetails(notification.messageId);
             if (details) {
@@ -118,12 +139,14 @@ export default function NotificationsPage() {
         }
     };
 
+    // Funkcja zamykająca modal
     const closeModal = () => {
         setModalVisible(false);
         setSelectedNotification(null);
         setMessageDetails(null);
     };
 
+    // Widok ładowania
     if (loading) {
         return (
             <View style={styles.centered}>
@@ -133,6 +156,7 @@ export default function NotificationsPage() {
         );
     }
 
+    // Widok błędu
     if (error) {
         return (
             <View style={styles.centered}>
@@ -142,12 +166,15 @@ export default function NotificationsPage() {
         );
     }
 
+    // Liczba nieprzeczytanych powiadomień
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
+    // Główny widok komponentu
     return (
         <View style={styles.container}>
             <Text style={styles.header}>🔔 Powiadomienia</Text>
 
+            {/* Przycisk do oznaczania wszystkich jako przeczytane */}
             {notifications.length > 0 && unreadCount > 0 && (
                 <Pressable onPress={handleMarkAllAsRead} style={styles.markAllButton}>
                     <Text style={styles.markAllButtonText}>
@@ -156,6 +183,7 @@ export default function NotificationsPage() {
                 </Pressable>
             )}
 
+            {/* Widok pustej listy powiadomień */}
             {notifications.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <Text style={styles.emptyText}>Brak powiadomień do wyświetlenia.</Text>
@@ -201,6 +229,7 @@ export default function NotificationsPage() {
                 />
             )}
 
+            {/* Modal ze szczegółami powiadomienia */}
             <Modal
                 animationType="slide"
                 transparent={true}
@@ -299,6 +328,7 @@ export default function NotificationsPage() {
     );
 }
 
+// Definicje stylów dla komponentu
 const styles = StyleSheet.create({
     container: {
         flex: 1,

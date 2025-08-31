@@ -6,62 +6,84 @@ import { useAuth } from '../../context/AuthContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import axios from 'axios';
 
-// Definicja interfejsu dla klienta - zgodna z modelem backendu
+// Definicja interfejsu dla obiektu klienta, odzwierciedlająca model danych z backendu.
 interface Customer {
-    id: number;
-    name: string;
-    email: string;
-    phone?: string;
-    company?: string;
-    address?: string;
-    nip?: string;
-    representative?: string;
-    createdAt: string;
-    assignedGroupId?: number;
-    assignedUserId?: number;
+    id: number; // Unikalny identyfikator klienta.
+    name: string; // Imię i nazwisko lub nazwa firmy klienta.
+    email: string; // Adres email klienta.
+    phone?: string; // Numer telefonu (opcjonalny).
+    company?: string; // Nazwa firmy (opcjonalna).
+    address?: string; // Adres (opcjonalny).
+    nip?: string; // Numer NIP (opcjonalny).
+    representative?: string; // Przedstawiciel handlowy (opcjonalny).
+    createdAt: string; // Data utworzenia rekordu klienta.
+    assignedGroupId?: number; // ID grupy, do której klient jest przypisany (opcjonalne).
+    assignedUserId?: number; // ID użytkownika, do którego klient jest przypisany (opcjonalne).
 }
 
+/**
+ * Komponent ekranu wyświetlającego listę klientów.
+ * Umożliwia przeglądanie, wyszukiwanie i odświeżanie listy klientów.
+ * @returns {JSX.Element} - Zwraca widok z listą klientów.
+ */
 export default function CustomersScreen() {
+    // Pobranie tokena uwierzytelniającego z kontekstu.
     const { token } = useAuth();
+    // Inicjalizacja hooka do nawigacji.
     const router = useRouter();
 
+    // Stan przechowujący pełną listę klientów pobraną z serwera.
     const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
+    // Stan przechowujący listę klientów po zastosowaniu filtrów (np. wyszukiwania).
     const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+    // Stan wskazujący, czy trwa ładowanie danych.
     const [loading, setLoading] = useState(true);
+    // Stan wskazujący, czy trwa proces odświeżania listy.
     const [refreshing, setRefreshing] = useState(false);
+    // Stan przechowujący ewentualny błąd, który wystąpił podczas pobierania danych.
     const [error, setError] = useState<string | null>(null);
+    // Stan przechowujący aktualną frazę wyszukiwania wprowadzoną przez użytkownika.
     const [searchQuery, setSearchQuery] = useState('');
 
+    // Funkcja do pobierania listy klientów z API, opakowana w useCallback dla optymalizacji.
     const fetchCustomers = useCallback(async () => {
+        // Przerywa wykonanie, jeśli brakuje tokena.
         if (!token) {
             setError("Brak tokena autoryzacyjnego.");
             setLoading(false);
             return;
         }
 
-        // Nie ustawiamy tutaj setLoading(true), aby uniknąć migotania przy odświeżaniu
+        // Ustawia stan ładowania tylko przy pierwszym ładowaniu, nie przy odświeżaniu, by uniknąć migotania.
         if (!refreshing) {
             setLoading(true);
         }
+        // Resetuje stan błędu przed nowym zapytaniem.
         setError(null);
 
         try {
+            // Logowanie rozpoczęcia pobierania danych.
             console.log("Pobieranie klientów...");
+            // Wykonanie zapytania GET do API.
             const response = await axios.get('/api/Customers');
+            // Logowanie odpowiedzi z serwera.
             console.log("Odpowiedź z serwera:", response.data);
 
+            // Przypisanie danych z odpowiedzi do zmiennej.
             const data = response.data;
+            // Logowanie typu i struktury otrzymanych danych.
             console.log("Typ danych:", typeof data);
             console.log("Czy data jest tablicą:", Array.isArray(data));
 
-            // Sprawdzamy różne możliwe formaty danych
+            // Zmienna do przechowywania przetworzonych danych klientów.
             let customersData;
+            // Sprawdzenie różnych możliwych formatów odpowiedzi z serwera .NET.
             if (Array.isArray(data)) {
                 customersData = data;
             } else if (data && data.$values && Array.isArray(data.$values)) {
-                customersData = data.$values;
+                customersData = data.$values; // Typowy format dla referencji cyklicznych w JSON.NET.
             } else if (data && typeof data === 'object') {
-                // Jeśli to obiekt, spróbujmy znaleźć tablicę w jego właściwościach
+                // Próba znalezienia tablicy wewnątrz obiektu, jeśli format jest nietypowy.
                 const keys = Object.keys(data);
                 console.log("Klucze w obiekcie:", keys);
                 for (const key of keys) {
@@ -72,10 +94,12 @@ export default function CustomersScreen() {
                 }
             }
 
+            // Logowanie danych po przetworzeniu.
             console.log("Przetworzone dane klientów:", customersData);
 
+            // Jeśli dane są poprawną tablicą, przetwarzamy je dalej.
             if (Array.isArray(customersData)) {
-                // Sprawdzamy czy każdy klient ma wymagane pola
+                // Walidacja każdego obiektu klienta w tablicy.
                 const validCustomers = customersData.filter(customer => {
                     if (!customer || typeof customer !== 'object') {
                         console.warn("Nieprawidłowy klient:", customer);
@@ -88,46 +112,54 @@ export default function CustomersScreen() {
                     return true;
                 });
 
+                // Logowanie poprawnych klientów.
                 console.log("Poprawni klienci:", validCustomers);
+                // Ustawienie pełnej listy klientów i listy filtrowanej.
                 setAllCustomers(validCustomers);
                 setFilteredCustomers(validCustomers);
             } else {
+                // Obsługa błędu nieprawidłowego formatu danych.
                 console.error("Nieprawidłowy format danych:", data);
                 setError("Nieprawidłowy format danych z serwera");
             }
         } catch (err: any) {
+            // Obsługa błędów zapytania sieciowego.
             console.error("Błąd podczas pobierania klientów:", err);
             console.error("Szczegóły błędu:", err.response?.data);
             setError(err.message || "Błąd podczas pobierania danych");
         } finally {
+            // Zakończenie stanu ładowania i odświeżania.
             setLoading(false);
             setRefreshing(false);
         }
-    }, [token, refreshing]);
+    }, [token, refreshing]); // Zależności hooka useCallback.
 
+    // Efekt uruchamiający pobieranie klientów przy starcie komponentu.
     useEffect(() => {
         fetchCustomers();
     }, [fetchCustomers]);
 
+    // Funkcja wywoływana przy odświeżaniu listy (pull-to-refresh).
     const onRefresh = useCallback(() => {
-        setSearchQuery(''); // Czyścimy wyszukiwanie przy odświeżaniu
-        setRefreshing(true);
+        setSearchQuery(''); // Czyści pole wyszukiwania.
+        setRefreshing(true); // Uruchamia stan odświeżania.
     }, []);
 
-    // ✅ UZUPEŁNIONA LOGIKA FILTROWANIA
+    // Efekt filtrujący klientów na podstawie frazy wyszukiwania.
     useEffect(() => {
         if (searchQuery.trim() === '') {
-            setFilteredCustomers(allCustomers);
+            setFilteredCustomers(allCustomers); // Jeśli wyszukiwarka jest pusta, pokaż wszystkich.
         } else {
             const lowercasedQuery = searchQuery.toLowerCase();
             const filtered = allCustomers.filter(customer =>
-                customer.name.toLowerCase().includes(lowercasedQuery) ||
-                (customer.nip && customer.nip.includes(searchQuery))
+                customer.name.toLowerCase().includes(lowercasedQuery) || // Filtruj po nazwie.
+                (customer.nip && customer.nip.includes(searchQuery)) // Filtruj po NIP.
             );
             setFilteredCustomers(filtered);
         }
-    }, [searchQuery, allCustomers]);
+    }, [searchQuery, allCustomers]); // Zależności hooka useEffect.
 
+    // Widok wyświetlany podczas ładowania danych.
     if (loading) {
         return (
             <View style={[styles.container, styles.centered]}>
@@ -136,6 +168,7 @@ export default function CustomersScreen() {
         );
     }
 
+    // Widok wyświetlany w przypadku błędu.
     if (error) {
         return (
             <View style={[styles.container, styles.centered]}>
@@ -144,8 +177,10 @@ export default function CustomersScreen() {
         );
     }
 
+    // Główny widok komponentu z listą klientów.
     return (
         <>
+            {/* Konfiguracja nagłówka ekranu z przyciskiem do dodawania klienta. */}
             <Stack.Screen options={{
                 title: 'Klienci', headerRight: () => (
                     <Link href="/add-customer" asChild>
@@ -163,6 +198,7 @@ export default function CustomersScreen() {
                 ),
             }} />
             <View style={styles.container}>
+                {/* Kontener z polem wyszukiwania. */}
                 <View style={styles.searchContainer}>
                     <FontAwesome name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
                     <TextInput
@@ -173,6 +209,7 @@ export default function CustomersScreen() {
                         onChangeText={setSearchQuery}
                     />
                 </View>
+                {/* Lista klientów. */}
                 <FlatList
                     data={filteredCustomers}
                     keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
@@ -239,6 +276,7 @@ export default function CustomersScreen() {
     );
 }
 
+// Definicje stylów dla komponentu.
 const styles = StyleSheet.create({
     container: {
         flex: 1,

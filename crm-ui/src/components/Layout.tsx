@@ -1,51 +1,83 @@
+// Import hooków React - useState do stanu komponentu, useCallback do memoizacji funkcji
 import { useState, type JSX, useCallback } from "react";
+// Import useRef do referencji DOM, useEffect do efektów ubocznych
 import { useRef, useEffect } from "react";
+// Import komponentów React Router - Link do nawigacji, useNavigate do programowej nawigacji, Outlet do renderowania dzieci tras
 import { Link, useNavigate, Outlet } from "react-router-dom";
+// Import kontekstu uwierzytelnienia do zarządzania stanem użytkownika
 import { useAuth } from "../context/AuthContext";
+// Import ikon Heroicons do interfejsu użytkownika
 import HomeIcon from '@heroicons/react/24/solid/HomeIcon';
 import UsersIcon from '@heroicons/react/24/solid/UsersIcon';
 import UserCircleIcon from '@heroicons/react/24/solid/UserCircleIcon';
 import CheckCircleIcon from '@heroicons/react/24/solid/CheckCircleIcon';
 import { ClipboardDocumentListIcon, CalendarDaysIcon, DocumentDuplicateIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, BellIcon } from "@heroicons/react/24/solid";
+// Import biblioteki axios do wykonywania zapytań HTTP
 import axios from 'axios';
+// Import funkcji formatDistanceToNow do formatowania dat jako "X minut temu"
 import { formatDistanceToNow } from 'date-fns';
+// Import polskiej lokalizacji dla date-fns
 import { pl } from 'date-fns/locale';
 
+// Interface definiujący strukturę powiadomienia z backendu
 interface Notification {
+    // Unikalny identyfikator powiadomienia
     id: number;
+    // Treść wiadomości powiadomienia
     message: string;
+    // Data i czas utworzenia powiadomienia (format ISO string)
     createdAt: string;
+    // Flaga określająca czy powiadomienie zostało przeczytane
     isRead: boolean;
 }
 
+// Interface definiujący strukturę przypomnienia z backendu
 interface Reminder {
+    // Unikalny identyfikator przypomnienia
     id: number;
+    // Treść notatki przypomnienia
     note: string;
+    // Data i czas przypomnienia (format ISO string)
     remindAt: string;
+    // ID użytkownika któremu przypomnienie jest przypisane
     userId: number;
 }
 
 
+// Główny komponent Layout - renderuje nawigację, nagłówek i obszar roboczy aplikacji CRM
 export default function Layout() {
+    // Pobieramy użytkownika i funkcję wylogowania z kontekstu uwierzytelnienia
     const { user, logout } = useAuth();
+    // Hook do programowej nawigacji po trasach
     const navigate = useNavigate();
+    // Stan określający które menu jest aktualnie rozwinęte (null = wszystkie zwinęte)
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
+    // Stan kontrolujący widoczność dropdownu powiadomień
     const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+    // Stan przechowujący listę powiadomień użytkownika
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    // Referencja do elementu DOM nawigacji - do obsługi kliknięć poza elementem
     const navRef = useRef<HTMLDivElement>(null);
+    // Referencja do elementu DOM dropdownu powiadomień
     const notificationsRef = useRef<HTMLDivElement>(null);
+    // URL API z zmiennej środowiskowej Vite
     const api = import.meta.env.VITE_API_URL;
+    // Stan przechowujący listę przypomnień z backendu
     const [reminders, setReminders] = useState<Reminder[]>([]);
+    // Stan aktualnie wyświetlanego przypomnienia (toast)
     const [activeReminder, setActiveReminder] = useState<Reminder | null>(null);
+    // Stan przechowujący ID już pokazanych przypomnień (persystowany w localStorage)
     const [shownReminders, setShownReminders] = useState<number[]>(() => {
         // Załaduj pokazane przypomnienia z localStorage
         const stored = localStorage.getItem('shownReminders');
         return stored ? JSON.parse(stored) : [];
     });
+    // Stan przechowujący ostatnią sprawdzoną datę (do resetowania przypomnnień codziennie)
     const [lastCheckedDate, setLastCheckedDate] = useState<string>(() => {
         // Załaduj ostatnią sprawdzoną datę z localStorage
         return localStorage.getItem('lastCheckedDate') || '';
     });
+    // Stan zegara wyświetlanego w nagłówku
     const [clock, setClock] = useState<string>("");
 
     // Zapisz shownReminders do localStorage przy każdej zmianie

@@ -5,16 +5,21 @@ import { useAuth } from '../../context/AuthContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import axios from 'axios';
 
+// Definicja interfejsu dla obiektu faktury.
 interface Invoice {
-    id: number;
-    invoiceNumber: string;
-    customerName: string;
-    totalAmount: number;
-    issuedAt: string;
-    isPaid: boolean;
+    id: number; // Unikalny identyfikator faktury.
+    invoiceNumber: string; // Numer faktury.
+    customerName: string; // Nazwa klienta, dla którego wystawiono fakturę.
+    totalAmount: number; // Całkowita kwota faktury.
+    issuedAt: string; // Data wystawienia faktury.
+    isPaid: boolean; // Status płatności (true - zapłacona, false - nie).
 }
 
-// Komponent do renderowania statusu płatności
+/**
+ * Komponent do renderowania plakietki statusu płatności.
+ * @param {{ isPaid: boolean }} props - Właściwości komponentu.
+ * @returns {JSX.Element} - Zwraca widok plakietki.
+ */
 const PaymentStatus = ({ isPaid }: { isPaid: boolean }) => (
     <View style={[styles.statusBadge, isPaid ? styles.paidBadge : styles.unpaidBadge]}>
         <FontAwesome name={isPaid ? 'check-circle' : 'hourglass-half'} size={14} color="#fff" />
@@ -22,18 +27,33 @@ const PaymentStatus = ({ isPaid }: { isPaid: boolean }) => (
     </View>
 );
 
+/**
+ * Komponent ekranu wyświetlającego listę faktur.
+ * Umożliwia przeglądanie, wyszukiwanie i filtrowanie faktur.
+ * @returns {JSX.Element} - Zwraca widok z listą faktur.
+ */
 export default function InvoicesScreen() {
+    // Pobranie tokena uwierzytelniającego z kontekstu.
     const { token } = useAuth();
+    // Inicjalizacja hooka do nawigacji.
     const router = useRouter();
 
+    // Stan przechowujący pełną listę faktur.
     const [allInvoices, setAllInvoices] = useState<Invoice[]>([]);
+    // Stan przechowujący przefiltrowaną listę faktur.
     const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
+    // Stan wskazujący, czy trwa ładowanie danych.
     const [loading, setLoading] = useState(true);
+    // Stan wskazujący, czy trwa proces odświeżania listy.
     const [refreshing, setRefreshing] = useState(false);
+    // Stan przechowujący ewentualny błąd.
     const [error, setError] = useState<string | null>(null);
+    // Stan przechowujący frazę wyszukiwania.
     const [searchQuery, setSearchQuery] = useState('');
+    // Stan przechowujący aktywne filtry statusu płatności.
     const [activeFilters, setActiveFilters] = useState<Set<'paid' | 'unpaid'>>(new Set(['paid', 'unpaid']));
 
+    // Funkcja do pobierania faktur z API.
     const fetchInvoices = useCallback(async () => {
         if (!token) {
             setError("Brak tokena autoryzacyjnego.");
@@ -73,10 +93,12 @@ export default function InvoicesScreen() {
         }
     }, [token, refreshing]);
 
+    // Efekt uruchamiający pobieranie faktur przy starcie komponentu.
     useEffect(() => {
         fetchInvoices();
     }, []);
 
+    // Funkcja wywoływana przy odświeżaniu listy.
     const onRefresh = useCallback(() => {
         setSearchQuery('');
         setActiveFilters(new Set(['paid', 'unpaid']));
@@ -84,15 +106,15 @@ export default function InvoicesScreen() {
         fetchInvoices();
     }, [fetchInvoices]);
 
-    // Filtrowanie faktur po wyszukiwaniu i statusie
+    // Efekt filtrujący faktury po zmianie wyszukiwania lub aktywnych filtrów.
     useEffect(() => {
         let filtered = allInvoices;
 
-        // Filtrowanie po statusie - jeśli żaden filtr nie jest aktywny, pokazuj wszystkie
+        // Filtrowanie po statusie.
         if (activeFilters.size > 0) {
             filtered = filtered.filter(invoice => {
                 if (activeFilters.has('paid') && activeFilters.has('unpaid')) {
-                    return true; // Oba filtry aktywne = wszystkie faktury
+                    return true; // Pokaż wszystkie, jeśli oba filtry są aktywne.
                 } else if (activeFilters.has('paid')) {
                     return invoice.isPaid;
                 } else if (activeFilters.has('unpaid')) {
@@ -102,7 +124,7 @@ export default function InvoicesScreen() {
             });
         }
 
-        // Filtrowanie po wyszukiwaniu
+        // Filtrowanie po frazie wyszukiwania.
         if (searchQuery.trim() !== '') {
             const lowercasedQuery = searchQuery.toLowerCase();
             filtered = filtered.filter(invoice =>
@@ -114,6 +136,7 @@ export default function InvoicesScreen() {
         setFilteredInvoices(filtered);
     }, [searchQuery, activeFilters, allInvoices]);
 
+    // Funkcja do przełączania filtrów statusu.
     const toggleFilter = (filter: 'paid' | 'unpaid') => {
         setActiveFilters(prev => {
             const newFilters = new Set(prev);
@@ -126,19 +149,25 @@ export default function InvoicesScreen() {
         });
     };
 
+    // Funkcja do pobierania liczby faktur dla danego statusu.
     const getStatusFilterCount = (status: 'paid' | 'unpaid') => {
         return allInvoices.filter(invoice =>
             status === 'paid' ? invoice.isPaid : !invoice.isPaid
         ).length;
     };
 
+    // Funkcja sprawdzająca, czy dany filtr jest aktywny.
     const isFilterActive = (filter: 'paid' | 'unpaid') => activeFilters.has(filter);
 
+    // Widok ładowania.
     if (loading) return <View style={[styles.container, styles.centered]}><ActivityIndicator size="large" color="#fff" /></View>;
+    // Widok błędu.
     if (error) return <View style={[styles.container, styles.centered]}><Text style={styles.errorText}>Błąd: {error}</Text></View>;
 
+    // Główny widok komponentu.
     return (
         <>
+            {/* Konfiguracja nagłówka ekranu. */}
             <Stack.Screen options={{
                 title: 'Faktury', headerRight: () => (
                     <Link href="/add-invoice" asChild>
@@ -156,6 +185,7 @@ export default function InvoicesScreen() {
                 ),
             }} />
             <View style={styles.container}>
+                {/* Kontener wyszukiwarki. */}
                 <View style={styles.searchContainer}>
                     <FontAwesome name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
                     <TextInput
@@ -167,7 +197,7 @@ export default function InvoicesScreen() {
                     />
                 </View>
 
-                {/* Filtry statusu */}
+                {/* Kontener filtrów statusu. */}
                 <View style={styles.filterContainer}>
                     <TouchableOpacity
                         style={[styles.filterButton, isFilterActive('paid') && styles.filterButtonActive]}
@@ -198,6 +228,7 @@ export default function InvoicesScreen() {
                     </TouchableOpacity>
                 </View>
 
+                {/* Lista faktur. */}
                 <FlatList
                     data={filteredInvoices}
                     keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
@@ -235,6 +266,7 @@ export default function InvoicesScreen() {
     );
 }
 
+// Definicje stylów dla komponentu.
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#111827' },
     centered: { justifyContent: 'center', alignItems: 'center' },

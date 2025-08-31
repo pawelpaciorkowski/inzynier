@@ -1,36 +1,55 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+// Import hooka useState do zarządzania stanem komponentu
 import { useState } from "react";
+// Import biblioteki axios do wykonywania zapytań HTTP
 import axios from "axios";
+// Import ikon z biblioteki React Icons - ikona email i kłódki
 import { FiMail, FiLock } from "react-icons/fi";
+// Import hooka useNavigate do programowej nawigacji
 import { useNavigate } from "react-router-dom";
 
+// Komponent strony logowania - główny punkt wejścia do aplikacji CRM
 export default function LoginPage() {
+    // Hook do nawigacji po trasach aplikacji
     const navigate = useNavigate();
+    // Stan przechowujący wprowadzoną nazwę użytkownika
     const [username, setUsername] = useState("");
+    // Stan przechowujący wprowadzone hasło
     const [password, setPassword] = useState("");
+    // Stan przechowujący komunikat błędu przy nieudanym logowaniu
     const [error, setError] = useState("");
+    // URL API z zmiennej środowiskowej Vite
     const api = import.meta.env.VITE_API_URL;
 
+    // Funkcja obsługująca proces logowania użytkownika
     const handleLogin = async () => {
+        // Czyścimy poprzednie komunikaty błędów
         setError("");
         try {
+            // Wykonujemy zapytanie POST do endpointa logowania z danymi użytkownika
             const res = await axios.post(`${api}/Auth/login`, {
                 username,
                 password,
             });
 
+            // Zapisujemy otrzymany token JWT w localStorage przeglądarki
             localStorage.setItem("token", res.data.token);
 
+            // Przekierowujemy użytkownika na dashboard (pełne przeładowanie strony)
             window.location.href = "/dashboard";
 
         } catch {
+            // W przypadku błędu wyświetlamy komunikat o niepoprawnych danych
             setError("Niepoprawna nazwa użytkownika lub hasło.");
         }
     };
 
     return (
+        // Główny kontener strony logowania - pełna wysokość ekranu z gradientowym tłem
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 px-6">
+            {/* Formularz logowania z przezroczystym tłem i rozmyciem */}
             <div className="max-w-md w-full bg-gray-800 bg-opacity-90 rounded-xl shadow-xl p-10 backdrop-blur-md border border-gray-700">
+                {/* Nagłówek formularza logowania */}
                 <h1 className="text-4xl font-extrabold text-white mb-10 text-center tracking-wide">
                     CRM Login
                 </h1>

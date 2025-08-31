@@ -5,10 +5,18 @@ import { Pressable, View, Text } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 
+/**
+ * Komponent ikony paska zakładek z opcjonalnym wskaźnikiem nieprzeczytanych powiadomień.
+ * @param {object} props - Właściwości komponentu.
+ * @param {React.ComponentProps<typeof FontAwesome>['name']} props.name - Nazwa ikony z FontAwesome.
+ * @param {string} props.color - Kolor ikony.
+ * @param {number} [props.unreadCount] - Liczba nieprzeczytanych powiadomień.
+ * @returns {JSX.Element} - Zwraca ikonę z plakietką.
+ */
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
   color: string;
-  unreadCount?: number; // Add unreadCount prop
+  unreadCount?: number; // Dodano właściwość unreadCount
 }) {
   return (
     <View style={{ position: 'relative' }}>
@@ -36,11 +44,20 @@ function TabBarIcon(props: {
   );
 }
 
+/**
+ * Główny komponent layoutu zakładek.
+ * Definiuje strukturę i wygląd paska zakładek oraz nagłówka.
+ * @returns {JSX.Element} - Zwraca komponent zakładek.
+ */
 export default function TabLayout() {
+  // Inicjalizuje hook do nawigacji
   const router = useRouter();
+  // Pobiera token z kontekstu autentykacji
   const { token } = useAuth();
+  // Stan przechowujący liczbę nieprzeczytanych powiadomień
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Funkcja do pobierania liczby nieprzeczytanych powiadomień
   const fetchUnreadCount = useCallback(async () => {
     if (!token) return;
     try {
@@ -53,18 +70,21 @@ export default function TabLayout() {
     }
   }, [token]);
 
+  // Efekt do okresowego odświeżania liczby powiadomień
   useEffect(() => {
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000); // Refresh every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000); // Odświeża co 30 sekund
     return () => clearInterval(interval);
   }, [fetchUnreadCount]);
 
+  // Efekt do odświeżania liczby powiadomień przy powrocie na ekran
   useFocusEffect(
     useCallback(() => {
       fetchUnreadCount();
     }, [fetchUnreadCount])
   );
 
+  // Renderuje komponent zakładek
   return (
     <Tabs
       screenOptions={{

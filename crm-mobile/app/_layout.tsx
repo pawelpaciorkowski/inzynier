@@ -10,6 +10,10 @@ export {
   ErrorBoundary,
 } from 'expo-router';
 
+/**
+ * Główny komponent layoutu, który zarządza nawigacją i autentykacją.
+ * @returns {JSX.Element} - Zwraca komponent nawigacyjny w zależności od stanu autentykacji.
+ */
 const InitialLayout = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
@@ -47,6 +51,10 @@ const InitialLayout = () => {
   );
 };
 
+/**
+ * Główny komponent layoutu aplikacji, który ładuje czcionki i dostarcza kontekst autentykacji.
+ * @returns {JSX.Element | null} - Zwraca layout aplikacji lub null, jeśli czcionki nie są załadowane.
+ */
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),

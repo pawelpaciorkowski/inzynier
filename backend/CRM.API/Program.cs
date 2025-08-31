@@ -1,103 +1,160 @@
+// Import przestrzeni nazw dla kontekstu bazy danych CRM
 using CRM.Data;
+// Import serwisów logiki biznesowej aplikacji CRM
 using CRM.BusinessLogic.Services;
+// Import Entity Framework Core do obsługi bazy danych
 using Microsoft.EntityFrameworkCore;
+// Import mechanizmu uwierzytelniania JWT Bearer
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+// Import tokenów Microsoft Identity Model do walidacji JWT
 using Microsoft.IdentityModel.Tokens;
+// Import do obsługi kodowania tekstu (potrzebne dla kluczy JWT)
 using System.Text;
+// Import serwisów uwierzytelniania i autoryzacji
 using CRM.BusinessLogic.Auth;
+// Import serwisów administracyjnych
 using CRM.BusinessLogic.Services.Admin;
+// Import dla konfiguracji OpenAPI/Swagger
 using Microsoft.OpenApi.Models; // Dodaj ten using
 
+// Tworzenie buildera aplikacji webowej z przekazanymi argumentami linii poleceń
 var builder = WebApplication.CreateBuilder(args);
 
-// --- Rejestracja serwisów ---
+// --- Rejestracja serwisów w kontenerze DI (Dependency Injection) ---
 
-// 1. Baza Danych
+// 1. Konfiguracja bazy danych MySQL
+// Pobieranie connection string z pliku konfiguracyjnego appsettings.json
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// Rejestracja kontekstu bazy danych ApplicationDbContext w kontenerze DI
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    // Konfiguracja MySQL z automatycznym wykrywaniem wersji serwera
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
+           // Włączenie logowania wrażliwych danych (tylko dla development)
            .EnableSensitiveDataLogging());
 
-// 2. Kontrolery
+// 2. Konfiguracja kontrolerów MVC z ustawieniami JSON
+// Rejestracja serwisów kontrolerów w kontenerze DI
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
+    // Zachowanie referencji obiektów w JSON (obsługa cykli referencyjnych)
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+    // Konwersja nazw właściwości na camelCase dla zgodności z konwencjami JavaScript/TypeScript
     options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase; // Ta linia konwertuje na camelCase
 });
 
-// 3. Serwisy biznesowe (bez zmian)
+// 3. Rejestracja serwisów logiki biznesowej w kontenerze DI
+// Każdy serwis rejestrowany jako Scoped - jedna instancja na request HTTP
+// Serwis do zarządzania klientami (CRUD operacje na Customer)
 builder.Services.AddScoped<ICustomerService, CustomerService>();
+// Serwis uwierzytelniania i autoryzacji użytkowników
 builder.Services.AddScoped<IAuthService, AuthService>();
+// Serwis do zarządzania użytkownikami systemu
 builder.Services.AddScoped<IUserService, UserService>();
+// Serwis do generowania plików PDF faktur
 builder.Services.AddScoped<InvoicePdfService>();
+// Serwis do zarządzania rolami użytkowników
 builder.Services.AddScoped<IRoleService, RoleService>();
+// Serwis do logowania aktywności w systemie
 builder.Services.AddScoped<ILogService, LogService>();
+// Serwis do generowania dokumentów (Word, PDF)
 builder.Services.AddScoped<DocumentGenerationService>();
+// Serwis do eksportu danych do formatów CSV
 builder.Services.AddScoped<ICsvExportService, CsvExportService>();
 
-// Plik: backend/CRM.API/Program.cs
-
-// 4. CORS (Cross-Origin Resource Sharing) - POPRAWIONA WERSJA
+// 4. Konfiguracja CORS (Cross-Origin Resource Sharing)
+// Umożliwia aplikacjom frontend (React, React Native) komunikację z API
 builder.Services.AddCors(options =>
 {
+    // Dodanie domyślnej polityki CORS
     options.AddDefaultPolicy(policy =>
     {
-        // Dozwolone origins dla aplikacji webowej i mobilnej
+        // Lista dozwolonych origins (źródeł requestów)
+        // localhost:5173 - aplikacja React (Vite)
+        // localhost:8081 - aplikacja React Native (Expo)
+        // localhost:5000 - alternatywny port dla aplikacji web
         policy.WithOrigins("http://localhost:5173", "http://localhost:8081", "http://localhost:5000")
+              // Zezwolenie na wszystkie nagłówki HTTP
               .AllowAnyHeader()
+              // Zezwolenie na wszystkie metody HTTP (GET, POST, PUT, DELETE)
               .AllowAnyMethod()
+              // Zezwolenie na przesyłanie credentials (cookies, authorization headers)
               .AllowCredentials();
     });
 });
 
-// 5. Autentykacja JWT - BEZPIECZNIEJSZA WERSJA
-// Pobierz klucz z konfiguracji i upewnij się, że nie jest pusty
+// 5. Konfiguracja uwierzytelniania JWT (JSON Web Token)
+// Pobieranie klucza JWT z pliku konfiguracyjnego
 var jwtKey = builder.Configuration["Jwt:Key"];
+// Walidacja czy klucz JWT został poprawnie skonfigurowany
 if (string.IsNullOrEmpty(jwtKey))
 {
-    // Rzuć wyjątek, aby aplikacja nie uruchomiła się bez klucza.
-    // To natychmiast pokaże Ci błąd w logach zamiast enigmatycznego błędu 500.
+    // Rzucenie wyjątku w przypadku braku klucza - zapobiega uruchomieniu aplikacji
+    // bez prawidłowej konfiguracji bezpieczeństwa
     throw new ArgumentNullException(nameof(jwtKey), "Klucz 'Jwt:Key' nie może być pusty. Sprawdź appsettings.json.");
 }
 
+// Rejestracja serwisu uwierzytelniania z domyślnym schematem JWT Bearer
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme) // Ustawienie domyślnego schematu
+    // Konfiguracja obsługi tokenów JWT Bearer
     .AddJwtBearer(options =>
     {
+        // Parametry walidacji tokenów JWT
         options.TokenValidationParameters = new TokenValidationParameters
         {
+            // Walidacja wydawcy tokenu (issuer)
             ValidateIssuer = true,
+            // Walidacja odbiorcy tokenu (audience)
             ValidateAudience = true,
+            // Walidacja czasu ważności tokenu
             ValidateLifetime = true,
+            // Walidacja klucza podpisu cyfrowego
             ValidateIssuerSigningKey = true,
+            // Oczekiwany wydawca tokenu z konfiguracji
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            // Oczekiwany odbiorca tokenu z konfiguracji
             ValidAudience = builder.Configuration["Jwt:Audience"],
+            // Klucz symetryczny do weryfikacji podpisu tokenu
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
     });
+// Dodanie serwisu autoryzacji (sprawdzania uprawnień)
 builder.Services.AddAuthorization();
 
 
-// 6. Swagger / OpenAPI (bez większych zmian, kosmetyka)
+// 6. Konfiguracja dokumentacji API - Swagger/OpenAPI
+// Eksploracja endpointów API do generowania dokumentacji
 builder.Services.AddEndpointsApiExplorer();
+// Konfiguracja generatora dokumentacji Swagger
 builder.Services.AddSwaggerGen(c =>
 {
+    // Definicja dokumentu OpenAPI z podstawowymi informacjami
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "CRM.API", Version = "v1" });
+    // Definicja schematu bezpieczeństwa Bearer JWT dla Swagger UI
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
+        // Nazwa nagłówka HTTP zawierającego token
         Name = "Authorization",
+        // Typ schematu bezpieczeństwa - HTTP
         Type = SecuritySchemeType.Http,
+        // Schemat uwierzytelniania - Bearer
         Scheme = "bearer",
+        // Format tokenu - JWT
         BearerFormat = "JWT",
+        // Lokalizacja tokenu - nagłówek HTTP
         In = ParameterLocation.Header,
+        // Opis dla użytkowników Swagger UI
         Description = "Wprowadź token JWT z prefiksem 'Bearer '.",
     });
+    // Wymaganie bezpieczeństwa dla wszystkich endpointów API
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
+            // Referencja do zdefiniowanego schematu Bearer
             new OpenApiSecurityScheme
             {
                 Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
             },
+            // Pusta tablica scope'ów (wszystkie uprawnienia)
             new string[] {}
         }
     });
@@ -106,41 +163,62 @@ builder.Services.AddSwaggerGen(c =>
 
 // --- Budowanie aplikacji i konfiguracja pipeline'u HTTP ---
 
+// Tworzenie instancji aplikacji z skonfigurowanymi serwisami
 var app = builder.Build();
 
+// Włączenie generowania dokumentacji Swagger JSON
 app.UseSwagger();
+// Włączenie interfejsu użytkownika Swagger UI
 app.UseSwaggerUI();
 
+// Konfiguracja specyficzna dla środowiska deweloperskiego
 if (app.Environment.IsDevelopment())
 {
+    // Wyświetlanie szczegółowych informacji o błędach w trybie deweloperskim
     app.UseDeveloperExceptionPage(); // Dodaj, aby widzieć szczegółowe błędy w trybie deweloperskim
 }
 
+// Przekierowanie HTTP na HTTPS dla bezpieczeństwa
 app.UseHttpsRedirection();
+// Włączenie routingu - musi być przed CORS, Authentication i Authorization
 app.UseRouting(); // Ważne, aby było przed UseCors, UseAuthentication i UseAuthorization
+// Stosowanie polityki CORS zdefiniowanej wcześniej
 app.UseCors();
+// Włączenie middleware uwierzytelniania (weryfikacja tokenów JWT)
 app.UseAuthentication();
+// Włączenie middleware autoryzacji (sprawdzanie uprawnień)
 app.UseAuthorization();
+// Mapowanie kontrolerów do odpowiadających im tras URL
 app.MapControllers();
 
-// Seedowanie danych
+// Inicjalizacja i seedowanie danych początkowych w bazie danych
+// Utworzenie scope'a dla dostępu do serwisów (wzorzec Scoped Service)
 using (var scope = app.Services.CreateScope())
 {
+    // Pobranie provider'a serwisów z utworzonego scope'a
     var services = scope.ServiceProvider;
     try
     {
+        // Pobranie kontekstu bazy danych z kontenera DI
         var context = services.GetRequiredService<ApplicationDbContext>();
+        // Zastosowanie wszystkich oczekujących migracji bazy danych
         context.Database.Migrate(); // Upewnij się, że migracje są zastosowane
 
-        // Seedowanie ról
+        // Seedowanie ról użytkowników - tylko jeśli tabela jest pusta
         if (!context.Roles.Any())
         {
+            // Dodanie podstawowych ról w systemie CRM
             context.Roles.AddRange(
+                // Rola administratora z pełnymi uprawnieniami
                 new CRM.Data.Models.Role { Name = "Admin", Description = "Administrator systemu", Users = new List<CRM.Data.Models.User>() },
+                // Rola standardowego użytkownika z ograniczonymi uprawnieniami
                 new CRM.Data.Models.Role { Name = "User", Description = "Standardowy użytkownik", Users = new List<CRM.Data.Models.User>() },
+                // Rola menedżera z uprawnieniami do zarządzania zespołem
                 new CRM.Data.Models.Role { Name = "Manager", Description = "Menedżer", Users = new List<CRM.Data.Models.User>() },
+                // Rola sprzedawcy z dostępem do funkcji sprzedażowych
                 new CRM.Data.Models.Role { Name = "Sprzedawca", Description = "Sprzedawca", Users = new List<CRM.Data.Models.User>() }
             );
+            // Zapisanie zmian w bazie danych
             context.SaveChanges();
         }
 
@@ -583,13 +661,19 @@ using (var scope = app.Services.CreateScope())
             context.SaveChanges();
         }
     }
+    // Obsługa błędów podczas seedowania danych
     catch (Exception ex)
     {
+        // Pobranie serwisu loggera z kontenera DI
         var logger = services.GetRequiredService<ILogger<Program>>();
+        // Logowanie błędu seedowania z pełnym stack trace
         logger.LogError(ex, "An error occurred while seeding the database.");
     }
 }
 
+// Konfiguracja adresu URL, na którym aplikacja będzie nasłuchiwać
+// 0.0.0.0:5000 oznacza nasłuchiwanie na wszystkich interfejsach sieciowych na porcie 5000
 app.Urls.Add("http://0.0.0.0:5000");
 
+// Uruchomienie aplikacji ASP.NET Core - blokujące wywołanie
 app.Run();

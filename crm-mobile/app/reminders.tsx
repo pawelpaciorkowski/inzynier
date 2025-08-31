@@ -6,25 +6,42 @@ import { pl } from 'date-fns/locale';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useAuth } from '../context/AuthContext';
 
+// Definiuje strukturę obiektu przypomnienia
 interface Reminder {
-    id: number;
-    note: string;
-    userId: number;
-    remindAt: string;
+    id: number; // Unikalny identyfikator przypomnienia
+    note: string; // Treść przypomnienia
+    userId: number; // ID użytkownika, do którego należy przypomnienie
+    remindAt: string; // Data i czas przypomnienia
 }
 
+/**
+ * Komponent strony z przypomnieniami.
+ * Wyświetla listę przypomnień, pozwala na ich dodawanie i usuwanie.
+ * @returns {JSX.Element} - Zwraca widok strony z przypomnieniami.
+ */
 export default function RemindersPage() {
+    // Stan przechowujący listę przypomnień
     const [reminders, setReminders] = useState<Reminder[]>([]);
+    // Stan wskazujący, czy trwa ładowanie przypomnień
     const [loading, setLoading] = useState(true);
+    // Stan przechowujący ewentualny błąd
     const [error, setError] = useState<string | null>(null);
+    // Stan kontrolujący widoczność modala do dodawania przypomnień
     const [modalVisible, setModalVisible] = useState(false);
+    // Stan przechowujący treść nowego przypomnienia
     const [newNote, setNewNote] = useState('');
+    // Stan przechowujący wybraną datę dla nowego przypomnienia
     const [selectedDate, setSelectedDate] = useState(new Date());
+    // Stan przechowujący wprowadzoną datę w formacie tekstowym
     const [dateInput, setDateInput] = useState('');
+    // Stan przechowujący wprowadzony czas w formacie tekstowym
     const [timeInput, setTimeInput] = useState('');
+    // Stan wskazujący, czy trwa zapisywanie nowego przypomnienia
     const [saving, setSaving] = useState(false);
+    // Pobranie tokena z kontekstu autentykacji
     const { token } = useAuth();
 
+    // Funkcja do pobierania przypomnień z API
     const fetchReminders = useCallback(async () => {
         if (!token) return;
 
@@ -44,10 +61,12 @@ export default function RemindersPage() {
         }
     }, [token]);
 
+    // Efekt uruchamiający pobieranie przypomnień po zamontowaniu komponentu
     useEffect(() => {
         fetchReminders();
     }, [fetchReminders]);
 
+    // Funkcja obsługująca dodawanie nowego przypomnienia
     const handleAddReminder = async () => {
         if (!newNote.trim()) {
             Alert.alert('Błąd', 'Wpisz treść przypomnienia');
@@ -106,6 +125,7 @@ export default function RemindersPage() {
         }
     };
 
+    // Funkcja obsługująca usuwanie przypomnienia
     const handleDeleteReminder = (id: number, note: string) => {
         Alert.alert(
             'Potwierdź usunięcie',
@@ -144,6 +164,7 @@ export default function RemindersPage() {
         }
     }, [modalVisible]);
 
+    // Widok ładowania
     if (loading) {
         return (
             <View style={styles.centered}>
@@ -153,6 +174,7 @@ export default function RemindersPage() {
         );
     }
 
+    // Widok błędu
     if (error) {
         return (
             <View style={styles.centered}>
@@ -162,6 +184,7 @@ export default function RemindersPage() {
         );
     }
 
+    // Główny widok komponentu
     return (
         <View style={styles.container}>
             <View style={styles.header}>
@@ -174,6 +197,7 @@ export default function RemindersPage() {
                 </Pressable>
             </View>
 
+            {/* Widok pustej listy przypomnień */}
             {reminders.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <FontAwesome name="clock-o" size={64} color="#6b7280" />
@@ -203,6 +227,7 @@ export default function RemindersPage() {
                 />
             )}
 
+            {/* Modal do dodawania nowego przypomnienia */}
             <Modal
                 animationType="slide"
                 transparent={true}
@@ -276,6 +301,7 @@ export default function RemindersPage() {
     );
 }
 
+// Definicje stylów dla komponentu
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -444,4 +470,4 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         textAlign: 'center',
     },
-}); 
+});

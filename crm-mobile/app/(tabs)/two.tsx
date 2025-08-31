@@ -3,24 +3,37 @@ import { View, Text, StyleSheet, Button, ActivityIndicator, TextInput, Alert, Sc
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 
+// Definicja interfejsu dla profilu użytkownika.
 interface UserProfile {
-    id: number;
-    username: string;
-    email: string;
-    roleName: string;
+    id: number; // Unikalny identyfikator użytkownika.
+    username: string; // Nazwa użytkownika.
+    email: string; // Adres email użytkownika.
+    roleName: string; // Nazwa roli przypisanej do użytkownika.
 }
 
+/**
+ * Komponent ekranu profilu użytkownika (druga zakładka).
+ * Wyświetla dane profilu, umożliwia zmianę hasła i wylogowanie.
+ * @returns {JSX.Element} - Zwraca widok profilu użytkownika.
+ */
 export default function TabTwoScreen() {
+    // Pobranie funkcji wylogowania i tokena z kontekstu autentykacji.
     const { logout, token } = useAuth();
+    // Stan przechowujący dane profilu użytkownika.
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+    // Stan wskazujący, czy trwa ładowanie danych.
     const [loading, setLoading] = useState(true);
+    // Stan przechowujący ewentualny błąd.
     const [error, setError] = useState<string | null>(null);
 
+    // Stany dla formularza zmiany hasła.
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmNewPassword, setConfirmNewPassword] = useState('');
+    // Stan wskazujący, czy trwa proces zmiany hasła.
     const [changingPassword, setChangingPassword] = useState(false);
 
+    // Efekt do pobierania danych profilu użytkownika po zamontowaniu komponentu.
     useEffect(() => {
         const fetchUserProfile = async () => {
             if (!token) {
@@ -41,7 +54,9 @@ export default function TabTwoScreen() {
         fetchUserProfile();
     }, [token]);
 
+    // Funkcja do obsługi zmiany hasła.
     const handleChangePassword = async () => {
+        // Walidacja pól formularza.
         if (!currentPassword || !newPassword || !confirmNewPassword) {
             Alert.alert("Błąd", "Wszystkie pola hasła są wymagane.");
             return;
@@ -57,6 +72,7 @@ export default function TabTwoScreen() {
 
         setChangingPassword(true);
         try {
+            // Wysłanie zapytania PUT do API w celu zmiany hasła.
             const response = await axios.put('/api/Profile/change-password', {
                 currentPassword,
                 newPassword,
@@ -67,6 +83,7 @@ export default function TabTwoScreen() {
             }
 
             Alert.alert("Sukces", "Hasło zostało pomyślnie zmienione.");
+            // Wyczyszczenie pól formularza po pomyślnej zmianie.
             setCurrentPassword('');
             setNewPassword('');
             setConfirmNewPassword('');
@@ -77,6 +94,7 @@ export default function TabTwoScreen() {
         }
     };
 
+    // Widok ładowania.
     if (loading) {
         return (
             <View style={styles.centered}>
@@ -85,6 +103,7 @@ export default function TabTwoScreen() {
         );
     }
 
+    // Widok błędu.
     if (error) {
         return (
             <View style={styles.centered}>
@@ -93,8 +112,10 @@ export default function TabTwoScreen() {
         );
     }
 
+    // Główny widok komponentu.
     return (
         <ScrollView style={styles.container}>
+            {/* Karta z danymi profilu */}
             <View style={styles.card}>
                 <Text style={styles.cardTitle}>Dane Profilu</Text>
                 <Text style={styles.infoText}>Nazwa użytkownika: {userProfile?.username}</Text>
@@ -102,6 +123,7 @@ export default function TabTwoScreen() {
                 <Text style={styles.infoText}>Rola: {userProfile?.roleName}</Text>
             </View>
 
+            {/* Karta z formularzem zmiany hasła */}
             <View style={styles.card}>
                 <Text style={styles.cardTitle}>Zmień Hasło</Text>
                 <TextInput
@@ -136,6 +158,7 @@ export default function TabTwoScreen() {
                 />
             </View>
 
+            {/* Kontener z przyciskiem wylogowania */}
             <View style={styles.logoutContainer}>
                 <Button title="Wyloguj" onPress={logout} color="#ef4444" />
             </View>
@@ -143,6 +166,7 @@ export default function TabTwoScreen() {
     );
 }
 
+// Definicje stylów dla komponentu.
 const styles = StyleSheet.create({
     container: {
         flex: 1,

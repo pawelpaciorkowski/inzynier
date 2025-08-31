@@ -61,10 +61,10 @@ namespace CRM.BusinessLogic.Auth // Przestrzeń nazw dla funkcjonalności autory
         /// <returns>Obiekt użytkownika jeśli uwierzytelnienie się powiodło, null w przeciwnym przypadku</returns>
         public async Task<User?> AuthenticateAsync(string username, string password) // Metoda asynchroniczna zwracająca użytkownika lub null
         {
-            // Wyszukuje użytkownika w bazie danych po nazwie użytkownika wraz z jego rolą
+            // Wyszukuje użytkownika w bazie danych po nazwie użytkownika (ignorując wielkość liter) wraz z jego rolą
             var user = await _context.Users
                 .Include(u => u.Role) // Dołącza dane roli użytkownika
-                .FirstOrDefaultAsync(u => u.Username == username); // Wyszukuje użytkownika po nazwie użytkownika
+                .FirstOrDefaultAsync(u => u.Username.ToLower() == username.ToLower()); // Wyszukuje użytkownika po nazwie użytkownika, ignorując wielkość liter
 
             if (user == null) // Jeśli użytkownik nie został znaleziony
             {

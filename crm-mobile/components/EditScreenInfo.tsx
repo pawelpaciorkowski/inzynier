@@ -7,6 +7,12 @@ import { Text, View } from './Themed';
 
 import Colors from '@/constants/Colors';
 
+/**
+ * Komponent wyświetlający informacje pomocnicze na ekranie.
+ * Zawiera ścieżkę do pliku ekranu oraz link do dokumentacji Expo.
+ * @param {{ path: string }} props - Właściwości komponentu, w tym ścieżka do pliku.
+ * @returns {JSX.Element} - Zwraca widok z informacjami pomocniczymi.
+ */
 export default function EditScreenInfo({ path }: { path: string }) {
   return (
     <View>
@@ -15,7 +21,7 @@ export default function EditScreenInfo({ path }: { path: string }) {
           style={styles.getStartedText}
           lightColor="rgba(0,0,0,0.8)"
           darkColor="rgba(255,255,255,0.8)">
-          Open up the code for this screen:
+          Otwórz kod dla tego ekranu:
         </Text>
 
         <View
@@ -29,7 +35,7 @@ export default function EditScreenInfo({ path }: { path: string }) {
           style={styles.getStartedText}
           lightColor="rgba(0,0,0,0.8)"
           darkColor="rgba(255,255,255,0.8)">
-          Change any of the text, save the file, and your app will automatically update.
+          Zmień dowolny tekst, zapisz plik, a aplikacja automatycznie się zaktualizuje.
         </Text>
       </View>
 
@@ -38,7 +44,7 @@ export default function EditScreenInfo({ path }: { path: string }) {
           style={styles.helpLink}
           href="https://docs.expo.io/get-started/create-a-new-app/#opening-the-app-on-your-phonetablet">
           <Text style={styles.helpLinkText} lightColor={Colors.light.tint}>
-            Tap here if your app doesn't automatically update after making changes
+            Kliknij tutaj, jeśli aplikacja nie aktualizuje się automatycznie po wprowadzeniu zmian.
           </Text>
         </ExternalLink>
       </View>
@@ -46,6 +52,7 @@ export default function EditScreenInfo({ path }: { path: string }) {
   );
 }
 
+// Definicje stylów dla komponentu.
 const styles = StyleSheet.create({
   getStartedContainer: {
     alignItems: 'center',

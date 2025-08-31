@@ -3,6 +3,10 @@ import { StyleSheet } from 'react-native';
 
 import { Text, View } from '@/components/Themed';
 
+/**
+ * Komponent ekranu "Nie znaleziono", który jest wyświetlany, gdy użytkownik próbuje uzyskać dostęp do nieistniejącej ścieżki.
+ * @returns {JSX.Element} - Zwraca ekran z informacją o braku strony i linkiem do ekranu głównego.
+ */
 export default function NotFoundScreen() {
   return (
     <>

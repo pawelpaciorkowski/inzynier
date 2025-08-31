@@ -5,42 +5,65 @@ import axios from 'axios';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 
+// Definiuje strukturę obiektu klienta
 interface Customer { id: number; name: string; }
 
+// Definiuje strukturę obiektu DTO (Data Transfer Object) do aktualizacji zadania
 interface UpdateTaskDto {
-    title: string;
-    description?: string;
-    dueDate?: string;
-    completed: boolean;
-    customerId: number;
+    title: string; // Tytuł zadania
+    description?: string; // Opis zadania (opcjonalny)
+    dueDate?: string; // Termin wykonania (opcjonalny)
+    completed: boolean; // Status ukończenia zadania
+    customerId: number; // ID klienta, do którego przypisane jest zadanie
 }
 
+/**
+ * Komponent ekranu edycji istniejącego zadania.
+ * Umożliwia modyfikację danych zadania i zapisanie zmian.
+ * @returns {JSX.Element} - Zwraca formularz do edycji zadania.
+ */
 export default function EditTaskScreen() {
+    // Pobiera token uwierzytelniający z kontekstu
     const { token } = useAuth();
+    // Inicjalizuje hook do nawigacji
     const router = useRouter();
+    // Pobiera parametry lokalne, w tym ID zadania
     const { taskId } = useLocalSearchParams<{ taskId: string }>();
 
+    // Stan przechowujący tytuł zadania
     const [title, setTitle] = useState('');
+    // Stan przechowujący opis zadania
     const [description, setDescription] = useState('');
+    // Stan przechowujący termin wykonania zadania
     const [dueDate, setDueDate] = useState('');
+    // Stan przechowujący status ukończenia zadania
     const [completed, setCompleted] = useState(false);
+    // Stan przechowujący ID wybranego klienta
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
 
+    // Stan przechowujący listę wszystkich klientów
     const [customers, setCustomers] = useState<Customer[]>([]);
+    // Stan wskazujący, czy trwa ładowanie danych
     const [loading, setLoading] = useState(true);
 
+    // Efekt pobierający dane zadania i listę klientów po zamontowaniu komponentu
     useEffect(() => {
+        // Asynchroniczna funkcja do pobierania danych
         const fetchData = async () => {
+            // Przerywa, jeśli brakuje tokena lub ID zadania
             if (!token || !taskId) return;
             try {
+                // Równoległe zapytania o listę klientów i dane konkretnego zadania
                 const [customersRes, taskRes] = await Promise.all([
                     axios.get(`/api/Customers`),
                     axios.get(`/api/user/tasks/${taskId}`)
                 ]);
 
+                // Przetwarza odpowiedź z listą klientów
                 const customerData = customersRes.data;
                 setCustomers(customerData?.$values || (Array.isArray(customerData) ? customerData : []));
 
+                // Przetwarza odpowiedź z danymi zadania i ustawia stany formularza
                 const taskData = taskRes.data;
                 setTitle(taskData.title);
                 setDescription(taskData.description || '');
@@ -49,20 +72,26 @@ export default function EditTaskScreen() {
                 setDueDate(taskData.dueDate ? new Date(taskData.dueDate).toISOString().split('T')[0] : '');
 
             } catch (err) {
+                // Wyświetla alert w przypadku błędu
                 Alert.alert("Błąd", "Nie udało się pobrać danych zadania.");
             } finally {
+                // Kończy stan ładowania
                 setLoading(false);
             }
         };
+        // Wywołuje funkcję pobierającą dane
         fetchData();
-    }, [token, taskId]);
+    }, [token, taskId]); // Efekt uruchamia się ponownie, gdy zmieni się token lub ID zadania
 
+    // Funkcja obsługująca aktualizację zadania
     const handleUpdateTask = async () => {
+        // Walidacja - sprawdza, czy tytuł i klient są wybrane
         if (!title.trim() || !selectedCustomerId) {
             Alert.alert("Błąd walidacji", "Tytuł i klient są wymagane.");
             return;
         }
 
+        // Tworzy obiekt DTO z danymi do aktualizacji
         const updateDto: UpdateTaskDto = {
             title,
             description,
@@ -72,19 +101,25 @@ export default function EditTaskScreen() {
         };
 
         try {
+            // Wykonuje zapytanie PUT do API w celu aktualizacji zadania
             await axios.put(`/api/user/tasks/${taskId}`, updateDto);
 
+            // Wyświetla alert o sukcesie
             Alert.alert("Sukces", "Zadanie zostało zaktualizowane.");
+            // Wraca do poprzedniego ekranu
             router.back();
         } catch {
+            // Wyświetla alert w przypadku błędu
             Alert.alert("Błąd", "Nie udało się zaktualizować zadania.");
         }
     };
 
+    // Jeśli dane się ładują, wyświetla wskaźnik aktywności
     if (loading) {
         return <View style={styles.container}><ActivityIndicator size="large" color="#fff" /></View>
     }
 
+    // Renderuje formularz edycji zadania
     return (
         <View style={styles.container}>
             <Text style={styles.label}>Tytuł zadania</Text>
@@ -104,6 +139,7 @@ export default function EditTaskScreen() {
                     style={styles.picker}
                     dropdownIconColor={'#fff'}
                 >
+                    {/* Mapuje listę klientów do komponentów Picker.Item */}
                     {customers.map(c => <Picker.Item key={c.id} label={c.name} value={c.id} />)}
                 </Picker>
             </View>
@@ -113,6 +149,7 @@ export default function EditTaskScreen() {
     );
 }
 
+// Definicje stylów dla komponentu
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 20, backgroundColor: '#111827' },
     label: { fontSize: 16, color: '#d1d5db', marginBottom: 5 },

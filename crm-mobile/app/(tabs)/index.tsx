@@ -6,31 +6,45 @@ import { useFocusEffect, Link } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 
-// Definicje interfejsów pozostają bez zmian
+// Definicja interfejsu dla obiektu zadania.
 interface Task {
-  id: number;
-  title: string;
-  description?: string;
-  completed: boolean;
-  dueDate?: string;
+  id: number; // Unikalny identyfikator zadania.
+  title: string; // Tytuł zadania.
+  description?: string; // Opis zadania (opcjonalny).
+  completed: boolean; // Status ukończenia zadania.
+  dueDate?: string; // Termin wykonania zadania (opcjonalny).
 }
 
+// Definicja interfejsu dla obiektu DTO (Data Transfer Object) do aktualizacji zadania.
 interface UpdateTaskDto {
-  title: string;
-  description?: string;
-  dueDate?: string;
-  completed: boolean;
+  title: string; // Tytuł zadania.
+  description?: string; // Opis zadania (opcjonalny).
+  dueDate?: string; // Termin wykonania (opcjonalny).
+  completed: boolean; // Status ukończenia zadania.
 }
 
+/**
+ * Komponent ekranu głównego (zakładka "Moje Zadania").
+ * Wyświetla listę zadań użytkownika, umożliwia ich filtrowanie, oznaczanie jako ukończone i usuwanie.
+ * @returns {JSX.Element} - Zwraca widok z listą zadań.
+ */
 export default function TabOneScreen() {
+  // Pobranie tokena i funkcji wylogowania z kontekstu autentykacji.
   const { token, logout } = useAuth();
+  // Stan przechowujący pełną listę zadań.
   const [tasks, setTasks] = useState<Task[]>([]);
+  // Stan przechowujący przefiltrowaną listę zadań.
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
+  // Stan wskazujący, czy trwa ładowanie danych.
   const [loading, setLoading] = useState(true);
+  // Stan wskazujący, czy trwa proces odświeżania listy.
   const [isRefreshing, setIsRefreshing] = useState(false);
+  // Stan przechowujący ewentualny błąd.
   const [error, setError] = useState<string | null>(null);
+  // Stan przechowujący frazę wyszukiwania.
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Funkcja do pobierania zadań z API.
   const fetchTasks = useCallback(async () => {
     if (!token) return;
     setLoading(true);
@@ -39,7 +53,7 @@ export default function TabOneScreen() {
       const res = await axios.get('/api/user/tasks');
       const data = res.data;
 
-      // Logika do obsługi .$values pozostaje
+      // Logika do obsługi formatu danych z serwera .NET (pole .$values).
       let tasksData: Task[] = [];
       if (data && Array.isArray((data as any).$values)) {
         tasksData = (data as any).$values;
@@ -53,6 +67,7 @@ export default function TabOneScreen() {
       setFilteredTasks(tasksData);
     } catch (err) {
       setError('Nie udało się pobrać zadań.');
+      // Automatyczne wylogowanie w przypadku błędu autoryzacji (401).
       if (axios.isAxiosError(err) && err.response?.status === 401) logout();
     } finally {
       setLoading(false);
@@ -60,15 +75,17 @@ export default function TabOneScreen() {
     }
   }, [token, logout]);
 
+  // Hook `useFocusEffect` do ponownego pobierania zadań, gdy ekran jest aktywny.
   useFocusEffect(useCallback(() => { fetchTasks(); }, [fetchTasks]));
 
+  // Funkcja wywoływana przy odświeżaniu listy (pull-to-refresh).
   const onRefresh = useCallback(() => {
-    setSearchQuery(''); // Czyścimy wyszukiwanie przy odświeżaniu
+    setSearchQuery(''); // Czyści pole wyszukiwania.
     setIsRefreshing(true);
     fetchTasks();
   }, [fetchTasks]);
 
-  // Logika filtrowania zadań
+  // Efekt filtrujący zadania na podstawie frazy wyszukiwania.
   useEffect(() => {
     if (searchQuery.trim() === '') {
       setFilteredTasks(tasks);
@@ -82,14 +99,16 @@ export default function TabOneScreen() {
     }
   }, [searchQuery, tasks]);
 
+  // Funkcja do przełączania statusu ukończenia zadania.
   const toggleComplete = async (task: Task) => {
-    // Logika optymistycznego UI pozostaje
+    // Optymistyczna aktualizacja UI - natychmiastowa zmiana stanu wizualnego.
     setTasks(prevTasks =>
       prevTasks.map(t =>
         t.id === task.id ? { ...t, completed: !t.completed } : t
       )
     );
 
+    // Przygotowanie obiektu DTO do wysłania na serwer.
     const updateDto: UpdateTaskDto = {
       title: task.title,
       description: task.description,
@@ -98,10 +117,11 @@ export default function TabOneScreen() {
     };
 
     try {
+      // Wysłanie zapytania PUT do API.
       await axios.put(`/api/user/tasks/${task.id}`, updateDto);
     } catch (error) {
       alert('Nie udało się zaktualizować zadania.');
-      // Przywrócenie stanu w przypadku błędu
+      // Przywrócenie poprzedniego stanu w przypadku błędu.
       setTasks(prevTasks =>
         prevTasks.map(t =>
           t.id === task.id ? { ...t, completed: task.completed } : t
@@ -110,6 +130,7 @@ export default function TabOneScreen() {
     }
   };
 
+  // Funkcja do usuwania zadania.
   const handleDelete = (taskToDelete: Task) => {
     Alert.alert(
       "Potwierdź usunięcie",
@@ -122,6 +143,7 @@ export default function TabOneScreen() {
           onPress: async () => {
             try {
               await axios.delete(`/api/user/tasks/${taskToDelete.id}`);
+              // Usunięcie zadania z lokalnego stanu po pomyślnym usunięciu na serwerze.
               setTasks(prev => prev.filter(task => task.id !== taskToDelete.id));
             } catch (error) {
               Alert.alert("Błąd", "Nie udało się usunąć zadania.");
@@ -133,17 +155,20 @@ export default function TabOneScreen() {
     );
   };
 
-  // Reszta komponentu (renderowanie) pozostaje bez zmian
+  // Widok ładowania.
   if (loading && !isRefreshing) {
     return <View style={styles.center}><ActivityIndicator size="large" color="#fff" /></View>;
   }
 
+  // Widok błędu.
   if (error) {
     return <View style={styles.center}><Text style={styles.errorText}>{error}</Text></View>;
   }
 
+  // Główny widok komponentu.
   return (
     <>
+      {/* Konfiguracja nagłówka ekranu. */}
       <Stack.Screen
         options={{
           title: 'Zadania',
@@ -164,7 +189,7 @@ export default function TabOneScreen() {
         }}
       />
       <View style={styles.container}>
-        {/* Wyszukiwarka */}
+        {/* Kontener wyszukiwarki. */}
         <View style={styles.searchContainer}>
           <FontAwesome name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
           <TextInput
@@ -181,6 +206,7 @@ export default function TabOneScreen() {
           )}
         </View>
 
+        {/* Lista zadań. */}
         <FlatList
           data={filteredTasks}
           keyExtractor={(item) => item.id.toString()}
@@ -230,7 +256,7 @@ export default function TabOneScreen() {
   );
 }
 
-// Style pozostają bez zmian
+// Definicje stylów dla komponentu.
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#111827' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#111827' },
