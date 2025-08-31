@@ -1,5 +1,6 @@
 using CRM.Data;
 using CRM.Data.Models;
+using CRM.BusinessLogic.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,10 +17,12 @@ namespace CRM.API.Controllers
     public class RemindersController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly INotificationService _notificationService;
 
-        public RemindersController(ApplicationDbContext context)
+        public RemindersController(ApplicationDbContext context, INotificationService notificationService)
         {
             _context = context;
+            _notificationService = notificationService;
         }
 
         private int GetCurrentUserId()

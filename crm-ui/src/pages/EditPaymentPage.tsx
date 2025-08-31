@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useModal } from '../context/ModalContext';
+import InvoiceSelectModal from '../components/InvoiceSelectModal';
 
 // ✅ Krok 1: Zdefiniuj dokładne typy dla danych z API.
 // To eliminuje potrzebę używania 'any'.
@@ -12,7 +13,9 @@ interface Invoice {
     id: number;
     invoiceNumber: string;
     totalAmount: number;
-    isPaid: boolean; // Nawet jeśli nieużywane, warto mieć pełny typ
+    isPaid: boolean;
+    customerName?: string;
+    issuedAt?: string;
 }
 
 // Interfejs dla danych płatności, które otrzymujemy z API
@@ -38,6 +41,8 @@ export function EditPaymentPage() {
     const [amount, setAmount] = useState<string>('');
     const [paidAt, setPaidAt] = useState<string>('');
     const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+    const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null); // Stan do przechowywania wiadomości o błędzie
@@ -65,6 +70,10 @@ export function EditPaymentPage() {
                 // Sprawdzamy, czy odpowiedź jest "opakowana" w $values
                 const invoicesData = '$values' in invoicesRes.data ? invoicesRes.data.$values : invoicesRes.data;
                 setInvoices(invoicesData);
+                
+                // Ustaw wybraną fakturę
+                const currentInvoice = invoicesData.find((inv: Invoice) => inv.id === paymentData.invoiceId);
+                setSelectedInvoice(currentInvoice || null);
 
             } catch (err: unknown) { // Używamy 'unknown' zamiast 'any' dla lepszego bezpieczeństwa
                 let errorMessage = 'Nie udało się pobrać danych.';
@@ -126,20 +135,20 @@ export function EditPaymentPage() {
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
                         <label htmlFor="invoiceId" className="block text-gray-300 text-sm font-bold mb-2">Faktura:</label>
-                        <select
-                            id="invoiceId"
-                            className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
-                            value={invoiceId}
-                            onChange={(e) => setInvoiceId(e.target.value)}
-                            required
-                        >
-                            <option value="">-- Wybierz fakturę --</option>
-                            {invoices.map(invoice => (
-                                <option key={invoice.id} value={invoice.id}>
-                                    {invoice.invoiceNumber} (Kwota: {invoice.totalAmount.toFixed(2)} PLN)
-                                </option>
-                            ))}
-                        </select>
+                        <button type="button" onClick={() => setShowInvoiceModal(true)} className="w-full py-2 px-3 rounded bg-gray-700 text-white border border-gray-600 text-left">
+                            {selectedInvoice ? `Faktura: ${selectedInvoice.invoiceNumber} (Kwota: ${selectedInvoice.totalAmount.toFixed(2)} PLN)` : '-- Wybierz fakturę --'}
+                        </button>
+                        {showInvoiceModal && (
+                            <InvoiceSelectModal
+                                invoices={invoices}
+                                onSelect={invoice => {
+                                    setSelectedInvoice(invoice);
+                                    setInvoiceId(invoice.id.toString());
+                                    setShowInvoiceModal(false);
+                                }}
+                                onClose={() => setShowInvoiceModal(false)}
+                            />
+                        )}
                     </div>
                     <div className="mb-4">
                         <label htmlFor="amount" className="block text-gray-300 text-sm font-bold mb-2">Kwota:</label>

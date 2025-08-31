@@ -8,6 +8,8 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
+    port: 5175,
+    strictPort: false, // Pozwala na automatyczne znalezienie wolnego portu
     proxy: {
       '/api': {
         // Zmień port na ten, na którym FAKTYCZNIE działa Twój backend

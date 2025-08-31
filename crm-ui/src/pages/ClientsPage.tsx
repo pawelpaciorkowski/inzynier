@@ -141,7 +141,7 @@ export default function ClientsPage() {
                             {client.address && <p className="text-gray-400">Adres: {client.address}</p>}
                             {client.nip && <p className="text-gray-400">NIP: {client.nip}</p>}
                             {client.representative && <p className="text-gray-400">Przedstawiciel: {client.representative}</p>}
-                            {client.createdAt && <p className="text-gray-400 text-xs">Dodano: {new Date(client.createdAt).toLocaleString()}</p>}
+                            {client.createdAt && <p className="text-gray-400 text-xs">Dodano: {new Date(client.createdAt.endsWith('Z') ? client.createdAt : client.createdAt + 'Z').toLocaleString('pl-PL')}</p>}
 
                             {/* Wyświetlanie tagów */}
                             {client.customerTags && client.customerTags.length > 0 && (

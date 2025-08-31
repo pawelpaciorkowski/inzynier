@@ -38,7 +38,7 @@ export default function UserDashboard({ data }: UserDashboardProps) {
                                 key={index}
                                 className="py-3 flex justify-between text-sm text-gray-300 hover:bg-gray-700 rounded transition"
                             >
-                                <span>{new Date(entry.date).toLocaleString()}</span>
+                                <span>{new Date(entry.date.endsWith('Z') ? entry.date : entry.date + 'Z').toLocaleString('pl-PL')}</span>
                                 <span>{entry.ipAddress}</span>
                             </li>
                         ))

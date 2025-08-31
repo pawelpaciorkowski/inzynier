@@ -182,6 +182,12 @@ namespace CRM.API.Controllers
                 return NotFound();
             }
 
+            // Usuń powiązane powiadomienia
+            var relatedNotifications = await _context.Notifications
+                .Where(n => n.MessageId == id)
+                .ToListAsync();
+            
+            _context.Notifications.RemoveRange(relatedNotifications);
             _context.Messages.Remove(message);
             await _context.SaveChangesAsync();
 

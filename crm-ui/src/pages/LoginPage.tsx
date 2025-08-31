@@ -9,12 +9,10 @@ export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
-    const api = import.meta.env.VITE_API_URL;
-
     const handleLogin = async () => {
         setError("");
         try {
-            const res = await axios.post(`${api}/Auth/login`, {
+            const res = await axios.post('/api/Auth/login', {
                 username,
                 password,
             });

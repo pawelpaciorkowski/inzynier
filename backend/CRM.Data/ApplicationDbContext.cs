@@ -96,6 +96,15 @@ namespace CRM.Data
                       .OnDelete(DeleteBehavior.Restrict); // Zapobiega cyklicznemu usuwaniu
             });
 
+            // Konfiguracja relacji Customer - Note
+            modelBuilder.Entity<Customer>(entity =>
+            {
+                entity.HasMany(c => c.Notes)
+                      .WithOne(n => n.Customer)
+                      .HasForeignKey(n => n.CustomerId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
 
         }
 

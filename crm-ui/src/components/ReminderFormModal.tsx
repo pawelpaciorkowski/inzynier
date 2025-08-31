@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { useModal } from '../context/ModalContext';
+import { parseBackendDate } from '../utils/dateUtils';
 
 interface Reminder {
     id: number;
@@ -24,7 +25,9 @@ export const ReminderFormModal: React.FC<ReminderFormModalProps> = ({ currentRem
     useEffect(() => {
         if (currentReminder) {
             setNote(currentReminder.note);
-            setRemindAt(format(new Date(currentReminder.remindAt), "yyyy-MM-dd'T'HH:mm"));
+            // Konwertuj UTC z backendu na czas lokalny dla input datetime-local
+            const utcDate = parseBackendDate(currentReminder.remindAt);
+            setRemindAt(format(utcDate, "yyyy-MM-dd'T'HH:mm"));
         } else {
             setNote('');
             setRemindAt('');
@@ -38,10 +41,14 @@ export const ReminderFormModal: React.FC<ReminderFormModalProps> = ({ currentRem
             return;
         }
 
+        // Konwertuj czas lokalny na UTC
+        // remindAt z input datetime-local jest w strefie lokalnej
+        const localDateTime = new Date(remindAt + ':00');
+
         const reminderData = {
             id: currentReminder?.id ?? 0,
             note,
-            remindAt,
+            remindAt: localDateTime.toISOString().slice(0, 16), // Format: YYYY-MM-DDTHH:mm
         };
 
         try {

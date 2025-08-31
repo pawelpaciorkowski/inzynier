@@ -122,7 +122,7 @@ export function RemindersPage() {
                             <div>
                                 <p className="font-semibold text-lg">{reminder.note}</p>
                                 <p className="text-gray-400 text-sm">
-                                    {format(new Date(reminder.remindAt), "d MMMM yyyy, HH:mm", { locale: pl })}
+                                    {format(new Date(reminder.remindAt.endsWith('Z') ? reminder.remindAt : reminder.remindAt + 'Z'), "d MMMM yyyy, HH:mm", { locale: pl })}
                                 </p>
                             </div>
                             <div className="flex items-center space-x-3">

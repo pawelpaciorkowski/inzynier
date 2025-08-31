@@ -36,7 +36,6 @@ import { EditNotePage } from "./pages/EditNotePage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { LoginHistoryPage } from "./pages/LoginHistoryPage";
 import { LogsPage } from "./pages/LogsPage";
-import { SystemLogsPage } from "./pages/SystemLogsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AddInvoicePage } from "./pages/AddInvoicePage";
 import { AddPaymentPage } from "./pages/AddPaymentPage";
@@ -107,7 +106,6 @@ function App() {
             <Route path="/powiadomienia" element={<NotificationsPage />} />
             <Route path="/logowania" element={<LoginHistoryPage />} />
             <Route path="/logi" element={<LogsPage />} />
-            <Route path="/logi" element={<SystemLogsPage />} />
             <Route path="/ustawienia" element={<SettingsPage />} />
           </Route>
         </Routes>

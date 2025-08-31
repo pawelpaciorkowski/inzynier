@@ -2,13 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import ClientSelectModal from '../components/ClientSelectModal';
+import InvoiceSelectModal from '../components/InvoiceSelectModal';
 
 interface Invoice {
     id: number;
     invoiceNumber: string;
     totalAmount: number;
     isPaid: boolean;
+    customerName?: string;
+    issuedAt?: string;
 }
 
 export function AddPaymentPage() {
@@ -81,13 +83,10 @@ export function AddPaymentPage() {
                             {selectedInvoice ? `Faktura: ${selectedInvoice.invoiceNumber} (Kwota: ${selectedInvoice.totalAmount.toFixed(2)} PLN)` : '-- Wybierz fakturę --'}
                         </button>
                         {showInvoiceModal && (
-                            <ClientSelectModal
-                                clients={invoices.map(inv => ({
-                                    id: inv.id,
-                                    name: `${inv.invoiceNumber} (Kwota: ${inv.totalAmount.toFixed(2)} PLN)`
-                                }))}
+                            <InvoiceSelectModal
+                                invoices={invoices}
                                 onSelect={invoice => {
-                                    setSelectedInvoice(invoices.find(inv => inv.id === invoice.id) || null);
+                                    setSelectedInvoice(invoice);
                                     setInvoiceId(invoice.id);
                                     setShowInvoiceModal(false);
                                 }}

@@ -25,7 +25,10 @@ namespace CRM.API.Controllers
         {
             try
             {
-                var user = await _authService.AuthenticateAsync(request.Username, request.Password);
+                var userAgent = Request.Headers["User-Agent"].FirstOrDefault();
+                var ipAddress = GetClientIpAddress();
+
+                var user = await _authService.AuthenticateAsync(request.Username, request.Password, userAgent, ipAddress);
 
                 if (user == null)
                     return Unauthorized(new { message = "Nieprawidłowe dane logowania" });
@@ -40,6 +43,23 @@ namespace CRM.API.Controllers
                 Console.WriteLine($"[BŁĄD LOGOWANIA]: {ex.Message}");
                 return StatusCode(500, new { message = $"Wystąpił wewnętrzny błąd serwera: {ex.Message}" });
             }
+        }
+
+        private string GetClientIpAddress()
+        {
+            var forwardedHeader = Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(forwardedHeader))
+            {
+                return forwardedHeader.Split(',')[0].Trim();
+            }
+
+            var realIpHeader = Request.Headers["X-Real-IP"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(realIpHeader))
+            {
+                return realIpHeader;
+            }
+
+            return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "::1";
         }
 
 

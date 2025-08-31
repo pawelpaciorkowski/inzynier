@@ -93,8 +93,16 @@ namespace CRM.Data.Models
     {
         public int Id { get; set; }
         public int UserId { get; set; }
+        public virtual User User { get; set; } = null!;
         public DateTime LoggedInAt { get; set; }
         public string IpAddress { get; set; } = default!;
+        public string? UserAgent { get; set; }
+        public string? Browser { get; set; }
+        public string? OperatingSystem { get; set; }
+        public string? DeviceType { get; set; }
+        public bool IsSuccessful { get; set; } = true;
+        public string? FailureReason { get; set; }
+        public string? Location { get; set; }
     }
 
     public class Notification

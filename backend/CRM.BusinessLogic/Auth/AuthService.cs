@@ -26,7 +26,7 @@ namespace CRM.BusinessLogic.Auth
             _logService = logService;
         }
 
-        public async Task<User?> AuthenticateAsync(string username, string password)
+        public async Task<User?> AuthenticateAsync(string username, string password, string? userAgent = null, string? ipAddress = null)
         {
             var user = await _context.Users
                 .Include(u => u.Role)
@@ -34,6 +34,8 @@ namespace CRM.BusinessLogic.Auth
 
             if (user == null)
             {
+                // Logowanie nieudanej próby logowania
+                await LogFailedLoginAttempt(username, "Nieprawidłowa nazwa użytkownika", userAgent, ipAddress);
                 return null;
             }
 
@@ -41,19 +43,97 @@ namespace CRM.BusinessLogic.Auth
 
             if (!passwordMatch)
             {
+                // Logowanie nieudanej próby logowania
+                await LogFailedLoginAttempt(username, "Nieprawidłowe hasło", userAgent, ipAddress);
                 return null;
             }
 
+            // Pomyślne logowanie
             var loginHistory = new LoginHistory
             {
                 UserId = user.Id,
                 LoggedInAt = DateTime.UtcNow,
-                IpAddress = "::1"
+                IpAddress = ipAddress ?? "::1",
+                UserAgent = userAgent,
+                Browser = ParseBrowser(userAgent),
+                OperatingSystem = ParseOperatingSystem(userAgent),
+                DeviceType = ParseDeviceType(userAgent),
+                IsSuccessful = true,
+                Location = "Lokalne" // TODO: Implement IP geolocation
             };
+            
             _context.LoginHistories.Add(loginHistory);
             await _context.SaveChangesAsync();
 
             return user;
+        }
+
+        private async Task LogFailedLoginAttempt(string username, string reason, string? userAgent, string? ipAddress)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (user != null)
+            {
+                var failedLogin = new LoginHistory
+                {
+                    UserId = user.Id,
+                    LoggedInAt = DateTime.UtcNow,
+                    IpAddress = ipAddress ?? "::1",
+                    UserAgent = userAgent,
+                    Browser = ParseBrowser(userAgent),
+                    OperatingSystem = ParseOperatingSystem(userAgent),
+                    DeviceType = ParseDeviceType(userAgent),
+                    IsSuccessful = false,
+                    FailureReason = reason,
+                    Location = "Lokalne"
+                };
+                
+                _context.LoginHistories.Add(failedLogin);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        private string? ParseBrowser(string? userAgent)
+        {
+            if (string.IsNullOrEmpty(userAgent)) return null;
+            
+            userAgent = userAgent.ToLower();
+            
+            if (userAgent.Contains("chrome")) return "Chrome";
+            if (userAgent.Contains("firefox")) return "Firefox";
+            if (userAgent.Contains("safari")) return "Safari";
+            if (userAgent.Contains("edge")) return "Edge";
+            if (userAgent.Contains("opera")) return "Opera";
+            if (userAgent.Contains("ie")) return "Internet Explorer";
+            
+            return "Nieznana";
+        }
+
+        private string? ParseOperatingSystem(string? userAgent)
+        {
+            if (string.IsNullOrEmpty(userAgent)) return null;
+            
+            userAgent = userAgent.ToLower();
+            
+            if (userAgent.Contains("windows")) return "Windows";
+            if (userAgent.Contains("mac os")) return "macOS";
+            if (userAgent.Contains("linux")) return "Linux";
+            if (userAgent.Contains("android")) return "Android";
+            if (userAgent.Contains("ios")) return "iOS";
+            
+            return "Nieznany";
+        }
+
+        private string? ParseDeviceType(string? userAgent)
+        {
+            if (string.IsNullOrEmpty(userAgent)) return null;
+            
+            userAgent = userAgent.ToLower();
+            
+            if (userAgent.Contains("mobile")) return "Mobile";
+            if (userAgent.Contains("tablet")) return "Tablet";
+            if (userAgent.Contains("android") || userAgent.Contains("ios")) return "Mobile";
+            
+            return "Desktop";
         }
 
         public string GenerateJwtToken(User user)

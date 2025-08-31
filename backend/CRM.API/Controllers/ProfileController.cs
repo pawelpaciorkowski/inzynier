@@ -89,13 +89,23 @@ namespace CRM.API.Controllers
 
             var history = await _context.LoginHistories
                 .Where(h => h.UserId == userId)
+                .Include(h => h.User)
                 .OrderByDescending(h => h.LoggedInAt)
-                .Take(20) // Ograniczamy do 20 ostatnich wpisów
+                .Take(50) // Zwiększamy do 50 ostatnich wpisów
                 .Select(h => new
                 {
                     h.Id,
                     h.LoggedInAt,
-                    h.IpAddress
+                    h.IpAddress,
+                    h.UserAgent,
+                    h.Browser,
+                    h.OperatingSystem,
+                    h.DeviceType,
+                    h.IsSuccessful,
+                    h.FailureReason,
+                    h.Location,
+                    Username = h.User.Username,
+                    UserEmail = h.User.Email
                 })
                 .ToListAsync();
 
