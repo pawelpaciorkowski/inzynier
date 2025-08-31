@@ -471,10 +471,10 @@ namespace CRM.Data.Models
     }
 
     /// <summary>
-    /// Model reprezentujący historię logowań użytkowników
-    /// Służy do monitorowania dostępu do systemu i bezpieczeństwa kont
-    /// Pozwala na wykrywanie podejrzanych prób logowania i analiz użytkowania
-    /// Ważny element systemu bezpieczeństwa i raportowania aktywności
+    /// Model reprezentujący historię logowań użytkowników do systemu CRM
+    /// Służy do śledzenia sesji użytkowników, analizy bezpieczeństwa i audytu dostępu
+    /// Zawiera szczegółowe informacje o każdym logowaniu (udanym i nieudanym)
+    /// Pozwala na wykrywanie podejrzanych aktywności i monitorowanie wzorców dostępu
     /// </summary>
     public class LoginHistory
     {
@@ -493,7 +493,21 @@ namespace CRM.Data.Models
         /// Używany do grupowania sesji według użytkowników i analizy wzorców
         /// </summary>
         public int UserId { get; set; }
+        
+        /// <summary>
+        /// Właściwość nawigacyjna do użytkownika który się logował
+        /// Pozwala na łatwe pobieranie danych użytkownika bez dodatkowych zapytań
+        /// Wymagana relacja - każdy wpis historii musi być powiązany z użytkownikiem
+        /// Używana do wyświetlania nazwy użytkownika w raportach i interfejsie
+        /// </summary>
         public virtual User User { get; set; } = null!;
+        
+        /// <summary>
+        /// Data i czas logowania do systemu
+        /// Wymagane pole - znacznik czasowy rozpoczęcia sesji
+        /// Używany do analizy godzin pracy i wzorców aktywności użytkowników
+        /// Pozwala na wykrywanie logowań poza godzinami pracy
+        /// </summary>
         public DateTime LoggedInAt { get; set; }
         
         /// <summary>
@@ -503,12 +517,61 @@ namespace CRM.Data.Models
         /// Pozwala na geograficzną analizę dostępów i bezpieczeństwo kont
         /// </summary>
         public string IpAddress { get; set; } = default!;
+        
+        /// <summary>
+        /// Nagłówek User-Agent przeglądarki/urządzenia
+        /// Opcjonalne pole - zawiera informacje o przeglądarce i systemie operacyjnym
+        /// Używany do identyfikacji typu urządzenia i przeglądarki
+        /// Pomaga w wykrywaniu nieautoryzowanych dostępów z nieznanych urządzeń
+        /// </summary>
         public string? UserAgent { get; set; }
+        
+        /// <summary>
+        /// Nazwa przeglądarki internetowej
+        /// Opcjonalne pole - automatycznie parsowane z User-Agent
+        /// Przykłady: "Chrome", "Firefox", "Safari", "Edge"
+        /// Używane do analizy preferencji użytkowników i wsparcia technicznego
+        /// </summary>
         public string? Browser { get; set; }
+        
+        /// <summary>
+        /// System operacyjny urządzenia
+        /// Opcjonalne pole - automatycznie parsowane z User-Agent
+        /// Przykłady: "Windows", "macOS", "Linux", "Android", "iOS"
+        /// Używane do analizy platform użytkowników i optymalizacji interfejsu
+        /// </summary>
         public string? OperatingSystem { get; set; }
+        
+        /// <summary>
+        /// Typ urządzenia używanego do logowania
+        /// Opcjonalne pole - automatycznie parsowane z User-Agent
+        /// Przykłady: "Desktop", "Mobile", "Tablet"
+        /// Używane do analizy preferencji urządzeń i responsywności aplikacji
+        /// </summary>
         public string? DeviceType { get; set; }
+        
+        /// <summary>
+        /// Flaga określająca czy logowanie było udane
+        /// Domyślnie true - ustawiane na false dla nieudanych prób logowania
+        /// Używane do rozróżnienia udanych i nieudanych sesji
+        /// Pozwala na analizę wzorców nieudanych logowań i potencjalnych ataków
+        /// </summary>
         public bool IsSuccessful { get; set; } = true;
+        
+        /// <summary>
+        /// Powód nieudanego logowania (jeśli IsSuccessful = false)
+        /// Opcjonalne pole - opisuje dlaczego logowanie się nie powiodło
+        /// Przykłady: "Nieprawidłowe hasło", "Nieprawidłowa nazwa użytkownika"
+        /// Używane do diagnostyki problemów z logowaniem i bezpieczeństwa
+        /// </summary>
         public string? FailureReason { get; set; }
+        
+        /// <summary>
+        /// Lokalizacja geograficzna adresu IP
+        /// Opcjonalne pole - może być określane przez zewnętrzne API geolokalizacji
+        /// Przykłady: "Warszawa, Polska", "Nowy Jork, USA"
+        /// Używane do wykrywania logowań z nietypowych lokalizacji
+        /// </summary>
         public string? Location { get; set; }
     }
 

@@ -16,9 +16,10 @@ export default defineConfig({
   ],
   // Konfiguracja serwera deweloperskiego Vite
   server: {
-    port: 5175,
-    strictPort: false, // Pozwala na automatyczne znalezienie wolnego portu
+    port: 5175, // Port na którym będzie uruchomiony serwer deweloperski
+    strictPort: false, // Pozwala na automatyczne znalezienie wolnego portu jeśli 5175 jest zajęty
     proxy: {
+      // Konfiguracja proxy - przekierowanie zapytań do backendu
       // Wszystkie zapytania zaczynające się od '/api' będą proxowane
       '/api': {
         // Adres docelowy backendu - zmień port na właściwy dla Twojego API

@@ -1,17 +1,17 @@
-using CRM.BusinessLogic.Auth;
-using CRM.BusinessLogic.Auth.Requests;
-using CRM.BusinessLogic.Services;
-using CRM.Data.Models;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+using CRM.BusinessLogic.Auth; // Importuje funkcjonalności autoryzacji z warstwy biznesowej
+using CRM.BusinessLogic.Auth.Requests; // Importuje klasy żądań autoryzacji (LoginRequest, RegisterRequest, etc.)
+using CRM.BusinessLogic.Services; // Importuje serwisy biznesowe (ICustomerService)
+using CRM.Data.Models; // Importuje modele danych CRM (Customer, User, etc.)
+using Microsoft.AspNetCore.Authorization; // Importuje funkcjonalności autoryzacji ASP.NET Core
+using Microsoft.AspNetCore.Mvc; // Importuje podstawowe klasy kontrolerów MVC
 
-namespace CRM.API.Controllers
+namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API w systemie CRM
 {
     /// <summary>
     /// Kontroler autoryzacji i uwierzytelniania w systemie CRM
     /// Klasa obsługuje logowanie, rejestrację użytkowników oraz zarządzanie profilami użytkowników
     /// </summary>
-    [ApiController] // Oznacza klasę jako kontroler API
+    [ApiController] // Oznacza klasę jako kontroler API - automatycznie waliduje model i zwraca odpowiednie błędy
     [Route("api/[controller]")] // Definiuje ścieżkę routingu - [controller] zostanie zastąpione nazwą klasy (Auth)
     public class AuthController : ControllerBase // Dziedziczy po ControllerBase - podstawowa klasa dla kontrolerów API
     {
@@ -19,13 +19,13 @@ namespace CRM.API.Controllers
         /// Serwis autoryzacji i uwierzytelniania
         /// Zawiera logikę biznesową dla operacji logowania, rejestracji i zarządzania użytkownikami
         /// </summary>
-        private readonly IAuthService _authService;
+        private readonly IAuthService _authService; // Pole tylko do odczytu - nie można zmienić po inicjalizacji
 
         /// <summary>
         /// Serwis klientów
         /// Używany do pobierania danych klientów
         /// </summary>
-        private readonly ICustomerService _customerService;
+        private readonly ICustomerService _customerService; // Pole tylko do odczytu - nie można zmienić po inicjalizacji
 
         /// <summary>
         /// Konstruktor klasy AuthController
@@ -48,11 +48,14 @@ namespace CRM.API.Controllers
         [HttpPost("login")] // Oznacza metodę jako obsługującą żądania HTTP POST na ścieżce /login
         public async Task<IActionResult> Login([FromBody] LoginRequest request) // Metoda asynchroniczna zwracająca IActionResult
         {
-            try
+            try // Blok try-catch do obsługi błędów
             {
+                // Pobiera nagłówek User-Agent z żądania HTTP - informacje o przeglądarce/urządzeniu
                 var userAgent = Request.Headers["User-Agent"].FirstOrDefault();
+                // Pobiera rzeczywisty adres IP klienta (może być za proxy)
                 var ipAddress = GetClientIpAddress();
 
+                // Wywołuje serwis autoryzacji z danymi logowania, user agent i IP
                 var user = await _authService.AuthenticateAsync(request.Username, request.Password, userAgent, ipAddress);
 
                 // Sprawdza czy uwierzytelnienie się powiodło
@@ -63,34 +66,47 @@ namespace CRM.API.Controllers
                 var token = _authService.GenerateJwtToken(user);
                 return Ok(new { token }); // Zwraca status HTTP 200 OK z tokenem JWT
             }
-            catch (Exception ex)
+            catch (Exception ex) // Łapie wszystkie wyjątki
             {
                 // Obsługa błędów - loguje błąd i zwraca status 500
-                Console.WriteLine($"[BŁĄD LOGOWANIA]: {ex.Message}");
-                return StatusCode(500, new { message = $"Wystąpił wewnętrzny błąd serwera: {ex.Message}" });
+                Console.WriteLine($"[BŁĄD LOGOWANIA]: {ex.Message}"); // Wypisuje błąd do konsoli
+                return StatusCode(500, new { message = $"Wystąpił wewnętrzny błąd serwera: {ex.Message}" }); // Zwraca błąd 500
             }
         }
 
+        /// <summary>
+        /// Metoda pomocnicza - pobiera rzeczywisty adres IP klienta
+        /// Sprawdza różne nagłówki HTTP używane przez proxy/load balancery
+        /// </summary>
+        /// <returns>Adres IP klienta jako string</returns>
         private string GetClientIpAddress()
         {
+            // Sprawdza nagłówek X-Forwarded-For (używany przez proxy)
             var forwardedHeader = Request.Headers["X-Forwarded-For"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(forwardedHeader))
+            if (!string.IsNullOrEmpty(forwardedHeader)) // Jeśli nagłówek istnieje
             {
-                return forwardedHeader.Split(',')[0].Trim();
+                return forwardedHeader.Split(',')[0].Trim(); // Bierze pierwszy adres IP z listy
             }
 
+            // Sprawdza nagłówek X-Real-IP (używany przez nginx)
             var realIpHeader = Request.Headers["X-Real-IP"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(realIpHeader))
+            if (!string.IsNullOrEmpty(realIpHeader)) // Jeśli nagłówek istnieje
             {
-                return realIpHeader;
+                return realIpHeader; // Zwraca adres IP z nagłówka
             }
 
-            return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "::1";
+            // Jeśli nie ma specjalnych nagłówków, bierze adres IP z połączenia
+            return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "::1"; // Domyślnie localhost IPv6
         }
 
-        [Authorize(Roles = "Admin")]
-        [HttpGet("customers")]
-        public async Task<ActionResult<List<Customer>>> GetAll()
+        /// <summary>
+        /// Metoda HTTP GET - pobiera wszystkich klientów (dostęp tylko dla administratorów)
+        /// Endpoint: GET /api/auth/customers
+        /// </summary>
+        /// <returns>Lista wszystkich klientów w systemie</returns>
+        [Authorize(Roles = "Admin")] // Wymaga autoryzacji - dostęp tylko dla użytkowników z rolą Admin
+        [HttpGet("customers")] // Oznacza metodę jako obsługującą żądania HTTP GET na ścieżce /customers
+        public async Task<ActionResult<List<Customer>>> GetAll() // Metoda asynchroniczna zwracająca listę klientów
         {
             var customers = await _customerService.GetAllAsync(); // Pobiera wszystkich klientów z serwisu
             return Ok(customers); // Zwraca status HTTP 200 OK z listą klientów
@@ -107,10 +123,10 @@ namespace CRM.API.Controllers
         {
             // Próbuje zarejestrować nowego użytkownika używając serwisu autoryzacji
             var user = await _authService.RegisterAsync(request);
-            if (user == null)
-                return BadRequest(new { message = "Username already taken" }); // Zwraca status HTTP 400 Bad Request jeśli nazwa użytkownika jest zajęta
+            if (user == null) // Jeśli rejestracja się nie powiodła (np. nazwa użytkownika zajęta)
+                return BadRequest(new { message = "Username already taken" }); // Zwraca status HTTP 400 Bad Request
 
-            return Ok(new { message = "User registered successfully" }); // Zwraca status HTTP 200 OK z potwierdzeniem rejestracji
+            return Ok(new { message = "User registered successfully" }); // Zwraca status HTTP 200 OK z potwierdzeniem
         }
 
         /// <summary>
@@ -119,8 +135,8 @@ namespace CRM.API.Controllers
         /// </summary>
         public class LoginRequest
         {
-            public string Username { get; set; } = default!; // Nazwa użytkownika
-            public string Password { get; set; } = default!; // Hasło użytkownika
+            public string Username { get; set; } = default!; // Nazwa użytkownika - pole wymagane
+            public string Password { get; set; } = default!; // Hasło użytkownika - pole wymagane
         }
 
         /// <summary>
@@ -135,11 +151,11 @@ namespace CRM.API.Controllers
         {
             // Próbuje zaktualizować użytkownika używając serwisu autoryzacji
             var updatedUser = await _authService.UpdateUserAsync(id, request);
-            if (updatedUser == null)
+            if (updatedUser == null) // Jeśli użytkownik nie został znaleziony
             {
-                return NotFound(new { message = "User not found" }); // Zwraca status HTTP 404 Not Found jeśli użytkownik nie istnieje
+                return NotFound(new { message = "User not found" }); // Zwraca status HTTP 404 Not Found
             }
-            return Ok(new { message = "User updated successfully", user = updatedUser }); // Zwraca status HTTP 200 OK z potwierdzeniem aktualizacji
+            return Ok(new { message = "User updated successfully", user = updatedUser }); // Zwraca status HTTP 200 OK z potwierdzeniem
         }
 
         /// <summary>
@@ -153,9 +169,9 @@ namespace CRM.API.Controllers
         {
             // Pobiera użytkownika o podanym ID używając serwisu autoryzacji
             var user = await _authService.GetUserByIdAsync(id);
-            if (user == null)
+            if (user == null) // Jeśli użytkownik nie został znaleziony
             {
-                return NotFound(new { message = "User not found" }); // Zwraca status HTTP 404 Not Found jeśli użytkownik nie istnieje
+                return NotFound(new { message = "User not found" }); // Zwraca status HTTP 404 Not Found
             }
             return Ok(user); // Zwraca status HTTP 200 OK z danymi użytkownika
         }

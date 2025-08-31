@@ -1,36 +1,50 @@
+/* Importuje framework CSS Tailwind CSS - biblioteka utility-first CSS */
 @import "tailwindcss";
 
-/* stylizuj paski przewijania w WebKit */
+/* === STYLIZACJA PASKÓW PRZEWIJANIA W PRZEGLĄDARCE WEBKIT (Chrome, Safari, Edge) === */
+
+/* Główny pasek przewijania - ustawia szerokość i wysokość */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 8px; /* Szerokość pionowego paska przewijania */
+  height: 8px; /* Wysokość poziomego paska przewijania */
 }
 
+/* Tło paska przewijania - obszar za "kciukiem" */
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: transparent; /* Przezroczyste tło */
 }
 
+/* "Kciuk" paska przewijania - część którą użytkownik przeciąga */
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.2); /* Półprzezroczyste białe tło */
+  border-radius: 8px; /* Zaokrąglone rogi */
 }
 
+/* Efekt hover na "kciuku" paska przewijania */
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.4);
+  background-color: rgba(
+    255,
+    255,
+    255,
+    0.4
+  ); /* Jaśniejsze tło przy najechaniu myszką */
 }
 
-/* Animation for toast notifications */
+/* === ANIMACJE DLA POWIADOMIEŃ TOAST === */
+
+/* Definicja animacji fadeIn - płynne pojawianie się elementu */
 @keyframes fadeIn {
   from {
-    opacity: 0;
-    transform: translateY(-10px);
+    opacity: 0; /* Początkowo niewidoczny */
+    transform: translateY(-10px); /* Przesunięty 10px w górę */
   }
   to {
-    opacity: 1;
-    transform: translateY(0);
+    opacity: 1; /* Końcowo w pełni widoczny */
+    transform: translateY(0); /* Na swojej pozycji */
   }
 }
 
+/* Klasa CSS do zastosowania animacji fadeIn */
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.3s ease-out; /* Animacja trwa 0.3s z funkcją ease-out */
 }
