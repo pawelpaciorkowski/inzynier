@@ -493,13 +493,7 @@ namespace CRM.Data.Models
         /// Używany do grupowania sesji według użytkowników i analizy wzorców
         /// </summary>
         public int UserId { get; set; }
-        
-        /// <summary>
-        /// Data i czas zalogowania się do systemu
-        /// Wymagane pole - znacznik czasowy rozpoczęcia sesji
-        /// Używany do analizy godzin pracy i wzorców aktywności użytkowników
-        /// Pozwala na wykrywanie logowań poza godzinami pracy
-        /// </summary>
+        public virtual User User { get; set; } = null!;
         public DateTime LoggedInAt { get; set; }
         
         /// <summary>
@@ -509,6 +503,13 @@ namespace CRM.Data.Models
         /// Pozwala na geograficzną analizę dostępów i bezpieczeństwo kont
         /// </summary>
         public string IpAddress { get; set; } = default!;
+        public string? UserAgent { get; set; }
+        public string? Browser { get; set; }
+        public string? OperatingSystem { get; set; }
+        public string? DeviceType { get; set; }
+        public bool IsSuccessful { get; set; } = true;
+        public string? FailureReason { get; set; }
+        public string? Location { get; set; }
     }
 
     /// <summary>
@@ -701,7 +702,7 @@ namespace CRM.Data.Models
         /// <summary>
         /// Unikalny identyfikator przypomnienia
         /// Klucz główny tabeli - automatycznie generowany przez bazę danych
-        /// Używany do zarządzania przypomnienami i ich statusem
+        /// Używany do zarządzania przypomnieniami i ich statusem
         /// Podstawa dla operacji edycji, usuwania i wyzwalania alertów
         /// </summary>
         public int Id { get; set; }

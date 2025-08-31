@@ -60,6 +60,8 @@ builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddScoped<DocumentGenerationService>();
 // Serwis do eksportu danych do formatów CSV
 builder.Services.AddScoped<ICsvExportService, CsvExportService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddHostedService<NotificationBackgroundService>();
 
 // 4. Konfiguracja CORS (Cross-Origin Resource Sharing)
 // Umożliwia aplikacjom frontend (React, React Native) komunikację z API
@@ -68,11 +70,8 @@ builder.Services.AddCors(options =>
     // Dodanie domyślnej polityki CORS
     options.AddDefaultPolicy(policy =>
     {
-        // Lista dozwolonych origins (źródeł requestów)
-        // localhost:5173 - aplikacja React (Vite)
-        // localhost:8081 - aplikacja React Native (Expo)
-        // localhost:5000 - alternatywny port dla aplikacji web
-        policy.WithOrigins("http://localhost:5173", "http://localhost:8081", "http://localhost:5000")
+        // Dozwolone origins dla aplikacji webowej i mobilnej
+        policy.WithOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:5175", "http://localhost:8081", "http://localhost:5000")
               // Zezwolenie na wszystkie nagłówki HTTP
               .AllowAnyHeader()
               // Zezwolenie na wszystkie metody HTTP (GET, POST, PUT, DELETE)
@@ -657,18 +656,83 @@ using (var scope = app.Services.CreateScope())
                 }
             };
 
-            context.Payments.AddRange(payments);
-            context.SaveChanges();
-        }
+                    context.Payments.AddRange(payments);
+        context.SaveChanges();
     }
-    // Obsługa błędów podczas seedowania danych
-    catch (Exception ex)
+
+    // Seedowanie logów systemowych
+    if (!context.SystemLogs.Any())
     {
-        // Pobranie serwisu loggera z kontenera DI
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        // Logowanie błędu seedowania z pełnym stack trace
-        logger.LogError(ex, "An error occurred while seeding the database.");
+        var users = context.Users.ToList();
+        var firstUser = users.FirstOrDefault();
+
+        var systemLogs = new List<CRM.Data.Models.SystemLog>
+        {
+            new CRM.Data.Models.SystemLog
+            {
+                Timestamp = DateTime.UtcNow.AddHours(-2),
+                Level = "Information",
+                Message = "System CRM został uruchomiony pomyślnie",
+                Source = "CRM.API.Program",
+                UserId = firstUser?.Id,
+                Details = "{\"version\": \"1.0.0\", \"environment\": \"Development\"}"
+            },
+            new CRM.Data.Models.SystemLog
+            {
+                Timestamp = DateTime.UtcNow.AddHours(-1),
+                Level = "Information",
+                Message = "Baza danych została zainicjalizowana",
+                Source = "CRM.API.Program",
+                UserId = firstUser?.Id,
+                Details = "{\"tables\": [\"Users\", \"Customers\", \"Invoices\", \"Contracts\"]}"
+            },
+            new CRM.Data.Models.SystemLog
+            {
+                Timestamp = DateTime.UtcNow.AddMinutes(-30),
+                Level = "Warning",
+                Message = "Wykryto próbę nieautoryzowanego dostępu do API",
+                Source = "CRM.API.Controllers.AuthController",
+                Details = "{\"ip\": \"192.168.1.100\", \"endpoint\": \"/api/Auth/login\"}"
+            },
+            new CRM.Data.Models.SystemLog
+            {
+                Timestamp = DateTime.UtcNow.AddMinutes(-15),
+                Level = "Information",
+                Message = "Użytkownik zalogował się pomyślnie",
+                Source = "CRM.API.Controllers.AuthController",
+                UserId = firstUser?.Id,
+                Details = "{\"username\": \"admin\", \"ip\": \"127.0.0.1\"}"
+            },
+            new CRM.Data.Models.SystemLog
+            {
+                Timestamp = DateTime.UtcNow.AddMinutes(-10),
+                Level = "Information",
+                Message = "Utworzono nowego klienta",
+                Source = "CRM.API.Controllers.CustomersController",
+                UserId = firstUser?.Id,
+                Details = "{\"customerName\": \"Firma ABC\", \"customerId\": 1}"
+            },
+            new CRM.Data.Models.SystemLog
+            {
+                Timestamp = DateTime.UtcNow.AddMinutes(-5),
+                Level = "Error",
+                Message = "Błąd podczas generowania raportu PDF",
+                Source = "CRM.BusinessLogic.Services.ReportService",
+                UserId = firstUser?.Id,
+                Details = "{\"error\": \"File not found\", \"reportType\": \"invoice\"}"
+            }
+        };
+
+        context.SystemLogs.AddRange(systemLogs);
+        context.SaveChanges();
     }
+}
+catch (Exception ex)
+{
+    // Pobranie serwisu loggera z kontenera DI
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    // Logowanie błędu seedowania z pełnym stack trace
+    logger.LogError(ex, "An error occurred while seeding the database.");
 }
 
 // Konfiguracja adresu URL, na którym aplikacja będzie nasłuchiwać

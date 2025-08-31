@@ -74,8 +74,6 @@ import { NotificationsPage } from "./pages/NotificationsPage";
 import { LoginHistoryPage } from "./pages/LoginHistoryPage";
 // Import strony ogólnych logów systemowych
 import { LogsPage } from "./pages/LogsPage";
-// Import strony szczegółowych logów systemu
-import { SystemLogsPage } from "./pages/SystemLogsPage";
 // Import strony ustawień aplikacji
 import { SettingsPage } from "./pages/SettingsPage";
 // Import strony dodawania nowej faktury
@@ -207,8 +205,6 @@ function App() {
             <Route path="/logowania" element={<LoginHistoryPage />} />
             {/* Ogólne logi systemowe */}
             <Route path="/logi" element={<LogsPage />} />
-            {/* Szczegółowe logi systemu - duplikacja trasy, prawdopodobnie błąd */}
-            <Route path="/logi" element={<SystemLogsPage />} />
             {/* Ustawienia aplikacji i preferencje użytkownika */}
             <Route path="/ustawienia" element={<SettingsPage />} />
           </Route>

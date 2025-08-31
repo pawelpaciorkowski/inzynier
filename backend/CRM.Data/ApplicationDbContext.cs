@@ -300,6 +300,14 @@ namespace CRM.Data
             });
 
             // Miejsce na dodatkowe konfiguracje encji w przyszłości
+            // Konfiguracja relacji Customer - Note
+            modelBuilder.Entity<Customer>(entity =>
+            {
+                entity.HasMany(c => c.Notes)
+                      .WithOne(n => n.Customer)
+                      .HasForeignKey(n => n.CustomerId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
         }
 
 

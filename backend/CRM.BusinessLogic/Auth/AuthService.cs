@@ -52,14 +52,7 @@ namespace CRM.BusinessLogic.Auth // Przestrzeń nazw dla funkcjonalności autory
             _logService = logService; // Przypisuje przekazany serwis logowania do pola prywatnego
         }
 
-        /// <summary>
-        /// Metoda uwierzytelniania użytkownika
-        /// Sprawdza czy podane dane logowania są poprawne i zwraca użytkownika lub null
-        /// </summary>
-        /// <param name="username">Nazwa użytkownika do uwierzytelnienia</param>
-        /// <param name="password">Hasło użytkownika do uwierzytelnienia</param>
-        /// <returns>Obiekt użytkownika jeśli uwierzytelnienie się powiodło, null w przeciwnym przypadku</returns>
-        public async Task<User?> AuthenticateAsync(string username, string password) // Metoda asynchroniczna zwracająca użytkownika lub null
+        public async Task<User?> AuthenticateAsync(string username, string password, string? userAgent = null, string? ipAddress = null)
         {
             // Wyszukuje użytkownika w bazie danych po nazwie użytkownika (ignorując wielkość liter) wraz z jego rolą
             var user = await _context.Users
@@ -68,7 +61,9 @@ namespace CRM.BusinessLogic.Auth // Przestrzeń nazw dla funkcjonalności autory
 
             if (user == null) // Jeśli użytkownik nie został znaleziony
             {
-                return null; // Zwraca null - uwierzytelnienie nie powiodło się
+                // Logowanie nieudanej próby logowania
+                await LogFailedLoginAttempt(username, "Nieprawidłowa nazwa użytkownika", userAgent, ipAddress);
+                return null;
             }
 
             // Sprawdza czy podane hasło pasuje do zahashowanego hasła w bazie danych
@@ -76,29 +71,100 @@ namespace CRM.BusinessLogic.Auth // Przestrzeń nazw dla funkcjonalności autory
 
             if (!passwordMatch) // Jeśli hasło nie pasuje
             {
-                return null; // Zwraca null - uwierzytelnienie nie powiodło się
+                // Logowanie nieudanej próby logowania
+                await LogFailedLoginAttempt(username, "Nieprawidłowe hasło", userAgent, ipAddress);
+                return null;
             }
 
-            // Tworzy nowy wpis w historii logowań
-            var loginHistory = new LoginHistory // Tworzy nowy obiekt historii logowania
+            // Pomyślne logowanie
+            var loginHistory = new LoginHistory
             {
-                UserId = user.Id, // Ustawia ID użytkownika
-                LoggedInAt = DateTime.UtcNow, // Ustawia datę i czas logowania (UTC)
-                IpAddress = "::1" // Ustawia adres IP (localhost w IPv6)
+                UserId = user.Id,
+                LoggedInAt = DateTime.UtcNow,
+                IpAddress = ipAddress ?? "::1",
+                UserAgent = userAgent,
+                Browser = ParseBrowser(userAgent),
+                OperatingSystem = ParseOperatingSystem(userAgent),
+                DeviceType = ParseDeviceType(userAgent),
+                IsSuccessful = true,
+                Location = "Lokalne" // TODO: Implement IP geolocation
             };
-            _context.LoginHistories.Add(loginHistory); // Dodaje wpis historii do kontekstu Entity Framework
-            await _context.SaveChangesAsync(); // Zapisuje zmiany w bazie danych
+            
+            _context.LoginHistories.Add(loginHistory);
+            await _context.SaveChangesAsync();
 
             return user; // Zwraca obiekt użytkownika - uwierzytelnienie powiodło się
         }
 
-        /// <summary>
-        /// Metoda generowania tokenu JWT dla użytkownika
-        /// Tworzy token JWT zawierający informacje o użytkowniku i jego uprawnieniach
-        /// </summary>
-        /// <param name="user">Użytkownik dla którego generowany jest token</param>
-        /// <returns>Token JWT jako string</returns>
-        public string GenerateJwtToken(User user) // Metoda zwracająca token JWT jako string
+        private async Task LogFailedLoginAttempt(string username, string reason, string? userAgent, string? ipAddress)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (user != null)
+            {
+                var failedLogin = new LoginHistory
+                {
+                    UserId = user.Id,
+                    LoggedInAt = DateTime.UtcNow,
+                    IpAddress = ipAddress ?? "::1",
+                    UserAgent = userAgent,
+                    Browser = ParseBrowser(userAgent),
+                    OperatingSystem = ParseOperatingSystem(userAgent),
+                    DeviceType = ParseDeviceType(userAgent),
+                    IsSuccessful = false,
+                    FailureReason = reason,
+                    Location = "Lokalne"
+                };
+                
+                _context.LoginHistories.Add(failedLogin);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        private string? ParseBrowser(string? userAgent)
+        {
+            if (string.IsNullOrEmpty(userAgent)) return null;
+            
+            userAgent = userAgent.ToLower();
+            
+            if (userAgent.Contains("chrome")) return "Chrome";
+            if (userAgent.Contains("firefox")) return "Firefox";
+            if (userAgent.Contains("safari")) return "Safari";
+            if (userAgent.Contains("edge")) return "Edge";
+            if (userAgent.Contains("opera")) return "Opera";
+            if (userAgent.Contains("ie")) return "Internet Explorer";
+            
+            return "Nieznana";
+        }
+
+        private string? ParseOperatingSystem(string? userAgent)
+        {
+            if (string.IsNullOrEmpty(userAgent)) return null;
+            
+            userAgent = userAgent.ToLower();
+            
+            if (userAgent.Contains("windows")) return "Windows";
+            if (userAgent.Contains("mac os")) return "macOS";
+            if (userAgent.Contains("linux")) return "Linux";
+            if (userAgent.Contains("android")) return "Android";
+            if (userAgent.Contains("ios")) return "iOS";
+            
+            return "Nieznany";
+        }
+
+        private string? ParseDeviceType(string? userAgent)
+        {
+            if (string.IsNullOrEmpty(userAgent)) return null;
+            
+            userAgent = userAgent.ToLower();
+            
+            if (userAgent.Contains("mobile")) return "Mobile";
+            if (userAgent.Contains("tablet")) return "Tablet";
+            if (userAgent.Contains("android") || userAgent.Contains("ios")) return "Mobile";
+            
+            return "Desktop";
+        }
+
+        public string GenerateJwtToken(User user)
         {
             // Tworzy tablicę claims (oświadczeń) zawierających informacje o użytkowniku
             var claims = new[] // Tablica claims dla tokenu JWT

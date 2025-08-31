@@ -48,7 +48,7 @@ export function ActivitiesPage() {
                                 <div className="flex-1 space-y-1">
                                     <div className="flex items-center justify-between">
                                         <h3 className="text-sm font-medium text-white">{activity.note}</h3>
-                                        <p className="text-sm text-gray-500">{new Date(activity.createdAt).toLocaleString()}</p>
+                                        <p className="text-sm text-gray-500">{new Date(activity.createdAt.endsWith('Z') ? activity.createdAt : activity.createdAt + 'Z').toLocaleString('pl-PL')}</p>
                                     </div>
                                     <p className="text-sm text-gray-400">
                                         Użytkownik: <span className="font-semibold">{activity.userName}</span> | Klient: <span className="font-semibold">{activity.customerName}</span>

@@ -150,6 +150,11 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
             {
                 return Unauthorized(ex.Message); // Zwraca status HTTP 401 Unauthorized z komunikatem błędu
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetUnreadNotificationsCount: {ex.Message}");
+                return StatusCode(500, new { message = "Wystąpił błąd podczas pobierania liczby nieprzeczytanych powiadomień.", error = ex.Message });
+            }
         }
     }
 }

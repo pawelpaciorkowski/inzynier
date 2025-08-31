@@ -123,7 +123,7 @@ export function MeetingsPage() {
                                         <tr key={meeting.id} className="hover:bg-gray-700">
                                             <td className="px-5 py-4 border-b border-gray-700">{meeting.topic}</td>
                                             <td className="px-5 py-4 border-b border-gray-700">{meeting.customerName}</td>
-                                            <td className="px-5 py-4 border-b border-gray-700">{new Date(meeting.scheduledAt).toLocaleString()}</td>
+                                            <td className="px-5 py-4 border-b border-gray-700">{new Date(meeting.scheduledAt.endsWith('Z') ? meeting.scheduledAt : meeting.scheduledAt + 'Z').toLocaleString('pl-PL')}</td>
                                             <td className="px-5 py-4 border-b border-gray-700 text-center">
                                                 <div className="flex justify-center gap-4">
                                                     <Link to={`/spotkania/edytuj/${meeting.id}`} title="Edytuj"><PencilIcon className="w-5 h-5 text-gray-400 hover:text-yellow-400" /></Link>

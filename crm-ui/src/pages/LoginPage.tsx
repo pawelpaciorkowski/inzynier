@@ -18,16 +18,21 @@ export default function LoginPage() {
     const [password, setPassword] = useState("");
     // Stan przechowujący komunikat błędu przy nieudanym logowaniu
     const [error, setError] = useState("");
-    // URL API z zmiennej środowiskowej Vite
-    const api = import.meta.env.VITE_API_URL;
+    // Stan przechowujący stan ładowania podczas logowania
+    const [loading, setLoading] = useState(false);
 
     // Funkcja obsługująca proces logowania użytkownika
     const handleLogin = async () => {
-        // Czyścimy poprzednie komunikaty błędów
-        setError("");
+        if (!username || !password) {
+            setError('Proszę wypełnić wszystkie pola');
+            return;
+        }
+
         try {
-            // Wykonujemy zapytanie POST do endpointa logowania z danymi użytkownika
-            const res = await axios.post(`${api}/Auth/login`, {
+            setLoading(true);
+            setError('');
+
+            const res = await axios.post('/api/Auth/login', {
                 username,
                 password,
             });
@@ -41,6 +46,8 @@ export default function LoginPage() {
         } catch {
             // W przypadku błędu wyświetlamy komunikat o niepoprawnych danych
             setError("Niepoprawna nazwa użytkownika lub hasło.");
+        } finally {
+            setLoading(false);
         }
     };
 

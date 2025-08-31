@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api';
 import { useModal } from '../context/ModalContext';
 import { PaperAirplaneIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { formatBackendDate } from '../utils/dateUtils';
 import { useAuth } from '../context/AuthContext';
 import { useOutletContext } from 'react-router-dom';
 
@@ -46,10 +47,10 @@ export function MessagesPage() {
     const fetchMessages = async () => {
         setLoading(true);
         try {
-            const inboxRes = await axios.get<any>('/api/Messages/inbox');
+            const inboxRes = await api.get<any>('/Messages/inbox');
             setInboxMessages(inboxRes.data.$values || inboxRes.data);
 
-            const sentRes = await axios.get<any>('/api/Messages/sent');
+            const sentRes = await api.get<any>('/Messages/sent');
             setSentMessages(sentRes.data.$values || sentRes.data);
         } catch (err: any) {
             console.error('Błąd pobierania wiadomości:', err);
@@ -61,7 +62,7 @@ export function MessagesPage() {
 
     const fetchUsers = async () => {
         try {
-            const res = await axios.get<any>('/api/admin/users'); // Zakładamy, że ten endpoint zwraca listę użytkowników
+            const res = await api.get<any>('/admin/users'); // Zakładamy, że ten endpoint zwraca listę użytkowników
             setUsers(res.data.$values || res.data);
         } catch (err) {
             console.error('Błąd pobierania użytkowników:', err);
@@ -77,7 +78,7 @@ export function MessagesPage() {
 
     const handleMarkAsRead = async (id: number) => {
         try {
-            await axios.put(`/api/Messages/${id}/read`);
+            await api.put(`/Messages/${id}/read`);
             openToast('Wiadomość oznaczona jako przeczytana.', 'success');
             fetchMessages(); // Odśwież listę
         } catch (err: any) {
@@ -94,7 +95,7 @@ export function MessagesPage() {
             confirmText: 'Usuń',
             onConfirm: async () => {
                 try {
-                    await axios.delete(`/api/Messages/${id}`);
+                    await api.delete(`/Messages/${id}`);
                     fetchMessages(); // Odśwież listę
                     openToast('Wiadomość została pomyślnie usunięta.', 'success');
                 } catch (err: any) {
@@ -108,7 +109,7 @@ export function MessagesPage() {
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await axios.post('/api/Messages', newMessage);
+            await api.post('/Messages', newMessage);
             setShowNewMessageModal(false);
             setNewMessage({ recipientUserId: 0, subject: '', body: '' });
             fetchMessages(); // Odśwież listę
@@ -161,7 +162,7 @@ export function MessagesPage() {
                                     <span className="text-lg font-semibold">
                                         {activeTab === 'inbox' ? `Od: ${message.senderUsername}` : `Do: ${message.recipientUsername}`}
                                     </span>
-                                    <span className="text-sm text-gray-400">{new Date(message.sentAt).toLocaleString()}</span>
+                                    <span className="text-sm text-gray-400">{formatBackendDate(message.sentAt)}</span>
                                 </div>
                                 <h3 className="text-xl font-bold mb-2">{message.subject}</h3>
                                 <p className="text-gray-300 mb-4">{message.body}</p>

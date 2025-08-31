@@ -1,12 +1,13 @@
-using CRM.Data; // Importuje przestrzeń nazw z danymi CRM
-using CRM.Data.Models; // Importuje modele danych CRM
-using Microsoft.AspNetCore.Authorization; // Importuje funkcjonalności autoryzacji
-using Microsoft.AspNetCore.Mvc; // Importuje podstawowe klasy kontrolerów MVC
-using Microsoft.EntityFrameworkCore; // Importuje Entity Framework Core
-using System.Collections.Generic; // Importuje kolekcje (List, IEnumerable)
-using System.Linq; // Importuje metody LINQ
-using System.Security.Claims; // Importuje klasy do obsługi claims (oświadczeń) użytkownika
-using System.Threading.Tasks; // Importuje klasy do programowania asynchronicznego
+using CRM.Data;
+using CRM.Data.Models;
+using CRM.BusinessLogic.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
 {
@@ -19,20 +20,13 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
     [Authorize] // Wymaga autoryzacji - dostęp tylko dla zalogowanych użytkowników
     public class RemindersController : ControllerBase // Dziedziczy po ControllerBase - podstawowa klasa dla kontrolerów API
     {
-        /// <summary>
-        /// Kontekst bazy danych Entity Framework
-        /// Pozwala na wykonywanie operacji na bazie danych (zapytania, zapisywanie, usuwanie)
-        /// </summary>
-        private readonly ApplicationDbContext _context; // Pole tylko do odczytu - nie można zmienić po inicjalizacji
+        private readonly ApplicationDbContext _context;
+        private readonly INotificationService _notificationService;
 
-        /// <summary>
-        /// Konstruktor klasy RemindersController
-        /// Inicjalizuje kontroler z kontekstem bazy danych przekazanym przez dependency injection
-        /// </summary>
-        /// <param name="context">Kontekst bazy danych przekazany przez system dependency injection</param>
-        public RemindersController(ApplicationDbContext context)
+        public RemindersController(ApplicationDbContext context, INotificationService notificationService)
         {
-            _context = context; // Przypisuje przekazany kontekst do pola prywatnego - inicjalizacja pola
+            _context = context;
+            _notificationService = notificationService;
         }
 
         /// <summary>

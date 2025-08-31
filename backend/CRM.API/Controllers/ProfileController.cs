@@ -128,7 +128,7 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
         /// <summary>
         /// Metoda HTTP GET - pobiera historię logowań zalogowanego użytkownika
         /// Endpoint: GET /api/Profile/login-history
-        /// Zwraca ostatnie 20 logowań użytkownika z datą i adresem IP
+        /// Zwraca ostatnie 50 logowań użytkownika z datą, adresem IP i dodatkowymi informacjami
         /// </summary>
         /// <returns>Historia logowań użytkownika lub błąd autoryzacji</returns>
         [HttpGet("login-history")] // Oznacza metodę jako obsługującą żądania HTTP GET na ścieżce /login-history
@@ -145,14 +145,24 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
 
             // Wykonuje zapytanie do bazy danych - pobiera historię logowań użytkownika
             var history = await _context.LoginHistories
-                .Where(h => h.UserId == userId) // Filtruje tylko logowania należące do aktualnego użytkownika
-                .OrderByDescending(h => h.LoggedInAt) // Sortuje od najnowszych logowań (najpierw najnowsze)
-                .Take(20) // Ogranicza wynik do 20 ostatnich wpisów - optymalizacja wydajności
-                .Select(h => new // Projektuje dane do anonimowego obiektu - zwraca tylko potrzebne pola
+                .Where(h => h.UserId == userId)
+                .Include(h => h.User)
+                .OrderByDescending(h => h.LoggedInAt)
+                .Take(50) // Zwiększamy do 50 ostatnich wpisów
+                .Select(h => new
                 {
-                    h.Id, // ID wpisu w historii logowań
-                    h.LoggedInAt, // Data i godzina logowania
-                    h.IpAddress // Adres IP z którego nastąpiło logowanie
+                    h.Id,
+                    h.LoggedInAt,
+                    h.IpAddress,
+                    h.UserAgent,
+                    h.Browser,
+                    h.OperatingSystem,
+                    h.DeviceType,
+                    h.IsSuccessful,
+                    h.FailureReason,
+                    h.Location,
+                    Username = h.User.Username,
+                    UserEmail = h.User.Email
                 })
                 .ToListAsync(); // Wykonuje zapytanie asynchronicznie i zwraca listę wyników
 

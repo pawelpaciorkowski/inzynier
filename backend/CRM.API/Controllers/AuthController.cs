@@ -50,8 +50,10 @@ namespace CRM.API.Controllers
         {
             try
             {
-                // Próbuje uwierzytelnić użytkownika używając serwisu autoryzacji
-                var user = await _authService.AuthenticateAsync(request.Username, request.Password);
+                var userAgent = Request.Headers["User-Agent"].FirstOrDefault();
+                var ipAddress = GetClientIpAddress();
+
+                var user = await _authService.AuthenticateAsync(request.Username, request.Password, userAgent, ipAddress);
 
                 // Sprawdza czy uwierzytelnienie się powiodło
                 if (user == null)
@@ -69,15 +71,26 @@ namespace CRM.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Metoda HTTP GET - pobiera wszystkich klientów (dostęp tylko dla administratorów)
-        /// Endpoint: GET /api/auth/customers
-        /// Dostęp: Admin
-        /// </summary>
-        /// <returns>Lista wszystkich klientów w systemie</returns>
-        [Authorize(Roles = "Admin")] // Wymaga autoryzacji - dostęp tylko dla użytkowników z rolą Admin
-        [HttpGet("customers")] // Oznacza metodę jako obsługującą żądania HTTP GET na ścieżce /customers
-        public async Task<ActionResult<List<Customer>>> GetAll() // Metoda asynchroniczna zwracająca listę klientów
+        private string GetClientIpAddress()
+        {
+            var forwardedHeader = Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(forwardedHeader))
+            {
+                return forwardedHeader.Split(',')[0].Trim();
+            }
+
+            var realIpHeader = Request.Headers["X-Real-IP"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(realIpHeader))
+            {
+                return realIpHeader;
+            }
+
+            return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "::1";
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("customers")]
+        public async Task<ActionResult<List<Customer>>> GetAll()
         {
             var customers = await _customerService.GetAllAsync(); // Pobiera wszystkich klientów z serwisu
             return Ok(customers); // Zwraca status HTTP 200 OK z listą klientów

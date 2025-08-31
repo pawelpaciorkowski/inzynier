@@ -18,6 +18,7 @@ import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 // Import polskiej lokalizacji dla date-fns
 import { pl } from 'date-fns/locale';
+import { parseBackendDate } from '../utils/dateUtils';
 
 // Interface definiujący strukturę powiadomienia z backendu
 interface Notification {
@@ -56,7 +57,7 @@ export default function Layout() {
     const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
     // Stan przechowujący listę powiadomień użytkownika
     const [notifications, setNotifications] = useState<Notification[]>([]);
-    // Referencja do elementu DOM nawigacji - do obsługi kliknięć poza elementem
+    const [newNotificationToast, setNewNotificationToast] = useState<Notification | null>(null);
     const navRef = useRef<HTMLDivElement>(null);
     // Referencja do elementu DOM dropdownu powiadomień
     const notificationsRef = useRef<HTMLDivElement>(null);
@@ -121,8 +122,32 @@ export default function Layout() {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const data = response.data.$values || response.data;
-            // Zmieniamy: licznik = wszystkie nieprzeczytane, dropdown = 5 najnowszych
-            setNotifications(data.filter((n: Notification) => !n.isRead));
+            const unreadNotifications = data.filter((n: Notification) => !n.isRead);
+
+            // Check for new notifications using a ref to avoid infinite loop
+            setNotifications(prevNotifications => {
+                const newNotifications = unreadNotifications.filter(
+                    (notification: Notification) =>
+                        !prevNotifications.some(prev => prev.id === notification.id)
+                );
+
+                if (newNotifications.length > 0) {
+                    // Show the newest notification as a toast
+                    const newestNotification = newNotifications.sort(
+                        (a: Notification, b: Notification) =>
+                            parseBackendDate(b.createdAt).getTime() - parseBackendDate(a.createdAt).getTime()
+                    )[0];
+
+                    setNewNotificationToast(newestNotification);
+
+                    // Auto-hide the toast after 5 seconds
+                    setTimeout(() => {
+                        setNewNotificationToast(null);
+                    }, 5000);
+                }
+
+                return unreadNotifications;
+            });
         } catch (err) {
             console.error("Błąd pobierania powiadomień:", err);
         }
@@ -176,11 +201,12 @@ export default function Layout() {
                     return false;
                 }
 
-                const reminderDate = new Date(r.remindAt);
+                const reminderDate = parseBackendDate(r.remindAt);
                 const reminderMinute = reminderDate.getMinutes();
                 const reminderHour = reminderDate.getHours();
                 const reminderDateStr = reminderDate.toDateString();
 
+                // Sprawdź czy to dokładnie ta sama minuta (bez sekund)
                 return reminderDateStr === currentDate &&
                     reminderHour === currentHour &&
                     reminderMinute === currentMinute;
@@ -224,7 +250,7 @@ export default function Layout() {
                     return false;
                 }
 
-                const reminderDate = new Date(r.remindAt);
+                const reminderDate = parseBackendDate(r.remindAt);
                 const reminderMinute = reminderDate.getMinutes();
                 const reminderHour = reminderDate.getHours();
                 const reminderDateStr = reminderDate.toDateString();
@@ -234,7 +260,7 @@ export default function Layout() {
                 console.log('  - Czas przypomnienia:', reminderHour + ':' + reminderMinute, 'dnia:', reminderDateStr);
                 console.log('  - Surowa data z API:', r.remindAt);
 
-                // Sprawdź czy to ten sam dzień i ta sama godzina/minuta
+                // Sprawdź czy to dokładnie ten sam dzień i ta sama godzina/minuta (bez sekund)
                 const dateMatches = reminderDateStr === currentDate;
                 const hourMatches = reminderHour === currentHour;
                 const minuteMatches = reminderMinute === currentMinute;
@@ -276,7 +302,7 @@ export default function Layout() {
 
     useEffect(() => {
         fetchNotifications();
-        const interval = setInterval(fetchNotifications, 60000); // Refresh every minute
+        const interval = setInterval(fetchNotifications, 30000); // Refresh every 30 seconds for real-time notifications
         return () => clearInterval(interval);
     }, [fetchNotifications]);
 
@@ -325,9 +351,12 @@ export default function Layout() {
     return (
         <div className="min-h-screen flex flex-col bg-gray-900 text-gray-300">
             <header className="bg-gray-800 px-8 py-4 flex justify-between items-center shadow-md border-b border-gray-700">
-                <h1 className="text-2xl font-extrabold tracking-wide text-indigo-400">
-                    CRM Panel
-                </h1>
+                <Link to="/dashboard" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+                    <img src="/crm.png" alt="CRM Logo" className="h-8 w-8" />
+                    <h1 className="text-2xl font-extrabold tracking-wide text-indigo-400">
+                        CRM Panel
+                    </h1>
+                </Link>
                 <div className="flex items-center gap-6 text-sm">
                     <div className="relative" ref={notificationsRef}>
                         <button onClick={toggleNotificationsDropdown} className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white">
@@ -345,7 +374,7 @@ export default function Layout() {
                                         notifications.slice(0, 5).map((notification) => (
                                             <div key={notification.id} className="block px-4 py-2 text-sm text-gray-300 border-b border-gray-600 last:border-b-0">
                                                 <p>{notification.message}</p>
-                                                <p className="text-xs text-gray-400">{formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: pl })}</p>
+                                                <p className="text-xs text-gray-400">{formatDistanceToNow(parseBackendDate(notification.createdAt), { addSuffix: true, locale: pl })}</p>
                                                 {!notification.isRead && (
                                                     <button
                                                         onClick={() => handleMarkAsRead(notification.id)}
@@ -456,6 +485,27 @@ export default function Layout() {
                     </div>
                 );
             })()}
+
+            {/* Notification toast */}
+            {newNotificationToast && (
+                <div className="fixed top-20 right-4 bg-green-700 text-white p-4 rounded-lg shadow-lg z-50 animate-fade-in max-w-sm">
+                    <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                            <strong className="block text-sm">🔔 Nowe powiadomienie</strong>
+                            <div className="mt-1 text-sm">{newNotificationToast.message}</div>
+                            <div className="mt-1 text-xs text-green-200">
+                                {formatDistanceToNow(parseBackendDate(newNotificationToast.createdAt), { addSuffix: true, locale: pl })}
+                            </div>
+                        </div>
+                        <button
+                            className="ml-2 text-green-200 hover:text-white text-lg"
+                            onClick={() => setNewNotificationToast(null)}
+                        >
+                            ×
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -260,7 +260,7 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
         /// <param name="id">ID wiadomości do usunięcia</param>
         /// <returns>Status HTTP 204 No Content po pomyślnym usunięciu lub NotFound jeśli wiadomość nie istnieje</returns>
         [HttpDelete("{id}")] // Oznacza metodę jako obsługującą żądania HTTP DELETE z parametrem id w ścieżce
-        public async Task<IActionResult> DeleteMessage(int id) // Metoda asynchroniczna zwracająca akcję HTTP
+        public async Task<IActionResult> DeleteMessage(int id) // Metoda asynchroniczna zwracająca IActionResult
         {
             // Pobiera ID aktualnego użytkownika z tokenu JWT
             var userId = GetCurrentUserId();
@@ -274,7 +274,12 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
                 return NotFound(); // Zwraca status HTTP 404 Not Found jeśli wiadomość nie istnieje lub użytkownik nie ma uprawnień
             }
 
-            // Usuwa wiadomość z kontekstu Entity Framework
+            // Usuń powiązane powiadomienia
+            var relatedNotifications = await _context.Notifications
+                .Where(n => n.MessageId == id)
+                .ToListAsync();
+            
+            _context.Notifications.RemoveRange(relatedNotifications);
             _context.Messages.Remove(message);
             // Zapisuje zmiany w bazie danych (fizyczne usunięcie wiadomości)
             await _context.SaveChangesAsync();
