@@ -187,7 +187,7 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
 
         [Authorize(Roles = "Admin,Manager,Sprzedawca")]
         [HttpGet("export-invoices")]
-        public async Task<IActionResult> ExportInvoices(
+        public async Task<IActionResult> ExportInvoices( // Metoda asynchroniczna zwracająca IActionResult  - zwraca plik do pobrania
             [FromQuery] string? format = "csv",
             [FromQuery] bool includeRelations = true,
             [FromQuery] string? columns = null,
@@ -196,79 +196,81 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
             [FromQuery] int? groupId = null,
             [FromQuery] int? tagId = null)
         {
-            var query = _context.Invoices.AsQueryable();
+            var query = _context.Invoices.AsQueryable(); // Rozpoczyna zapytanie LINQ do bazy danych - AsQueryable - zwraca zapytanie LINQ do bazy danych 
 
             // Filtrowanie po dacie
-            if (!string.IsNullOrEmpty(dateFrom) && DateTime.TryParse(dateFrom, out var fromDate))
+            if (!string.IsNullOrEmpty(dateFrom) && DateTime.TryParse(dateFrom, out var fromDate)) // Sprawdza czy data jest podana i czy można ją sparsować
             {
-                query = query.Where(i => i.IssuedAt >= fromDate);
+                query = query.Where(i => i.IssuedAt >= fromDate); // Filtruje faktury wystawione od podanej daty 
             }
-            if (!string.IsNullOrEmpty(dateTo) && DateTime.TryParse(dateTo, out var toDate))
+            if (!string.IsNullOrEmpty(dateTo) && DateTime.TryParse(dateTo, out var toDate)) // Sprawdza czy data jest podana i czy można ją sparsować
             {
-                query = query.Where(i => i.IssuedAt <= toDate);
+                query = query.Where(i => i.IssuedAt <= toDate); // Filtruje faktury wystawione do podanej daty 
             }
 
             // Filtrowanie po grupie
             if (groupId.HasValue)
             {
-                query = query.Where(i => i.AssignedGroupId == groupId || i.Customer.AssignedGroupId == groupId);
+                query = query.Where(i => i.AssignedGroupId == groupId || i.Customer.AssignedGroupId == groupId); // Filtruje faktury przypisane do podanej grupy
             }
 
             // Filtrowanie po tagu
-            if (tagId.HasValue)
+            if (tagId.HasValue) // Sprawdza czy ID tagu zostało podane 
             {
-                query = query.Where(i => i.InvoiceTags.Any(it => it.TagId == tagId) || i.Customer.CustomerTags.Any(ct => ct.TagId == tagId));
+                query = query.Where(i => i.InvoiceTags.Any(it => it.TagId == tagId) || i.Customer.CustomerTags.Any(ct => ct.TagId == tagId)); // Filtruje faktury mające podany tag 
             }
 
             // Include relations if requested
-            if (includeRelations)
+            if (includeRelations) // Sprawdza czy użytkownik chce dołączyć powiązane dane
             {
-                query = query
+                query = query // Dołącza powiązane dane do faktur   - Include - dołącza powiązane dane do faktur    
                     .Include(i => i.Customer)
-                    .Include(i => i.AssignedGroup)
-                    .Include(i => i.CreatedByUser)
-                    .Include(i => i.InvoiceTags)
-                        .ThenInclude(it => it.Tag);
+                    .Include(i => i.AssignedGroup) // Dołącza dane przypisanej grupy
+                    .Include(i => i.CreatedByUser) // Dołącza dane utworzonego użytkownika
+                    .Include(i => i.InvoiceTags) // Dołącza tagi faktur
+                        .ThenInclude(it => it.Tag); // Dołącza szczegóły tagów faktur
+                        //ThenInclude - dołącza szczegóły tagów faktur do faktur czym roznic sie od Include - dołącza powiązane dane do faktur
+                        //rozica miedzy include a theninclude - include dołącza powiązane dane do faktur a theninclude dołącza szczegóły tagów faktur do faktur 
             }
 
             var invoices = await query.ToListAsync();
 
             // Parse columns
             var selectedColumns = !string.IsNullOrEmpty(columns) 
-                ? columns.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                ? columns.Split(',', StringSplitOptions.RemoveEmptyEntries) // Dzieli string na tablicę kolumn przez przecinek i usuwa puste wpisy
                 : new[] { "id", "number", "customerName", "totalAmount", "isPaid", "issuedAt" };
 
             byte[] fileBytes;
             string contentType;
             if (format.ToLower() == "xlsx")
             {
-                fileBytes = _csvExportService.ExportInvoicesToXlsx(invoices, selectedColumns, includeRelations);
-                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                fileBytes = _csvExportService.ExportInvoicesToXlsx(invoices, selectedColumns, includeRelations); // Generuje plik XLSX faktur z powiązanymi danymi 
+                contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"; // Ustawia typ MIME dla XLSX
             }
             else if (format.ToLower() == "pdf")
             {
-                fileBytes = _csvExportService.ExportInvoicesToCsvAdvanced(invoices, selectedColumns, includeRelations);
-                contentType = "text/csv";
+                fileBytes = _csvExportService.ExportInvoicesToCsvAdvanced(invoices, selectedColumns, includeRelations); // Generuje plik CSV faktur z powiązanymi danymi    
+                contentType = "text/csv"; // Ustawia typ MIME dla CSV
             }
             else
             {
-                fileBytes = _csvExportService.ExportInvoicesToCsvAdvanced(invoices, selectedColumns, includeRelations);
-                contentType = "text/csv";
+                fileBytes = _csvExportService.ExportInvoicesToCsvAdvanced(invoices, selectedColumns, includeRelations); // Generuje plik CSV faktur z powiązanymi danymi    
+                contentType = "text/csv"; // Ustawia typ MIME dla CSV
             }
-            var fileName = $"invoices_export_{DateTime.Now:yyyyMMdd_HHmmss}.{format.ToLower()}";
+            var fileName = $"invoices_export_{DateTime.Now:yyyyMMdd_HHmmss}.{format.ToLower()}"; // Format: invoices_export_20241201_143022.csv
             return File(fileBytes, contentType, fileName);
         }
 
         [Authorize(Roles = "Admin,Manager,Sprzedawca")]
         [HttpGet("export-payments")]
-        public async Task<IActionResult> ExportPayments(
+        public async Task<IActionResult> ExportPayments( // Metoda asynchroniczna zwracająca IActionResult  - zwraca plik do pobrania
             [FromQuery] string? format = "csv",
-            [FromQuery] bool includeRelations = true,
-            [FromQuery] string? columns = null,
-            [FromQuery] string? dateFrom = null,
-            [FromQuery] string? dateTo = null)
+            [FromQuery] bool includeRelations = true, // Parametr z query string - czy dołączyć relacje 
+            [FromQuery] string? columns = null, // Parametr z query string - kolumny do eksportu
+            [FromQuery] string? dateFrom = null, // Parametr z query string - data początkowa
+            [FromQuery] string? dateTo = null, // Parametr z query string - data końcowa
         {
-            var query = _context.Payments.AsQueryable();
+            var query = _context.Payments.AsQueryable(); // Rozpoczyna zapytanie LINQ do bazy danych - AsQueryable - zwraca zapytanie LINQ do bazy danych 
 
             // Filtrowanie po dacie
             if (!string.IsNullOrEmpty(dateFrom) && DateTime.TryParse(dateFrom, out var fromDate))
