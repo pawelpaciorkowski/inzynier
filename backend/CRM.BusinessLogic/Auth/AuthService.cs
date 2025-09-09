@@ -93,7 +93,7 @@ namespace CRM.BusinessLogic.Auth // Przestrzeń nazw dla funkcjonalności autory
             _context.LoginHistories.Add(loginHistory);
             await _context.SaveChangesAsync();
 
-            return user; // Zwraca obiekt użytkownika - uwierzytelnienie powiodło się
+            return user; // Zwraca obiekt użytkownika - uwierzytelnienie powiodło się asynchronicznie bez blokowania wątku głównego 
         }
 
         private async Task LogFailedLoginAttempt(string username, string reason, string? userAgent, string? ipAddress)
@@ -105,18 +105,21 @@ namespace CRM.BusinessLogic.Auth // Przestrzeń nazw dla funkcjonalności autory
                 {
                     UserId = user.Id,
                     LoggedInAt = DateTime.UtcNow,
-                    IpAddress = ipAddress ?? "::1",
-                    UserAgent = userAgent,
-                    Browser = ParseBrowser(userAgent),
+                    IpAddress = ipAddress ?? "::1", // TODO: Implement IP geolocation  - przypisac do logowania uzytkownika jego lokalizacje na podstawie IP adresu  
+                    UserAgent = userAgent, // TODO: Implement IP geolocation  - przypisac do logowania uzytkownika jego lokalizacje na podstawie IP adresu  
+                    Browser = ParseBrowser(userAgent), // opisz mi to 
+                    //ParseBrowser - parsuje przeglądarkę użytkownika na podstawie UserAgent
+                    //UserAgent - to jest string ktory zawiera informacje o przeglądarce użytkownika
+                    //ParseBrowser - parsuje przeglądarkę użytkownika na podstawie UserAgent
                     OperatingSystem = ParseOperatingSystem(userAgent),
                     DeviceType = ParseDeviceType(userAgent),
                     IsSuccessful = false,
                     FailureReason = reason,
-                    Location = "Lokalne"
+                    Location = "Lokalne" // TODO: Implement IP geolocation  - przypisac do logowania uzytkownika jego lokalizacje na podstawie IP adresu  
                 };
                 
                 _context.LoginHistories.Add(failedLogin);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(); // Zapisuje zmiany w bazie danych asynchronicznie bez blokowania wątku głównego          
             }
         }
 

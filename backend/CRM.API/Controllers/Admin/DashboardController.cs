@@ -71,7 +71,7 @@ namespace CRM.API.Controllers.Admin
                     // Tworzy obiekt z ogólnymi statystykami systemu
                     var result = new
                     {
-                        contractsCount = await _context.Contracts.CountAsync(), // Liczba wszystkich kontraktów
+                        contractsCount = await _context.Contracts.CountAsync(), // Liczba wszystkich kontraktów 
                         invoicesCount = await _context.Invoices.CountAsync(), // Liczba wszystkich faktur
                         paymentsCount = await _context.Payments.CountAsync(), // Liczba wszystkich płatności
                         usersCount = await _context.Users.CountAsync(), // Liczba wszystkich użytkowników
@@ -96,7 +96,9 @@ namespace CRM.API.Controllers.Admin
                         // Ostatnie 5 spotkań z informacjami o klientach
                         recentMeetings = await _context.Meetings
                             .Include(m => m.Customer) // Dołącza dane klienta
-                            .OrderByDescending(m => m.ScheduledAt) // Sortuje od najnowszych
+                            .OrderByDescending(m => m.ScheduledAt) // Sortuje od najnowszych spotkań według daty i czasu 
+                            //OrderByDescending - co to jest 
+                            //Sortuje od najnowszych spotkań według daty i czasu
                             .Take(5) // Pobiera tylko 5 rekordów
                             .Select(m => new { 
                                 Id = m.Id, // ID spotkania
@@ -104,12 +106,12 @@ namespace CRM.API.Controllers.Admin
                                 ScheduledAt = m.ScheduledAt, // Data i czas spotkania
                                 CustomerName = m.Customer.Name // Nazwa klienta
                             })
-                            .ToListAsync(),
+                            .ToListAsync(), //ToListAsync - pobiera listę wyników z bazy danych asynchronicznie
                         
                         // Ostatnie 5 notatek z informacjami o klientach
                         recentNotes = await _context.Notes
                             .Include(n => n.Customer) // Dołącza dane klienta
-                            .OrderByDescending(n => n.CreatedAt) // Sortuje od najnowszych
+                            .OrderByDescending(n => n.CreatedAt) // Sortuje od najnowszych notatek według daty i czasu
                             .Take(5) // Pobiera tylko 5 rekordów
                             .Select(n => new { 
                                 Id = n.Id, // ID notatki

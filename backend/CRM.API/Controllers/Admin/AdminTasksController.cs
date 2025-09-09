@@ -25,6 +25,7 @@ namespace CRM.API.Controllers.Admin
         /// Inicjalizuje kontroler z kontekstem bazy danych
         /// </summary>
         /// <param name="context">Kontekst bazy danych przekazany przez dependency injection</param>
+        /// dependency injection - przekazywanie kontekstu bazy danych do kontrolera
         public TasksController(ApplicationDbContext context)
         {
             _context = context; // Przypisuje przekazany kontekst do pola prywatnego
@@ -32,6 +33,7 @@ namespace CRM.API.Controllers.Admin
 
         /// <summary>
         /// Metoda HTTP GET - pobiera wszystkie zadania z systemu
+        /// dependency injection - przekazywanie kontekstu bazy danych do kontrolera
         /// Endpoint: GET /api/admin/tasks
         /// </summary>
         /// <returns>Lista wszystkich zadań z informacjami o użytkownikach i klientach</returns>

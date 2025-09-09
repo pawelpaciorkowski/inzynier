@@ -86,6 +86,9 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
             
             // Wykonuje zapytanie do bazy danych - pobiera przypomnienie o podanym ID
             var reminder = await _context.Reminders.FindAsync(id);
+            // FindAsync - pobiera przypomnienie o podanym ID z bazy danych asynchronicznie 
+            // asynchronicznie - bez blokowania wątku głównego
+
 
             // Sprawdza czy przypomnienie zostało znalezione i czy należy do aktualnego użytkownika
             if (reminder == null || reminder.UserId != userId)
@@ -113,6 +116,7 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
             var reminder = new Reminder
             {
                 Note = createReminderDto.Note, // Ustawia notatkę przypomnienia z DTO
+                //DTO - Data Transfer Object - obiekt przekazywany między kontrolerem a usługą
                 RemindAt = createReminderDto.RemindAt, // Ustawia datę i godzinę przypomnienia z DTO
                 UserId = userId // Przypisuje ID aktualnego użytkownika jako właściciela przypomnienia
             };

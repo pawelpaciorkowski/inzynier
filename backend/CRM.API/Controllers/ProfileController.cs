@@ -106,14 +106,17 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
         {
             // Pobiera wartość claim o typie NameIdentifier z tokenu JWT - zawiera ID użytkownika
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            //User.FindFirstValue(ClaimTypes.NameIdentifier) - pobiera wartość claim o typie NameIdentifier z tokenu JWT - zawiera ID użytkownika oraz czy jest poprawny format liczby całkowitej w stringu  oraz czy jest poprawny format liczby całkowitej oraz czy jest poprawny format liczby całkowitej w stringu 
+            //FindFirstValue - pobiera wartość claim o typie NameIdentifier z tokenu JWT - zawiera ID użytkownika oraz czy jest poprawny format liczby całkowitej w stringu  oraz czy jest poprawny format liczby całkowitej oraz czy jest poprawny format liczby całkowitej w stringu 
             
             // Sprawdza czy claim istnieje i czy można go przekonwertować na liczbę całkowitą
             if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId))
             {
                 return Unauthorized(); // Zwraca status HTTP 401 Unauthorized jeśli nie można pobrać ID użytkownika
             }
-
-            // Wywołuje serwis użytkowników do zmiany hasła - weryfikuje bieżące hasło i ustawia nowe
+ 
+            // Wywołuje serwis użytkowników do zmiany hasła - weryfikuje bieżące hasło i ustawia nowe asynchronicznie bez blokowania wątku głównego 
+            //watek głowny - main thread - glowny watek programu - czyli glowny watek programu ktory uruchamia wszystkie inne wtyki w tym backend oraz frontend 
             var result = await _userService.ChangeUserPasswordAsync(userId, dto.CurrentPassword, dto.NewPassword);
 
             // Sprawdza czy operacja zmiany hasła zakończyła się sukcesem
@@ -134,10 +137,10 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
         [HttpGet("login-history")] // Oznacza metodę jako obsługującą żądania HTTP GET na ścieżce /login-history
         public async Task<IActionResult> GetLoginHistory() // Metoda asynchroniczna zwracająca historię logowań
         {
-            // Pobiera wartość claim o typie NameIdentifier z tokenu JWT - zawiera ID użytkownika
+            // Pobiera wartość claim o typie NameIdentifier z tokenu JWT - zawiera ID użytkownika oraz czy jest poprawny format liczby całkowitej w stringu  oraz czy jest poprawny format liczby całkowitej oraz czy jest poprawny format liczby całkowitej w stringu 
             var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
             
-            // Sprawdza czy claim istnieje i czy można go przekonwertować na liczbę całkowitą
+            // Sprawdza czy claim istnieje i czy można go przekonwertować na liczbę całkowitą oraz czy jest poprawny format liczby całkowitej oraz czy jest poprawny format liczby całkowitej w stringu 
             if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out var userId))
             {
                 return Unauthorized(); // Zwraca status HTTP 401 Unauthorized jeśli nie można pobrać ID użytkownika
@@ -149,7 +152,7 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
                 .Include(h => h.User)
                 .OrderByDescending(h => h.LoggedInAt)
                 .Take(50) // Zwiększamy do 50 ostatnich wpisów
-                .Select(h => new
+                .Select(h => new //Select - wybiera dane z bazy danych do nowego obiektu zawierającego dane logowania użytkownika i dane użytkownika (Username i Email) oraz dane logowania użytkownika (LoggedInAt, IpAddress, UserAgent, Browser, OperatingSystem, DeviceType, IsSuccessful, FailureReason, Location)
                 {
                     h.Id,
                     h.LoggedInAt,
@@ -164,7 +167,7 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
                     Username = h.User.Username,
                     UserEmail = h.User.Email
                 })
-                .ToListAsync(); // Wykonuje zapytanie asynchronicznie i zwraca listę wyników
+                .ToListAsync(); // Wykonuje zapytanie asynchronicznie i zwraca listę wyników asynchronicznie bez blokowania wątku głównego 
 
             return Ok(history); // Zwraca status HTTP 200 OK z historią logowań użytkownika
         }

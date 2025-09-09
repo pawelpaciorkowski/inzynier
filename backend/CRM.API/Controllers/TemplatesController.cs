@@ -18,6 +18,7 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
     {
         /// <summary>
         /// Kontekst bazy danych Entity Framework
+        /// dependency injection - przekazywanie kontekstu bazy danych do kontrolera
         /// Pozwala na wykonywanie operacji na bazie danych (zapytania, zapisywanie, usuwanie)
         /// </summary>
         private readonly ApplicationDbContext _context; // Pole tylko do odczytu - nie można zmienić po inicjalizacji

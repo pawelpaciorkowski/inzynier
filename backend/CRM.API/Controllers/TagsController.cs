@@ -59,6 +59,8 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
                     MeetingCount = t.MeetingTags.Count // Liczba spotkań z tym tagiem
                 })
                 .ToListAsync(); // Wykonuje zapytanie asynchronicznie i zwraca listę wyników
+                //ToListAsync - pobiera listę wyników z bazy danych asynchronicznie
+                // asynchronicznie - bez blokowania wątku głównego
             
             return Ok(tags); // Zwraca status HTTP 200 OK z listą tagów
         }
@@ -75,11 +77,13 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
         {
             // Wykonuje zapytanie do bazy danych - pobiera tag z wszystkimi powiązanymi encjami
             var tag = await _context.Tags
-                .Include(t => t.CustomerTags) // Dołącza tagi klientów
+                .Include(t => t.CustomerTags) // Dołącza tagi klientów do tagów a następnie dołącza szczegóły klientów do tagów
                     .ThenInclude(ct => ct.Customer) // Dołącza szczegóły klientów
                 .Include(t => t.ContractTags) // Dołącza tagi kontraktów
                     .ThenInclude(ct => ct.Contract) // Dołącza szczegóły kontraktów
+                    //ThenInclude - dołącza szczegóły kontraktów do tagów, a następnie dołącza szczegóły klientów do kontraktów
                 .Include(t => t.InvoiceTags) // Dołącza tagi faktur
+                //ThenInclude - dołącza szczegóły faktur do tagów, a następnie dołącza szczegóły klientów do faktur
                     .ThenInclude(it => it.Invoice) // Dołącza szczegóły faktur
                 .Include(t => t.TaskTags) // Dołącza tagi zadań
                     .ThenInclude(tt => tt.Task) // Dołącza szczegóły zadań
@@ -120,7 +124,8 @@ namespace CRM.API.Controllers // Przestrzeń nazw dla kontrolerów API
                 return BadRequest("Nazwa tagu jest wymagana."); // Zwraca błąd 400 Bad Request z komunikatem
 
             _context.Tags.Add(tag); // Dodaje nowy tag do kontekstu Entity Framework
-            await _context.SaveChangesAsync(); // Zapisuje tag w bazie danych
+            await _context.SaveChangesAsync(); // Zapisuje tag w bazie danych asynchronicznie
+            // asynchronicznie - bez blokowania wątku głównego
             return CreatedAtAction(nameof(GetTags), new { id = tag.Id }, tag); // Zwraca status HTTP 201 Created z lokalizacją nowego zasobu
         }
 

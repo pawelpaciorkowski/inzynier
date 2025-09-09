@@ -178,10 +178,11 @@ namespace CRM.BusinessLogic.Services // Przestrzeń nazw dla serwisów biznesowy
         public async Task<bool> DeleteAsync(int id) // Metoda asynchroniczna zwracająca status operacji
         {
             // Wyszukuje klienta po ID w bazie danych
-            var customer = await _context.Customers.FindAsync(id); // Wyszukuje klienta o podanym ID
+            var customer = await _context.Customers.FindAsync(id); // Wyszukuje klienta o podanym ID asynchronicznie    
+            // FindAsync - pobiera klienta o podanym ID z bazy danych asynchronicznie
             if (customer == null) return false; // Jeśli klient nie istnieje, zwraca false
 
-            _context.Customers.Remove(customer); // Usuwa klienta z kontekstu Entity Framework
+            _context.Customers.Remove(customer); // Usuwa klienta z kontekstu Entity Framework              
             await _context.SaveChangesAsync(); // Zapisuje zmiany w bazie danych (fizyczne usunięcie klienta)
             return true; // Zwraca true - usunięcie się powiodło
         }
