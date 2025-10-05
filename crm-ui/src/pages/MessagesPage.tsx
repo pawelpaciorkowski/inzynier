@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
-import api from '../api';
+import api from '../services/api';
 import { useModal } from '../context/ModalContext';
 import { PaperAirplaneIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { formatBackendDate } from '../utils/dateUtils';
@@ -47,13 +47,12 @@ export function MessagesPage() {
     const fetchMessages = async () => {
         setLoading(true);
         try {
-            const inboxRes = await api.get<any>('/Messages/inbox');
-            setInboxMessages(inboxRes.data.$values || inboxRes.data);
+            const inboxRes = await api.get('/Messages/inbox');
+            setInboxMessages(inboxRes.data || []);
 
-            const sentRes = await api.get<any>('/Messages/sent');
-            setSentMessages(sentRes.data.$values || sentRes.data);
+            const sentRes = await api.get('/Messages/sent');
+            setSentMessages(sentRes.data || []);
         } catch (err: any) {
-            console.error('Błąd pobierania wiadomości:', err);
             openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się pobrać wiadomości.' });
         } finally {
             setLoading(false);
@@ -62,8 +61,8 @@ export function MessagesPage() {
 
     const fetchUsers = async () => {
         try {
-            const res = await api.get<any>('/admin/users'); // Zakładamy, że ten endpoint zwraca listę użytkowników
-            setUsers(res.data.$values || res.data);
+            const res = await api.get('/admin/users');
+            setUsers(res.data || []);
         } catch (err) {
             console.error('Błąd pobierania użytkowników:', err);
         }
@@ -109,7 +108,7 @@ export function MessagesPage() {
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await api.post('/Messages', newMessage);
+            await api.post('/Messages/', newMessage);
             setShowNewMessageModal(false);
             setNewMessage({ recipientUserId: 0, subject: '', body: '' });
             fetchMessages(); // Odśwież listę

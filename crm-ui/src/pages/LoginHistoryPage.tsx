@@ -1,20 +1,19 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 // Definicja typu dla pojedynczego wpisu w historii
 interface LoginEntry {
     id: number;
-    loggedInAt: string;
+    loginTime: string;
     ipAddress: string;
     userAgent?: string;
-    browser?: string;
-    operatingSystem?: string;
-    deviceType?: string;
-    isSuccessful: boolean;
+    browser: string;
+    operatingSystem: string;
+    deviceType: string;
+    success: boolean;
     failureReason?: string;
     location?: string;
-    username: string;
-    userEmail: string;
+    userId: number;
 }
 
 // Definicja typu dla odpowiedzi z API, która może być opakowana
@@ -27,28 +26,21 @@ export function LoginHistoryPage() {
     const [history, setHistory] = useState<LoginEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const api = import.meta.env.VITE_API_URL;
 
     useEffect(() => {
         const fetchHistory = async () => {
-            const token = localStorage.getItem('token');
             try {
-                const response = await axios.get<ApiResponse | LoginEntry[]>(`${api}/profile/login-history`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const response = await api.get<ApiResponse | LoginEntry[]>('/Profile/login-history');
 
                 const data = response.data;
 
-                // --- TO JEST POPRAWIONA LOGIKA ---
-                // Sprawdzamy, czy dane są 'opakowane' w obiekt z kluczem '$values'
+               
                 if (data && typeof data === 'object' && '$values' in data && Array.isArray(data.$values)) {
                     setHistory(data.$values);
                 }
-                // Sprawdzamy, czy dane są po prostu tablicą
                 else if (Array.isArray(data)) {
                     setHistory(data);
                 }
-                // Jeśli format jest nieznany, ustawiamy błąd
                 else {
                     throw new Error("Otrzymano nieprawidłowy format danych.");
                 }
@@ -62,7 +54,7 @@ export function LoginHistoryPage() {
         };
 
         fetchHistory();
-    }, [api]);
+    }, []);
 
     if (loading) return <p className="p-6 text-gray-400">Ładowanie...</p>;
     if (error) return <p className="p-6 text-red-500">{error}</p>;
@@ -79,13 +71,13 @@ export function LoginHistoryPage() {
                 </div>
                 <div className="bg-gray-800 p-4 rounded-lg">
                     <div className="text-2xl font-bold text-green-500">
-                        {history.filter(h => h.isSuccessful).length}
+                        {history.filter(h => h.success).length}
                     </div>
                     <div className="text-sm text-gray-400">Udane logowania</div>
                 </div>
                 <div className="bg-gray-800 p-4 rounded-lg">
                     <div className="text-2xl font-bold text-red-500">
-                        {history.filter(h => !h.isSuccessful).length}
+                        {history.filter(h => !h.success).length}
                     </div>
                     <div className="text-sm text-gray-400">Nieudane próby</div>
                 </div>
@@ -126,18 +118,18 @@ export function LoginHistoryPage() {
                         </thead>
                         <tbody>
                             {history.map((entry) => (
-                                <tr key={entry.id} className={`hover:bg-gray-700 ${!entry.isSuccessful ? 'bg-red-900/20' : ''}`}>
+                                <tr key={entry.id} className={`hover:bg-gray-700 ${!entry.success ? 'bg-red-900/20' : ''}`}>
                                     <td className="px-5 py-4 border-b border-gray-600 text-sm">
-                                        {new Date(entry.loggedInAt.endsWith('Z') ? entry.loggedInAt : entry.loggedInAt + 'Z').toLocaleString('pl-PL')}
+                                        {entry.loginTime ? new Date(entry.loginTime.endsWith('Z') ? entry.loginTime : entry.loginTime + 'Z').toLocaleString('pl-PL') : 'Brak daty'}
                                     </td>
                                     <td className="px-5 py-4 border-b border-gray-600 text-sm">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${entry.isSuccessful
+                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${entry.success
                                             ? 'bg-green-100 text-green-800'
                                             : 'bg-red-100 text-red-800'
                                             }`}>
-                                            {entry.isSuccessful ? '✅ Sukces' : '❌ Błąd'}
+                                            {entry.success ? '✅ Sukces' : '❌ Błąd'}
                                         </span>
-                                        {!entry.isSuccessful && entry.failureReason && (
+                                        {!entry.success && entry.failureReason && (
                                             <div className="text-xs text-red-400 mt-1">
                                                 {entry.failureReason}
                                             </div>

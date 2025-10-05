@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { useModal } from '../context/ModalContext';
 import ClientSelectModal from '../components/ClientSelectModal';
+import api from '../services/api';
 
 interface Customer {
     id: number;
@@ -28,17 +28,13 @@ export function AddContractPage() {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const navigate = useNavigate();
     const { openModal, openToast } = useModal();
-    const api = import.meta.env.VITE_API_URL;
     const [showClientModal, setShowClientModal] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
     useEffect(() => {
         const fetchCustomers = async () => {
-            const token = localStorage.getItem('token');
             try {
-                const res = await axios.get(`${api}/customers`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const res = await api.get('/Customers/');
                 const data = res.data;
                 if (data && Array.isArray((data as any).$values)) {
                     setCustomers((data as any).$values);
@@ -77,9 +73,7 @@ export function AddContractPage() {
         };
 
         try {
-            await axios.post(`${api}/contracts`, newContract, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.post('/Contracts/', newContract);
             openToast('Nowy kontrakt został pomyślnie dodany.', 'success');
             navigate('/kontrakty');
         } catch (err: any) {

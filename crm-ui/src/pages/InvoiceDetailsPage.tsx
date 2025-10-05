@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getInvoiceById, type InvoiceDetailsDto } from '../services/invoiceService';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
-import axios from 'axios';
+import api from '../services/api';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { PrinterIcon } from '@heroicons/react/24/outline';
@@ -33,9 +33,9 @@ export function InvoiceDetailsPage() {
                 const invoiceData = await getInvoiceById(Number(id));
                 setInvoice(invoiceData);
 
-                const paymentsResponse = await axios.get<any>(`/api/Payments?invoiceId=${id}`);
+                const paymentsResponse = await api.get<any>(`/Payments/?invoiceId=${id}`);
                 const paymentsData = paymentsResponse.data.$values || paymentsResponse.data;
-                setPayments(paymentsData);
+                setPayments(Array.isArray(paymentsData) ? paymentsData : []);
 
                 setError(null);
             } catch (err) {
@@ -54,7 +54,7 @@ export function InvoiceDetailsPage() {
 
     const itemsToRender = Array.isArray(invoice.items) ? invoice.items : invoice.items?.$values || [];
 
-    const totalPaidAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
+    const totalPaidAmount = Array.isArray(payments) ? payments.reduce((sum, payment) => sum + payment.amount, 0) : 0;
     const remainingAmount = invoice.totalAmount - totalPaidAmount;
 
     return (
@@ -69,17 +69,14 @@ export function InvoiceDetailsPage() {
                     <div></div>
                     <button
                         className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition-colors"
-                        onClick={async () => {
-                            try {
-                                const token = localStorage.getItem('token');
-                                const response = await axios.get(`/api/invoices/${id}/pdf`, {
-                                    responseType: 'blob',
-                                    headers: token ? { Authorization: `Bearer ${token}` } : {},
-                                });
-                                const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-                                window.open(url, '_blank');
-                            } catch {
-                                alert('Nie udało się pobrać PDF faktury.');
+                        onClick={() => {
+                            const token = localStorage.getItem('token');
+                            const url = `/api/Invoices/${id}/pdf`;
+                            const printWindow = window.open(url, '_blank');
+                            if (printWindow) {
+                                // Dodaj token do requestu poprzez ustawienie nagłówka w nowym oknie nie jest możliwe
+                                // Więc przekierujemy z tokenem w URL lub użyjemy innego rozwiązania
+                                printWindow.location.href = url + `?token=${token}`;
                             }
                         }}
                         title="Drukuj fakturę"
@@ -164,7 +161,7 @@ export function InvoiceDetailsPage() {
 
                 <div className="bg-gray-800 rounded-lg shadow-lg p-8">
                     <h3 className="text-xl font-semibold border-b border-gray-700 pb-2 mb-4">Historia Płatności</h3>
-                    {payments.length === 0 ? (
+                    {!Array.isArray(payments) || payments.length === 0 ? (
                         <p className="text-gray-400">Brak płatności dla tej faktury.</p>
                     ) : (
                         <table className="min-w-full leading-normal">

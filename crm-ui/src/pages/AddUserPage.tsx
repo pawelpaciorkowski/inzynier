@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -24,14 +24,11 @@ export function AddUserPage() {
     const [roles, setRoles] = useState<Role[]>([]);
     const [success, setSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const api = import.meta.env.VITE_API_URL;
-    const token = localStorage.getItem('token');
 
     useEffect(() => {
-        axios.get(`${api}/admin/roles`, {
-            headers: { Authorization: `Bearer ${token}` },
-        })
-            .then(res => {
+        const fetchRoles = async () => {
+            try {
+                const res = await api.get<any>('/admin/Roles');
                 const data = res.data;
                 // Obsługa różnych formatów odpowiedzi z API (.NET)
                 if (data && Array.isArray((data as any).$values)) {
@@ -42,10 +39,14 @@ export function AddUserPage() {
                     console.warn("Otrzymano nieoczekiwany format danych dla ról:", data);
                     setRoles([]);
                 }
-            })
-            .catch(() => setError('Błąd ładowania ról'));
+            } catch (err) {
+                console.error('Błąd pobierania ról:', err);
+                setError('Błąd ładowania ról');
+            }
+        };
 
-    }, [api, token]);
+        fetchRoles();
+    }, []);
 
     // 2. WARUNKOWY RETURN ZNAJDUJE SIĘ PO HOOKACH
     if (user?.role === 'Sprzedawca') {
@@ -73,13 +74,11 @@ export function AddUserPage() {
         setError(null);
         setSuccess(null);
         try {
-            await axios.post(`${api}/admin/users`, {
+            await api.post('/admin/Users', {
                 username: formData.username,
                 email: formData.email,
                 password: formData.password,
                 roleId: formData.role?.id,
-            }, {
-                headers: { Authorization: `Bearer ${token}` },
             });
             setSuccess('Użytkownik dodany!');
             setFormData({}); // Resetuj formularz po sukcesie

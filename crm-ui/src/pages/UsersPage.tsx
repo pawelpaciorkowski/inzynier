@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
-import { useModal } from '../context/ModalContext'; // Import useModal
+import api from '../services/api';
+import { useModal } from '../context/ModalContext';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
 
@@ -22,16 +22,13 @@ export default function UsersPage() {
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
-    const { openModal, openToast } = useModal(); // Use the global modal context
-    const api = import.meta.env.VITE_API_URL;
+    const { openModal, openToast } = useModal();
+    const apiUrl = import.meta.env.VITE_API_URL;
 
     const fetchUsers = useCallback(async () => {
-        const token = localStorage.getItem('token');
         setLoading(true);
         try {
-            const res = await axios.get<ApiResponse | User[]>(`${api}/admin/users`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get<ApiResponse | User[]>('/admin/users');
             const data = '$values' in res.data ? res.data.$values : res.data;
             setUsers(data);
             setFilteredUsers(data);
@@ -41,11 +38,11 @@ export default function UsersPage() {
         } finally {
             setLoading(false);
         }
-    }, [api, openModal]);
+    }, []); // Usunięto openModal z zależności
 
     useEffect(() => {
         fetchUsers();
-    }, [fetchUsers]);
+    }, []); // Usunięto fetchUsers z zależności
 
     // Filtrowanie użytkowników na podstawie wyszukiwania
     useEffect(() => {
@@ -69,13 +66,10 @@ export default function UsersPage() {
             message: `Czy na pewno chcesz usunąć użytkownika "${user.username}"?`,
             confirmText: 'Usuń',
             onConfirm: async () => {
-                const token = localStorage.getItem('token');
                 try {
-                    await axios.delete(`${api}/admin/users/${user.id}`, {
-                        headers: { Authorization: `Bearer ${token}` },
-                    });
+                    await api.delete(`/admin/users/${user.id}`);
                     openToast('Użytkownik usunięty.', 'success');
-                    fetchUsers(); // Refresh the list after deleting
+                    fetchUsers();
                 } catch (err) {
                     console.error('❌ Błąd usuwania użytkownika:', err);
                     openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się usunąć użytkownika.' });

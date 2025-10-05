@@ -106,7 +106,7 @@ export default function ActivitiesScreen() {
                 Klient: {item.customerName || 'Brak'} | Użytkownik: {item.userName || 'Brak'}
               </Text>
               <Text style={styles.activityDate}>
-                {new Date(item.createdAt).toLocaleString('pl-PL')}
+                {item.createdAt ? new Date(item.createdAt).toLocaleString('pl-PL') : 'Brak daty'}
               </Text>
             </View>
           )}

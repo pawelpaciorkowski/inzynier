@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useModal } from '../context/ModalContext';
+import api from '../services/api';
 
 interface Tag {
     id: number;
@@ -20,13 +20,11 @@ export function AddClientPage() {
     const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
     const navigate = useNavigate();
     const { openModal, openToast } = useModal();
-    const api = import.meta.env.VITE_API_URL;
 
     useEffect(() => {
         const fetchTags = async () => {
-            const token = localStorage.getItem('token');
             try {
-                const response = await axios.get(`${api}/tags`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await api.get('/Tags/');
                 setAllTags(response.data.$values || response.data);
             } catch (err) {
                 console.error("Error fetching tags:", err);
@@ -53,13 +51,13 @@ export function AddClientPage() {
         };
 
         try {
-            await axios.post(`${api}/customers`, newClient, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.post('/Customers/', newClient);
             navigate('/klienci');
             openToast('Nowy klient został dodany.', 'success');
         } catch (err: any) {
-            openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się dodać klienta.' });
+            // Backend Python zwraca błędy w polu 'error', nie 'message'
+            const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Nie udało się dodać klienta.';
+            openModal({ type: 'error', title: 'Błąd', message: errorMessage });
         }
     };
 
@@ -94,8 +92,8 @@ export function AddClientPage() {
                                         type="button"
                                         onClick={() => handleTagToggle(tag.id)}
                                         className={`px-3 py-1 rounded-full text-sm font-medium transition-all ${selectedTagIds.includes(tag.id)
-                                                ? 'ring-2 ring-white ring-opacity-50'
-                                                : 'opacity-70 hover:opacity-100'
+                                            ? 'ring-2 ring-white ring-opacity-50'
+                                            : 'opacity-70 hover:opacity-100'
                                             }`}
                                         style={{
                                             backgroundColor: tag.color || '#3B82F6',

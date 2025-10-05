@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { Link, useNavigate } from 'react-router-dom';
 import { PlusIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
+import { useAuth } from '../context/AuthContext';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
@@ -16,6 +17,7 @@ interface CalendarEvent {
 
 export function CalendarEventsPage() {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [filteredEvents, setFilteredEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
@@ -28,7 +30,7 @@ export function CalendarEventsPage() {
         try {
             setLoading(true);
             setError(null);
-            const response = await axios.get('/api/CalendarEvents');
+            const response = await api.get('/CalendarEvents/');
             const responseData = response.data;
             let data = responseData;
 
@@ -52,8 +54,10 @@ export function CalendarEventsPage() {
     }, []);
 
     useEffect(() => {
-        fetchEvents();
-    }, [fetchEvents]);
+        if (user) {
+            fetchEvents();
+        }
+    }, [fetchEvents, user]);
 
     // Filtrowanie wydarzeń na podstawie wyszukiwania
     useEffect(() => {
@@ -102,22 +106,32 @@ export function CalendarEventsPage() {
                                         </button>
                                         <button
                                             onClick={() => {
+                                                console.log('🔴 Kliknięto przycisk Usuń dla wydarzenia:', event.id, event.title);
                                                 closeModal();
+                                                console.log('🔴 Zamknięto pierwszy modal');
                                                 openModal({
                                                     type: 'confirm',
                                                     title: 'Potwierdź usunięcie',
                                                     message: `Czy na pewno chcesz usunąć wydarzenie "${event.title}"?`,
                                                     onConfirm: async () => {
+                                                        console.log('🟢 onConfirm wywołane dla wydarzenia:', event.id);
                                                         try {
-                                                            await axios.delete(`/api/CalendarEvents/${event.id}`);
+                                                            console.log('🟡 Rozpoczynam usuwanie wydarzenia:', event.id);
+                                                            await api.delete(`/CalendarEvents/${event.id}`);
+                                                            console.log('✅ Wydarzenie usunięte pomyślnie:', event.id);
                                                             openToast('Wydarzenie zostało usunięte.', 'success');
-                                                            fetchEvents();
+                                                            // Zaktualizuj lokalny stan zamiast odświeżać całą stronę
+                                                            setEvents(prevEvents => prevEvents.filter(e => e.id !== event.id));
+                                                            setFilteredEvents(prevEvents => prevEvents.filter(e => e.id !== event.id));
+                                                            console.log('✅ Stan zaktualizowany lokalnie');
                                                         } catch (err: unknown) {
+                                                            console.error('❌ Błąd podczas usuwania:', err);
                                                             const errorMessage = err instanceof Error ? err.message : 'Nie udało się usunąć wydarzenia.';
                                                             openModal({ type: 'error', title: 'Błąd', message: errorMessage });
                                                         }
                                                     }
                                                 });
+                                                console.log('🔴 Otworzono modal potwierdzenia');
                                             }}
                                             className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors"
                                         >
@@ -169,6 +183,20 @@ export function CalendarEventsPage() {
 
     const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
     const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
+
+    if (!user) {
+        return (
+            <div className="p-6 text-center">
+                <p className="text-red-500 mb-4">Musisz się zalogować, aby zobaczyć wydarzenia kalendarza.</p>
+                <button
+                    onClick={() => navigate('/login')}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                >
+                    Przejdź do logowania
+                </button>
+            </div>
+        );
+    }
 
     if (loading) {
         return <div className="p-6 text-white text-center">Ładowanie wydarzeń...</div>;
@@ -359,9 +387,11 @@ export function CalendarEventsPage() {
                                                                         message: `Czy na pewno chcesz usunąć wydarzenie "${event.title}"?`,
                                                                         onConfirm: async () => {
                                                                             try {
-                                                                                await axios.delete(`/api/CalendarEvents/${event.id}`);
+                                                                                await api.delete(`/CalendarEvents/${event.id}`);
                                                                                 openToast('Wydarzenie zostało usunięte.', 'success');
-                                                                                fetchEvents();
+                                                                                // Zaktualizuj lokalny stan zamiast odświeżać całą stronę
+                                                                                setEvents(prevEvents => prevEvents.filter(e => e.id !== event.id));
+                                                                                setFilteredEvents(prevEvents => prevEvents.filter(e => e.id !== event.id));
                                                                             } catch (err: unknown) {
                                                                                 const errorMessage = err instanceof Error ? err.message : 'Nie udało się usunąć wydarzenia.';
                                                                                 openModal({ type: 'error', title: 'Błąd', message: errorMessage });

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { format } from 'date-fns';
-import { useModal } from '../context/ModalContext';
+// import { useModal } from '../context/ModalContext';
 import { BellIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { useOutletContext } from 'react-router-dom';
 
@@ -16,8 +16,7 @@ export function NotificationsPage() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { openModal } = useModal();
-    const api = import.meta.env.VITE_API_URL;
+    // const { openModal } = useModal();
     const { fetchNotifications: globalFetchNotifications } = useOutletContext<{ fetchNotifications: () => void }>();
 
     const fetchNotifications = useCallback(async () => {
@@ -25,29 +24,41 @@ export function NotificationsPage() {
         setError(null);
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get(`${api}/Notifications/user`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            if (!token) {
+                console.warn('Brak tokenu - pomijam pobieranie powiadomień');
+                setNotifications([]);
+                setLoading(false);
+                return;
+            }
+            const response = await api.get('/Notifications/user');
             const data = response.data.$values || response.data;
-            setNotifications(data);
-        } catch (err) {
-            console.error("Błąd pobierania powiadomień:", err);
+            // Upewnij się, że data jest tablicą
+            if (Array.isArray(data)) {
+                setNotifications(data);
+            } else {
+                console.warn('Otrzymano nieprawidłowy format danych powiadomień:', data);
+                setNotifications([]);
+            }
+        } catch (error: unknown) {
+            console.error("Błąd pobierania powiadomień:", error);
+            if (error && typeof error === 'object' && 'response' in error) {
+                const axiosError = error as { response?: { data?: unknown; status?: number } };
+                console.error("Response data:", axiosError.response?.data);
+                console.error("Response status:", axiosError.response?.status);
+            }
             setError("Nie udało się załadować powiadomień.");
         } finally {
             setLoading(false);
         }
-    }, [api, openModal]);
+    }, []); // Usunięto apiUrl i openModal z zależności
 
     useEffect(() => {
         fetchNotifications();
-    }, [fetchNotifications]);
+    }, []); // Usunięto fetchNotifications z zależności
 
     const handleMarkAsRead = async (id: number) => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.post(`${api}/Notifications/mark-as-read/${id}`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.post(`/Notifications/mark-as-read/${id}`, {});
             fetchNotifications(); // Odśwież lokalnie
             globalFetchNotifications(); // Odśwież licznik w Layout
         } catch (err) {
@@ -59,12 +70,9 @@ export function NotificationsPage() {
     // Dodaj funkcję do masowego oznaczania
     const handleMarkAllAsRead = async () => {
         const unread = notifications.filter(n => !n.isRead);
-        const token = localStorage.getItem('token');
         try {
-            await Promise.all(unread.map(n =>
-                axios.post(`${api}/Notifications/mark-as-read/${n.id}`, {}, {
-                    headers: { Authorization: `Bearer ${token}` }
-                })
+            await Promise.all(unread.map(notification =>
+                api.post(`/Notifications/mark-as-read/${notification.id}`, {})
             ));
             fetchNotifications();
             globalFetchNotifications();
@@ -90,7 +98,7 @@ export function NotificationsPage() {
         <div className="p-6 text-white">
             <h1 className="text-3xl font-bold mb-6">🔔 Powiadomienia</h1>
 
-            {notifications.length > 0 && notifications.some(n => !n.isRead) && (
+            {Array.isArray(notifications) && notifications.length > 0 && notifications.some(n => !n.isRead) && (
                 <button
                     onClick={handleMarkAllAsRead}
                     className="mb-4 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow"

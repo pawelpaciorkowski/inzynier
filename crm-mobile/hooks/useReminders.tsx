@@ -6,8 +6,8 @@ import { useAuth } from '../context/AuthContext';
 interface Reminder {
     id: number;
     note: string;
-    userId: number;
-    remindAt: string;
+    user_id: number;
+    remind_at: string;
 }
 
 export const useReminders = () => {
@@ -71,7 +71,7 @@ export const useReminders = () => {
                 return false;
             }
 
-            const reminderDate = new Date(r.remindAt);
+            const reminderDate = new Date(r.remind_at);
             const reminderMinute = reminderDate.getMinutes();
             const reminderHour = reminderDate.getHours();
             const reminderDateStr = reminderDate.toDateString();

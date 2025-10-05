@@ -2,9 +2,9 @@
 // Plik: crm-ui/src/pages/AddNotePage.tsx
 
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useModal } from '../context/ModalContext';
+import api from '../services/api';
 import ClientSelectModal from '../components/ClientSelectModal';
 
 interface Customer {
@@ -27,7 +27,7 @@ export function AddNotePage() {
     useEffect(() => {
         const fetchCustomers = async () => {
             try {
-                const response = await axios.get<ApiResponse<Customer> | Customer[]>('/api/Customers');
+                const response = await api.get<ApiResponse<Customer> | Customer[]>('/Customers/');
                 const data = '$values' in response.data ? response.data.$values : response.data;
                 setCustomers(data);
             } catch (err) {
@@ -45,14 +45,16 @@ export function AddNotePage() {
         }
 
         try {
-            await axios.post('/api/Notes', {
+            await api.post('/Notes', {
                 content,
                 customerId: parseInt(customerId)
             });
             openToast('Notatka została dodana.', 'success');
             navigate('/notatki');
         } catch (err: any) {
-            openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się dodać notatki.' });
+            // Backend Python zwraca błędy w polu 'error', nie 'message'
+            const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Nie udało się dodać notatki.';
+            openModal({ type: 'error', title: 'Błąd', message: errorMessage });
         }
     };
 

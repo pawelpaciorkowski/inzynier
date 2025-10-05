@@ -81,7 +81,7 @@ import { AddInvoicePage } from "./pages/AddInvoicePage";
 // Import strony dodawania nowej płatności
 import { AddPaymentPage } from "./pages/AddPaymentPage";
 // Import strony edytowania istniejącej płatności
-import { EditPaymentPage } from "./pages/EditPaymentPage";
+import EditPaymentPage from "./pages/EditPaymentPage";
 // Import strony dodawania nowego spotkania
 import { AddMeetingPage } from "./pages/AddMeetingPage";
 // Import strony edytowania istniejącego spotkania

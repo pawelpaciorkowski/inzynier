@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import api from '../services/api';
 import AdminDashboard from "../components/AdminDashboard";
 import UserDashboard from "../components/UserDashboard.tsx";
 import SalesDashboard from "../components/SalesDashboard";
@@ -11,7 +12,7 @@ type AdminDashboardData = {
     paymentsCount: number;
     usersCount: number;
     systemLogsCount: number;
-    taskPerUser: { username: string; count: number }[];
+    taskPerUser: { username: string; totalTasks: number; pendingTasks: number }[];
 };
 
 type UserDashboardData = {
@@ -69,22 +70,9 @@ export default function DashboardPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const token = localStorage.getItem("token");
-
-                const response = await fetch("/api/admin/dashboard", {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-
-                if (!response.ok) {
-                    console.error("Błąd HTTP", response.status);
-                    return;
-                }
-
-                const data = await response.json();
-                console.log("Dashboard data:", data);
-                setDashboardData(data);
+                const response = await api.get('/admin/dashboard');
+                console.log("Dashboard data:", response.data);
+                setDashboardData(response.data);
             } catch (error) {
                 console.error("Błąd pobierania danych dashboardu:", error);
             }

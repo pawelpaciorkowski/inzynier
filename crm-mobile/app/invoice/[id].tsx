@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, ScrollView, Text, Alert, Platform, TouchableTouchableOpacity } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, ScrollView, Text, Alert, Platform, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import * as FileSystem from 'expo-file-system';
@@ -28,9 +28,7 @@ interface InvoiceDetails {
     issuedAt: string; // Data wystawienia.
     dueDate: string; // Termin płatności.
     isPaid: boolean; // Status płatności.
-    items: {
-        $values: InvoiceItemDetails[]; // Lista pozycji na fakturze (format .NET).
-    };
+    items: InvoiceItemDetails[]; // Lista pozycji na fakturze.
 }
 
 /**
@@ -146,7 +144,7 @@ export default function InvoiceDetailScreen() {
                 {/* Karta z pozycjami na fakturze. */}
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>Pozycje na fakturze</Text>
-                    {invoice.items?.$values.map(item => (
+                    {invoice.items?.map(item => (
                         <View key={item.id} style={styles.item}>
                             <Text style={styles.itemName}>{item.description}</Text>
                             <Text style={styles.itemDetails}>

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
+import api from '../services/api';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useModal } from '../context/ModalContext';
@@ -27,17 +28,14 @@ export default function EditInvoicePage() {
 
     const navigate = useNavigate();
     const { openModal, openToast } = useModal();
-    const api = import.meta.env.VITE_API_URL;
 
     useEffect(() => {
         const fetchData = async () => {
-            const token = localStorage.getItem("token");
-            if (!token || !id) return;
-            const headers = { Authorization: `Bearer ${token}` };
+            if (!id) return;
             try {
                 const [servicesRes, invoiceRes] = await Promise.all([
-                    axios.get(`${api}/services`, { headers }),
-                    axios.get(`${api}/invoices/${id}`, { headers }),
+                    api.get('/Services/'),
+                    api.get(`/Invoices/${id}`),
                 ]);
 
                 const servicesData = servicesRes.data;
@@ -65,11 +63,8 @@ export default function EditInvoicePage() {
                     price: item.unitPrice || item.price || 0,
                     total: (item.unitPrice || item.price || 0) * item.quantity,
                 }) as InvoiceItem));
-            } catch (err: unknown) {
-                let errorMessage = 'Nie udało się załadować danych faktury.';
-                if (axios.isAxiosError(err) && err.response) {
-                    errorMessage = err.response.data?.message || err.message;
-                }
+            } catch (err: any) {
+                const errorMessage = err.response?.data?.message || 'Nie udało się załadować danych faktury.';
                 openModal({ type: 'error', title: 'Błąd', message: errorMessage });
                 setError(errorMessage);
             } finally {
@@ -77,7 +72,7 @@ export default function EditInvoicePage() {
             }
         };
         fetchData();
-    }, [api, id, openModal]);
+    }, [id, openModal]);
 
     const handleAddItem = () => {
         if (!selectedServiceId) {
@@ -113,7 +108,6 @@ export default function EditInvoicePage() {
         }
         setIsSubmitting(true);
         setError(null);
-        const token = localStorage.getItem("token");
         const invoiceData = {
             invoiceNumber,
             customerId: parseInt(selectedCustomerId, 10),
@@ -123,7 +117,7 @@ export default function EditInvoicePage() {
             })),
         };
         try {
-            await axios.put(`${api}/invoices/${id}`, invoiceData, { headers: { Authorization: `Bearer ${token}` } });
+            await api.put(`/Invoices/${id}`, invoiceData);
             openToast('Faktura została zaktualizowana.', 'success');
             navigate(`/faktury/${id}`);
         } catch (err: unknown) {

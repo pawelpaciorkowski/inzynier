@@ -3,6 +3,7 @@
 import { useState } from "react";
 // Import biblioteki axios do wykonywania zapytań HTTP
 import axios from "axios";
+import api from "../services/api";
 // Import ikon z biblioteki React Icons - ikona email i kłódki
 import { FiMail, FiLock } from "react-icons/fi";
 // Import hooka useNavigate do programowej nawigacji
@@ -32,7 +33,7 @@ export default function LoginPage() {
             setLoading(true);
             setError('');
 
-            const res = await axios.post('/api/Auth/login', {
+            const res = await api.post('/Auth/login', {
                 username,
                 password,
             });

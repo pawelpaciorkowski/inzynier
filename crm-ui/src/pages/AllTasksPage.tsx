@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 // Definicja interfejsu, aby TypeScript wiedział, jak wyglądają dane zadania
 interface Task {
@@ -24,15 +24,10 @@ export function AllTasksPage() {
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [completionFilter, setCompletionFilter] = useState<'all' | 'completed' | 'pending'>('all');
-    const api = import.meta.env.VITE_API_URL;
-    const token = localStorage.getItem('token');
-
     useEffect(() => {
         const fetchTasks = async () => {
             try {
-                const response = await axios.get(`${api}/admin/tasks`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const response = await api.get('/admin/tasks');
 
                 const data = response.data;
 
@@ -57,7 +52,7 @@ export function AllTasksPage() {
             }
         };
         fetchTasks();
-    }, [api, token]);
+    }, []);
 
     // Filtrowanie zadań na podstawie wyszukiwania
     useEffect(() => {

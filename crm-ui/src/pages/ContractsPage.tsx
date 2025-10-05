@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { Link } from 'react-router-dom';
 import { TrashIcon, PencilIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
@@ -14,7 +14,12 @@ interface Contract {
     endDate?: string;
     netAmount?: number;
 }
-interface Template { id: number; name: string; }
+interface Template {
+    id: number;
+    name: string;
+    fileName: string;
+    uploadedAt?: string;
+}
 
 export function ContractsPage() {
     const [contracts, setContracts] = useState<Contract[]>([]);
@@ -25,17 +30,15 @@ export function ContractsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { openModal, openToast } = useModal();
-    const api = import.meta.env.VITE_API_URL;
     const [currentPage, setCurrentPage] = useState(1);
     const resultsPerPage = 10;
 
     const fetchData = useCallback(async () => {
-        const token = localStorage.getItem('token');
         setLoading(true);
         try {
             const [contractsRes, templatesRes] = await Promise.all([
-                axios.get(`${api}/contracts`, { headers: { Authorization: `Bearer ${token}` } }),
-                axios.get(`${api}/templates`, { headers: { Authorization: `Bearer ${token}` } })
+                api.get('/Contracts/'),
+                api.get('/Contracts/templates')
             ]);
 
             const contractsData = contractsRes.data;
@@ -47,7 +50,7 @@ export function ContractsPage() {
             setTemplates(templatesData?.$values || (Array.isArray(templatesData) ? templatesData : []));
 
         } catch { setError('Nie udało się pobrać danych.'); } finally { setLoading(false); }
-    }, [api]);
+    }, []); // Usunięto apiUrl z zależności
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -75,7 +78,7 @@ export function ContractsPage() {
             confirmText: 'Usuń',
             onConfirm: async () => {
                 try {
-                    await axios.delete(`/api/Contracts/${id}`);
+                    await api.delete(`/Contracts/${id}`);
                     // Odśwież listę po usunięciu
                     setContracts(prevContracts => prevContracts.filter(contract => contract.id !== id));
                     openToast('Kontrakt został pomyślnie usunięty.', 'success');
@@ -92,19 +95,45 @@ export function ContractsPage() {
             openModal({ type: 'error', title: 'Brak szablonu', message: 'Proszę wybrać szablon z listy powyżej.' });
             return;
         }
-        const token = localStorage.getItem('token');
         try {
-            const response = await axios.get(`${api}/contracts/${contractId}/generate-document?templateId=${selectedTemplateId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-                responseType: 'blob',
+            const response = await api.post(`/Contracts/${contractId}/generate-from-template`, {
+                template_id: parseInt(selectedTemplateId)
+            }, {
+                responseType: 'blob'
             });
+
+            // Sprawdź czy odpowiedź to JSON z komunikatem błędu
+            if (response.data && typeof response.data === 'object' && response.data.error) {
+                openModal({
+                    type: 'error',
+                    title: 'Błąd generowania dokumentu',
+                    message: response.data.error
+                });
+                return;
+            }
+
+            // Jeśli to prawdziwy plik DOCX
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `umowa-${contractId}.docx`);
+
+            // Pobierz nazwę pliku z nagłówka Content-Disposition
+            const contentDisposition = response.headers['content-disposition'];
+            let filename = `umowa-${contractId}.docx`;
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                if (filenameMatch) {
+                    filename = filenameMatch[1];
+                }
+            }
+
+            link.setAttribute('download', filename);
             link.click();
             link.remove();
-        } catch {
+
+            openToast('Dokument został wygenerowany i pobrany.', 'success');
+        } catch (error) {
+            console.error('Błąd generowania dokumentu:', error);
             openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się wygenerować dokumentu.' });
         }
     };

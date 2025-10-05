@@ -10,8 +10,8 @@ import { useAuth } from '../context/AuthContext';
 interface Reminder {
     id: number; // Unikalny identyfikator przypomnienia
     note: string; // Treść przypomnienia
-    userId: number; // ID użytkownika, do którego należy przypomnienie
-    remindAt: string; // Data i czas przypomnienia
+    user_id: number; // ID użytkownika, do którego należy przypomnienie
+    remind_at: string; // Data i czas przypomnienia
 }
 
 /**
@@ -106,7 +106,7 @@ export default function RemindersPage() {
         try {
             await axios.post('/api/Reminders', {
                 note: newNote.trim(),
-                remindAt: reminderDate.toISOString()
+                remind_at: reminderDate.toISOString()
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -213,7 +213,7 @@ export default function RemindersPage() {
                             <View style={styles.reminderContent}>
                                 <Text style={styles.reminderNote}>{item.note}</Text>
                                 <Text style={styles.reminderDate}>
-                                    {format(new Date(item.remindAt), 'dd.MM.yyyy HH:mm', { locale: pl })}
+                                    {format(new Date(item.remind_at), 'dd.MM.yyyy HH:mm', { locale: pl })}
                                 </Text>
                             </View>
                             <Pressable

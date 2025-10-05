@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useModal } from '../context/ModalContext';
+import api from '../services/api';
 
 interface Note {
     id: number;
@@ -28,12 +28,12 @@ export function EditNotePage() {
     useEffect(() => {
         const fetchNoteAndCustomers = async () => {
             try {
-                const noteResponse = await axios.get<Note>(`/api/Notes/${noteId}`);
+                const noteResponse = await api.get<Note>(`/Notes/${noteId}`);
                 setContent(noteResponse.data.content);
                 setCustomerId(noteResponse.data.customerId || undefined);
 
                 // Fetch customers
-                const customersResponse = await axios.get<Customer[]>('/api/Customers');
+                const customersResponse = await api.get<Customer[]>('/Customers/');
                 const customerData = customersResponse.data;
                 let customersData: Customer[] = [];
 
@@ -47,8 +47,9 @@ export function EditNotePage() {
             } catch (err) {
                 console.error('Failed to fetch note or customers:', err);
                 let errorMessage = 'Nie udało się pobrać danych notatki lub klientów.';
-                if (axios.isAxiosError(err) && err.response) {
-                    errorMessage = err.response.data?.message || err.message;
+                if (err && typeof err === 'object' && 'response' in err) {
+                    const axiosError = err as { response?: { data?: { message?: string } }; message?: string };
+                    errorMessage = axiosError.response?.data?.message || axiosError.message || errorMessage;
                 }
                 openModal({ type: 'error', title: 'Błąd', message: errorMessage });
                 navigate('/notatki'); // Go back to notes list on error
@@ -65,13 +66,14 @@ export function EditNotePage() {
         }
 
         try {
-            await axios.put(`/api/Notes/${noteId}`, { id: noteId, content, customerId: customerId || null });
+            await api.put(`/Notes/${noteId}`, { id: noteId, content, customerId: customerId || null });
             openToast('Notatka została zaktualizowana.', 'success');
-            navigate('/notatki'); // Redirect to notes list
+            navigate('/notatki');
         } catch (err) {
             let errorMessage = 'Wystąpił nieoczekiwany błąd podczas aktualizacji notatki.';
-            if (axios.isAxiosError(err) && err.response) {
-                errorMessage = err.response.data?.message || err.message;
+            if (err && typeof err === 'object' && 'response' in err) {
+                const axiosError = err as { response?: { data?: { message?: string } }; message?: string };
+                errorMessage = axiosError.response?.data?.message || axiosError.message || errorMessage;
             }
             openModal({ type: 'error', title: 'Błąd', message: errorMessage });
         }

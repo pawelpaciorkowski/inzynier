@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { Link } from 'react-router-dom';
 import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
@@ -13,6 +13,7 @@ interface Note {
     createdAt: string;
     userId: number;
     customerId?: number;
+    customerName?: string; // Nazwa klienta zwracana przez backend
     customer?: { name: string }; // Opcjonalnie, jeśli dołączamy dane klienta
     user?: { username: string }; // Opcjonalnie, jeśli dołączamy dane użytkownika
 }
@@ -34,24 +35,32 @@ export function NotesPage() {
         setLoading(true);
         setError(null);
         try {
-            const response = await axios.get<ApiResponse<Note> | Note[]>('/api/Notes');
+            const response = await api.get<ApiResponse<Note> | Note[]>('/Notes');
             const data = '$values' in response.data ? response.data.$values : response.data;
-            setNotes(data);
-            setFilteredNotes(data);
+            const notesArray = Array.isArray(data) ? data : [];
+            setNotes(notesArray);
+            setFilteredNotes(notesArray);
         } catch (err: unknown) {
             let errorMessage = 'Nie udało się pobrać notatek.';
-            if (axios.isAxiosError(err) && err.response) {
-                errorMessage = err.response.data?.message || err.message;
+            if (err && typeof err === 'object' && 'response' in err) {
+                const axiosErr = err as any;
+                const status = axiosErr.response?.status;
+
+                if (status === 401) {
+                    errorMessage = 'Błąd autoryzacji. Spróbuj się zalogować ponownie.';
+                } else {
+                    errorMessage = axiosErr.response?.data?.message || axiosErr.message;
+                }
             }
             setError(errorMessage);
         } finally {
             setLoading(false);
         }
-    }, [openModal]);
+    }, []); // Usunięto openModal z zależności
 
     useEffect(() => {
         fetchNotes();
-    }, [fetchNotes]);
+    }, []); // Usunięto fetchNotes z zależności
 
     // Filtrowanie notatek na podstawie wyszukiwania
     useEffect(() => {
@@ -69,22 +78,44 @@ export function NotesPage() {
             message: 'Czy na pewno chcesz usunąć tę notatkę?',
             onConfirm: async () => {
                 try {
-                    await axios.delete(`/api/Notes/${id}`);
+                    await api.delete(`/Notes/${id}`);
                     fetchNotes(); // Odśwież listę
                     openToast('Notatka została pomyślnie usunięta.', 'success');
                 } catch (err: unknown) {
                     let errorMessage = 'Nie udało się usunąć notatki.';
-                    if (axios.isAxiosError(err) && err.response) {
-                        errorMessage = err.response.data?.message || err.message;
+                    if (err && typeof err === 'object' && 'response' in err) {
+                        const axiosErr = err as any;
+                        // Backend Python zwraca błędy w polu 'error', nie 'message'
+                        errorMessage = axiosErr.response?.data?.error || axiosErr.response?.data?.message || axiosErr.message;
                     }
-                    openModal({ type: 'error', title: 'Błąd', message: errorMessage });
+                    // Otwórz modal błędu po zamknięciu modal potwierdzenia
+                    setTimeout(() => {
+                        openModal({ type: 'error', title: 'Błąd', message: errorMessage });
+                    }, 100);
                 }
             },
         });
     };
 
     if (loading) return <p className="p-6 text-center text-gray-400">Ładowanie...</p>;
-    if (error) return <p className="p-6 text-center text-red-500">{error}</p>;
+    if (error) {
+        return (
+            <div className="p-6 text-center">
+                <p className="text-red-500 mb-4">{error}</p>
+                {error.includes('autoryzacji') && (
+                    <button
+                        onClick={() => {
+                            localStorage.removeItem('token');
+                            window.location.href = '/login';
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                    >
+                        Przejdź do logowania
+                    </button>
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className="p-6">
@@ -144,7 +175,7 @@ export function NotesPage() {
                                             : note.content}
                                     </td>
                                     <td className="px-5 py-4 border-b border-gray-600 font-medium text-indigo-400">
-                                        {note.customer?.name || "Brak"}
+                                        {note.customerName || "Brak"}
                                     </td>
                                     <td className="px-5 py-4 border-b border-gray-600">
                                         {format(new Date(note.createdAt), "dd.MM.yyyy HH:mm", {
@@ -153,7 +184,7 @@ export function NotesPage() {
                                     </td>
                                     <td className="px-5 py-4 border-b border-gray-600 text-center">
                                         <div className="flex justify-center gap-4">
-                                            <Link to={`/notatki/edytuj/:id`} title="Edytuj">
+                                            <Link to={`/notatki/edytuj/${note.id}`} title="Edytuj">
                                                 <PencilIcon className="w-5 h-5 text-gray-400 hover:text-yellow-400" />
                                             </Link>
                                             <button

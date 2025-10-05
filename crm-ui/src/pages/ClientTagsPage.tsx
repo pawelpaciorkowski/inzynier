@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { TagIcon, TrashIcon, PlusIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
 
@@ -39,16 +39,15 @@ export function ClientTagsPage() {
     const [editName, setEditName] = useState('');
     const [editColor, setEditColor] = useState('');
     const [editDescription, setEditDescription] = useState('');
-    const api = import.meta.env.VITE_API_URL;
     const { openToast } = useModal();
 
     const fetchTags = async () => {
-        const token = localStorage.getItem('token');
         try {
-            const response = await axios.get(`${api}/tags`, { headers: { Authorization: `Bearer ${token}` } });
+            const response = await api.get('/Tags/');
             const tagsData = response.data.$values || response.data;
-            setTags(tagsData);
-            setFilteredTags(tagsData);
+            const tagsArray = Array.isArray(tagsData) ? tagsData : [];
+            setTags(tagsArray);
+            setFilteredTags(tagsArray);
         } catch {
             openToast('Nie udało się pobrać tagów', 'error');
         }
@@ -71,13 +70,12 @@ export function ClientTagsPage() {
         e.preventDefault();
         if (!newTagName) return;
 
-        const token = localStorage.getItem('token');
         try {
-            await axios.post(`${api}/tags`, {
+            await api.post('/Tags/', {
                 name: newTagName,
                 color: newTagColor,
                 description: newTagDescription
-            }, { headers: { Authorization: `Bearer ${token}` } });
+            });
             setNewTagName('');
             setNewTagColor('#3B82F6');
             setNewTagDescription('');
@@ -91,9 +89,8 @@ export function ClientTagsPage() {
     const handleDeleteTag = async (id: number) => {
         if (!confirm("Czy na pewno chcesz usunąć ten tag? Spowoduje to usunięcie wszystkich powiązań.")) return;
 
-        const token = localStorage.getItem('token');
         try {
-            await axios.delete(`${api}/tags/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            await api.delete(`/Tags/${id}`);
             fetchTags();
             openToast('Tag został usunięty pomyślnie', 'success');
         } catch {
@@ -112,13 +109,12 @@ export function ClientTagsPage() {
     const handleUpdateTag = async () => {
         if (!editingTag || !editName) return;
 
-        const token = localStorage.getItem('token');
         try {
-            await axios.put(`${api}/tags/${editingTag.id}`, {
+            await api.put(`/Tags/${editingTag.id}`, {
                 name: editName,
                 color: editColor,
                 description: editDescription
-            }, { headers: { Authorization: `Bearer ${token}` } });
+            });
 
             setEditingTag(null);
             setEditName('');

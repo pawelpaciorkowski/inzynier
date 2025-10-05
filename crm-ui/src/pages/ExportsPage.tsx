@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useModal } from '../context/ModalContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -136,12 +136,16 @@ export function ExportsPage() {
         const fetchData = async () => {
             try {
                 const [groupsRes, tagsRes] = await Promise.all([
-                    axios.get('/api/groups'),
-                    axios.get('/api/tags')
+                    api.get('/Groups/'),
+                    api.get('/Tags/')
                 ]);
 
-                setGroups(groupsRes.data.$values || groupsRes.data);
-                setTags(tagsRes.data.$values || tagsRes.data);
+                // Ensure groups is always an array
+                const groupsData = groupsRes.data?.$values || groupsRes.data || [];
+                const tagsData = tagsRes.data?.$values || tagsRes.data || [];
+
+                setGroups(Array.isArray(groupsData) ? groupsData : []);
+                setTags(Array.isArray(tagsData) ? tagsData : []);
             } catch (error) {
                 console.error('Błąd pobierania danych:', error);
             } finally {
@@ -175,7 +179,7 @@ export function ExportsPage() {
             if (config.groupId) params.append('groupId', config.groupId.toString());
             if (config.tagId) params.append('tagId', config.tagId.toString());
 
-            const response = await axios.get(`/api/reports/export-${config.type}?${params}`, {
+            const response = await api.get(`/reports/export-${config.type}?${params}`, {
                 responseType: 'blob',
                 headers: {
                     'Accept': '*/*',
@@ -313,13 +317,6 @@ export function ExportsPage() {
                         </h2>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {config.format === 'pdf' && (
-                                <div className="md:col-span-2 mb-4 p-3 bg-yellow-900 border border-yellow-600 rounded-md">
-                                    <p className="text-yellow-200 text-sm">
-                                        ⚠️ PDF ma problemy na systemie Linux. Zostanie wyeksportowany jako CSV z informacją o problemie.
-                                    </p>
-                                </div>
-                            )}
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-2">
                                     Typ danych
@@ -350,7 +347,7 @@ export function ExportsPage() {
                                 >
                                     <option value="csv">CSV</option>
                                     <option value="xlsx">Excel (XLSX)</option>
-                                    <option value="pdf">PDF (CSV fallback)</option>
+                                    <option value="pdf">PDF</option>
                                 </select>
                             </div>
                         </div>

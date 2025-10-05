@@ -4,8 +4,8 @@ import axios from 'axios';
 
 // Tworzymy nową, konfigurowalną instancję axios z określoną konfiguracją
 const api = axios.create({
-    // Bazowy URL dla wszystkich zapytań - wszystkie ścieżki będą relative do '/api'
-    baseURL: '/api' 
+    // Bazowy URL dla wszystkich zapytań - używamy pustego stringa dla względnych ścieżek z proxy
+    baseURL: import.meta.env.VITE_API_URL || ''
 });
 
 // Konfigurujemy interceptor dla zapytań (request interceptor)

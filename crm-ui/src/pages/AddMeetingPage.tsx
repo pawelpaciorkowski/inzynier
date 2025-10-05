@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useModal } from '../context/ModalContext';
 import ClientSelectModal from '../components/ClientSelectModal';
+import api from '../services/api';
 
 interface Customer {
     id: number;
@@ -11,7 +11,6 @@ interface Customer {
 }
 
 export function AddMeetingPage() {
-    const api = import.meta.env.VITE_API_URL;
 
     const navigate = useNavigate();
     const [topic, setTopic] = useState('');
@@ -32,11 +31,8 @@ export function AddMeetingPage() {
         };
 
         const fetchCustomers = async () => {
-            const token = localStorage.getItem('token');
             try {
-                const res = await axios.get(`${api}/customers`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const res = await api.get('/Customers/');
 
                 const data = res.data;
 
@@ -65,7 +61,7 @@ export function AddMeetingPage() {
         };
 
         fetchCustomers();
-    }, [api, openModal]);
+    }, [openModal]);
 
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -82,7 +78,7 @@ export function AddMeetingPage() {
             const adjustedScheduledAt = new Date(scheduledAt);
             adjustedScheduledAt.setMinutes(adjustedScheduledAt.getMinutes() - adjustedScheduledAt.getTimezoneOffset());
 
-            await axios.post('/api/Meetings', {
+            await api.post('/Meetings', {
                 topic,
                 scheduledAt: adjustedScheduledAt.toISOString(),
                 customerId: parseInt(customerId as string),

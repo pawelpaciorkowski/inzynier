@@ -89,7 +89,7 @@ export default function CustomerDetailScreen() {
 
         try {
             const response = await axios.put(`/api/Customers/${customer.id}`, editForm);
-            if (response.status === 204) { // Status 204 No Content oznacza sukces.
+            if (response.status === 200) { // Backend zwraca status 200
                 setCustomer({ ...customer, ...editForm });
                 setIsEditing(false); // Wyłączenie trybu edycji.
                 Alert.alert("Sukces", "Dane klienta zostały zaktualizowane");

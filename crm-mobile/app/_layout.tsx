@@ -11,8 +11,8 @@ export {
 } from 'expo-router';
 
 /**
- * Główny komponent layoutu, który zarządza nawigacją i autentykacją.
- * @returns {JSX.Element} - Zwraca komponent nawigacyjny w zależności od stanu autentykacji.
+ * Komponent do zarządzania nawigacją i autentykacją.
+ * @returns {JSX.Element | null} - Zwraca null, ponieważ logika nawigacji jest w useEffect.
  */
 const InitialLayout = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -36,19 +36,7 @@ const InitialLayout = () => {
     }
   }, [isAuthenticated, isLoading, segments]);
 
-  return (
-    <Stack screenOptions={{
-      headerStyle: { backgroundColor: '#1f2937' },
-      headerTintColor: '#fff',
-    }}>
-      <Stack.Screen name="login" options={{ headerShown: false }} /> {/* Ustaw login jako pierwszy ekran */}
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="add-task" options={{ presentation: 'modal', title: 'Nowe Zadanie', contentStyle: { backgroundColor: '#111827' } }} />
-      <Stack.Screen name="edit-task" options={{ presentation: 'modal', title: 'Edytuj Zadanie' }} />
-      <Stack.Screen name="notifications" options={{ presentation: 'modal', title: 'Powiadomienia' }} />
-      <Stack.Screen name="reminders" options={{ presentation: 'modal', title: 'Przypomnienia' }} />
-    </Stack>
-  );
+  return null;
 };
 
 /**
@@ -71,6 +59,17 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
+      <Stack screenOptions={{
+        headerStyle: { backgroundColor: '#1f2937' },
+        headerTintColor: '#fff',
+      }}>
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="add-task" options={{ presentation: 'modal', title: 'Nowe Zadanie', contentStyle: { backgroundColor: '#111827' } }} />
+        <Stack.Screen name="edit-task" options={{ presentation: 'modal', title: 'Edytuj Zadanie' }} />
+        <Stack.Screen name="notifications" options={{ presentation: 'modal', title: 'Powiadomienia' }} />
+        <Stack.Screen name="reminders" options={{ presentation: 'modal', title: 'Przypomnienia' }} />
+      </Stack>
       <InitialLayout />
     </AuthProvider>
   );

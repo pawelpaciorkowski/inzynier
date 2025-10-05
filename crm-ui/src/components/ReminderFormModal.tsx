@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { format } from 'date-fns';
 import { useModal } from '../context/ModalContext';
 import { parseBackendDate } from '../utils/dateUtils';
+import api from '../services/api';
 
 interface Reminder {
     id: number;
     note: string;
-    remindAt: string;
-    userId: number;
+    remind_at: string;
+    user_id: number;
 }
 
 interface ReminderFormModalProps {
@@ -21,12 +21,11 @@ export const ReminderFormModal: React.FC<ReminderFormModalProps> = ({ currentRem
     const [note, setNote] = useState('');
     const [remindAt, setRemindAt] = useState('');
     const { openModal } = useModal();
-
     useEffect(() => {
         if (currentReminder) {
             setNote(currentReminder.note);
             // Konwertuj UTC z backendu na czas lokalny dla input datetime-local
-            const utcDate = parseBackendDate(currentReminder.remindAt);
+            const utcDate = parseBackendDate(currentReminder.remind_at);
             setRemindAt(format(utcDate, "yyyy-MM-dd'T'HH:mm"));
         } else {
             setNote('');
@@ -41,30 +40,27 @@ export const ReminderFormModal: React.FC<ReminderFormModalProps> = ({ currentRem
             return;
         }
 
-        // Konwertuj czas lokalny na UTC
         // remindAt z input datetime-local jest w strefie lokalnej
-        const localDateTime = new Date(remindAt + ':00');
-
+        // Wysyłamy go jako czas lokalny (bez konwersji na UTC)
         const reminderData = {
             id: currentReminder?.id ?? 0,
             note,
-            remindAt: localDateTime.toISOString().slice(0, 16), // Format: YYYY-MM-DDTHH:mm
+            remind_at: remindAt + ':00', // Format: YYYY-MM-DDTHH:mm:00
         };
 
         try {
             if (currentReminder) {
-                await axios.put(`/api/Reminders/${currentReminder.id}`, reminderData);
+                await api.put(`/Reminders/${currentReminder.id}`, reminderData);
             } else {
-                await axios.post('/api/Reminders', reminderData);
+                await api.post('/Reminders/', reminderData);
             }
             onSaveSuccess();
             onClose();
         } catch (err: unknown) {
-            if (axios.isAxiosError(err)) {
-                openModal({ type: 'error', title: 'Błąd zapisu', message: err.response?.data?.message || 'Wystąpił błąd.' });
-            } else {
-                openModal({ type: 'error', title: 'Błąd zapisu', message: 'Wystąpił błąd.' });
-            }
+            const errorMessage = (err as { response?: { data?: { error?: string; message?: string } } }).response?.data?.error ||
+                (err as { response?: { data?: { error?: string; message?: string } } }).response?.data?.message ||
+                'Wystąpił błąd.';
+            openModal({ type: 'error', title: 'Błąd zapisu', message: errorMessage });
         }
     };
 

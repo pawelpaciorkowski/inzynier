@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
+import api from '../services/api';
 
 interface Meeting {
     id: number;
@@ -22,11 +22,8 @@ export function MeetingsPage() {
 
     useEffect(() => {
         const fetchMeetings = async () => {
-            const token = localStorage.getItem('token');
             try {
-                const res = await axios.get<any>('/api/meetings', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const res = await api.get<any>('/Meetings');
                 const data = res.data;
                 if (data && Array.isArray((data as any).$values)) {
                     setMeetings((data as any).$values);
@@ -61,7 +58,7 @@ export function MeetingsPage() {
             confirmText: 'Usuń',
             onConfirm: async () => {
                 try {
-                    await axios.delete(`/api/Meetings/${id}`);
+                    await api.delete(`/Meetings/${id}`);
                     // Odśwież listę po usunięciu
                     setMeetings(prevMeetings => prevMeetings.filter(meeting => meeting.id !== id));
                     openToast('Spotkanie zostało pomyślnie usunięte.', 'success');

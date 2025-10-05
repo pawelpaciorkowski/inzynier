@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useModal } from '../context/ModalContext';
+import api from '../services/api';
 
 interface Customer {
     id: number;
@@ -46,8 +46,8 @@ export function EditContractPage() {
         const fetchData = async () => {
             try {
                 const [contractRes, customersRes] = await Promise.all([
-                    axios.get<Contract>(`/api/Contracts/${id}`),
-                    axios.get<Customer[]>('/api/Customers'),
+                    api.get<Contract>(`/Contracts/${id}`),
+                    api.get<Customer[]>('/Customers/'),
                 ]);
 
                 setTitle(contractRes.data.title);
@@ -71,11 +71,10 @@ export function EditContractPage() {
                 }
 
                 setCustomers(customersData);
-            } catch (err: unknown) {
-                const errorMessage = err instanceof Error ? err.message : 'Nieznany błąd';
-                openModal({ type: 'error', title: 'Błąd', message: `Nie udało się pobrać danych: ${errorMessage}` });
-                setError(`Nie udało się pobrać danych: ${errorMessage}`);
-                console.error('Błąd pobierania danych:', err);
+            } catch (err: any) {
+                const errorMessage = err.response?.data?.message || 'Nie udało się pobrać danych.';
+                openModal({ type: 'error', title: 'Błąd', message: errorMessage });
+                setError(errorMessage);
             } finally {
                 setLoading(false);
             }
@@ -94,7 +93,7 @@ export function EditContractPage() {
         }
 
         try {
-            await axios.put(`/api/Contracts/${id}`, {
+            await api.put(`/Contracts/${id}`, {
                 id: parseInt(id as string),
                 title,
                 contractNumber,

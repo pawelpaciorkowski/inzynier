@@ -7,7 +7,7 @@ import { jwtDecode } from 'jwt-decode';
 const TOKEN_KEY = 'my-jwt';
 
 // ✅ Ten adres będzie teraz używany wszędzie
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:5000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:8100';
 
 // ✅ Ustawiamy bazowy URL dla wszystkich zapytań axios w całej aplikacji
 axios.defaults.baseURL = API_URL;

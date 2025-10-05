@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import { ChartBarIcon, UserPlusIcon, XCircleIcon, UsersIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
 
@@ -49,7 +49,6 @@ export function GroupDetailsPage() {
     const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
 
-    const api = import.meta.env.VITE_API_URL;
     const { openToast } = useModal();
 
     // Sprawdzenie roli użytkownika
@@ -111,14 +110,13 @@ export function GroupDetailsPage() {
 
     // --- POBIERANIE DANYCH ---
     const fetchAllData = async () => {
-        const token = localStorage.getItem('token');
         setLoading(true);
         try {
             // Pobieramy wszystkie dane równolegle
             const [groupResponse, usersResponse, customersResponse] = await Promise.all([
-                axios.get(`${api}/groups/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
-                axios.get(`${api}/admin/users`, { headers: { Authorization: `Bearer ${token}` } }),
-                axios.get(`${api}/customers`, { headers: { Authorization: `Bearer ${token}` } })
+                api.get(`/Groups/${id}`),
+                api.get('/admin/users'),
+                api.get('/Customers/')
             ]);
 
             // Przetwarzanie danych grupy
@@ -129,11 +127,13 @@ export function GroupDetailsPage() {
 
             // Przetwarzanie danych użytkowników
             const allUsersData = usersResponse.data.$values || usersResponse.data;
-            setAllUsers(allUsersData);
+            const usersArray = Array.isArray(allUsersData) ? allUsersData : [];
+            setAllUsers(usersArray);
 
             // Przetwarzanie danych klientów
             const allCustomersData = customersResponse.data.$values || customersResponse.data;
-            setAvailableCustomers(allCustomersData.filter((c: Customer) => !c.assignedGroupId));
+            const customersArray = Array.isArray(allCustomersData) ? allCustomersData : [];
+            setAvailableCustomers(customersArray.filter((c: Customer) => !c.assignedGroupId));
 
             setError(null);
         } catch (err) {
@@ -151,9 +151,8 @@ export function GroupDetailsPage() {
     // --- AKCJE UŻYTKOWNIKÓW ---
     const handleAddMember = async () => {
         if (!selectedUserId || !group) return;
-        const token = localStorage.getItem('token');
         try {
-            await axios.post(`${api}/groups/${group.id}/members/${selectedUserId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+            await api.post(`/Groups/${group.id}/members/${selectedUserId}`);
             await fetchAllData();
             setShowAddMemberModal(false);
             setSelectedUserId(null);
@@ -163,9 +162,8 @@ export function GroupDetailsPage() {
 
     const handleRemoveMember = async (userId: number) => {
         if (!group) return;
-        const token = localStorage.getItem('token');
         try {
-            await axios.delete(`${api}/groups/${group.id}/members/${userId}`, { headers: { Authorization: `Bearer ${token}` } });
+            await api.delete(`/Groups/${group.id}/members/${userId}`);
             await fetchAllData();
             openToast('Użytkownik usunięty z grupy', 'success');
         } catch { openToast('Błąd podczas usuwania użytkownika', 'error'); }
@@ -174,9 +172,8 @@ export function GroupDetailsPage() {
     // --- AKCJE KLIENTÓW ---
     const handleAddCustomer = async () => {
         if (!selectedCustomerId || !group) return;
-        const token = localStorage.getItem('token');
         try {
-            await axios.post(`${api}/groups/${group.id}/customers/${selectedCustomerId}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+            await api.post(`/Groups/${group.id}/customers/${selectedCustomerId}`);
             await fetchAllData();
             setShowAddCustomerModal(false);
             setSelectedCustomerId(null);
@@ -186,9 +183,8 @@ export function GroupDetailsPage() {
 
     const handleRemoveCustomer = async (customerId: number) => {
         if (!group) return;
-        const token = localStorage.getItem('token');
         try {
-            await axios.delete(`${api}/groups/${group.id}/customers/${customerId}`, { headers: { Authorization: `Bearer ${token}` } });
+            await api.delete(`/Groups/${group.id}/customers/${customerId}`);
             await fetchAllData();
             openToast('Klient usunięty z grupy', 'success');
         } catch { openToast('Błąd podczas usuwania klienta', 'error'); }
@@ -203,6 +199,9 @@ export function GroupDetailsPage() {
         <div className="p-6">
             <div className="flex justify-between items-center mb-6">
                 <div>
+                    <Link to="/grupy" className="text-blue-400 hover:text-blue-300 text-sm mb-2 inline-block">
+                        ← Wróć do listy grup
+                    </Link>
                     <h1 className="text-3xl font-bold text-white">{group.name}</h1>
                     <p className="text-gray-400 mt-1">{group.description || 'Brak opisu'}</p>
                 </div>
@@ -249,7 +248,7 @@ export function GroupDetailsPage() {
                 {/* SEKCJA CZŁONKÓW (UŻYTKOWNICY) */}
                 <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold text-white">Członkowie grupy ({group.members.length})</h3>
+                        <h3 className="text-lg font-semibold text-white">Członkowie grupy ({group.members?.length || 0})</h3>
                         {isAdmin && (
                             <button onClick={() => setShowAddMemberModal(true)} className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-md text-sm flex items-center">
                                 <UserPlusIcon className="w-4 h-4 mr-1" />
@@ -258,7 +257,7 @@ export function GroupDetailsPage() {
                         )}
                     </div>
                     <div className="space-y-2">
-                        {group.members.map(member => (
+                        {group.members?.map(member => (
                             <div key={member.id} className="flex justify-between items-center bg-gray-700 p-3 rounded-lg">
                                 <div>
                                     <div className="text-white font-medium">{member.username}</div>
@@ -271,14 +270,14 @@ export function GroupDetailsPage() {
                                 )}
                             </div>
                         ))}
-                        {group.members.length === 0 && <p className="text-gray-400 text-center py-4">Brak członków w grupie.</p>}
+                        {(!group.members || group.members.length === 0) && <p className="text-gray-400 text-center py-4">Brak członków w grupie.</p>}
                     </div>
                 </div>
 
                 {/* SEKCJA KLIENTÓW */}
                 <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold text-white">Przypisani Klienci ({group.assignedCustomers.length})</h3>
+                        <h3 className="text-lg font-semibold text-white">Przypisani Klienci ({group.assignedCustomers?.length || 0})</h3>
                         {isAdmin && (
                             <button onClick={() => setShowAddCustomerModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm flex items-center">
                                 <UsersIcon className="w-4 h-4 mr-1" />
@@ -287,7 +286,7 @@ export function GroupDetailsPage() {
                         )}
                     </div>
                     <div className="space-y-2">
-                        {group.assignedCustomers.map(customer => (
+                        {group.assignedCustomers?.map(customer => (
                             <div key={customer.id} className="flex justify-between items-center bg-gray-700 p-3 rounded-lg">
                                 <div>
                                     <div className="text-white font-medium">{customer.name}</div>
@@ -300,7 +299,7 @@ export function GroupDetailsPage() {
                                 )}
                             </div>
                         ))}
-                        {group.assignedCustomers.length === 0 && <p className="text-gray-400 text-center py-4">Brak przypisanych klientów.</p>}
+                        {(!group.assignedCustomers || group.assignedCustomers.length === 0) && <p className="text-gray-400 text-center py-4">Brak przypisanych klientów.</p>}
                     </div>
                 </div>
             </div>
@@ -317,8 +316,8 @@ export function GroupDetailsPage() {
                         >
                             <option value="">Wybierz użytkownika</option>
                             {allUsers
-                                .filter(user => !group?.members.some(member => member.id === user.id))
-                                .map(user => <option key={user.id} value={user.id}>{user.username}</option>)
+                                ?.filter(user => !group?.members?.some(member => member.id === user.id))
+                                ?.map(user => <option key={user.id} value={user.id}>{user.username}</option>)
                             }
                         </select>
                         <div className="flex justify-end space-x-2">
@@ -340,7 +339,7 @@ export function GroupDetailsPage() {
                             className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white mb-4"
                         >
                             <option value="">Wybierz klienta</option>
-                            {availableCustomers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
+                            {availableCustomers?.map(customer => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
                         </select>
                         <div className="flex justify-end space-x-2">
                             <button onClick={() => setShowAddCustomerModal(false)} className="px-4 py-2 bg-gray-600 text-white rounded-md">Anuluj</button>

@@ -1,8 +1,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import api from '../services/api';
 
 interface GroupStatistics {
     totalMembers: number;
@@ -32,13 +32,12 @@ export function GroupStatisticsPage() {
     const [groupName, setGroupName] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const api = import.meta.env.VITE_API_URL;
 
     useEffect(() => {
         const token = localStorage.getItem('token');
         const fetchStats = async () => {
             try {
-                const response = await axios.get(`${api}/groups/${id}/statistics`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await api.get(`/Groups/${id}/statistics`, { headers: { Authorization: `Bearer ${token}` } });
                 setStats(response.data);
             } catch {
                 setError("Nie udało się pobrać statystyk grupy.");
@@ -47,7 +46,7 @@ export function GroupStatisticsPage() {
 
         const fetchGroupName = async () => {
             try {
-                const response = await axios.get(`${api}/groups/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+                const response = await api.get(`/Groups/${id}`, { headers: { Authorization: `Bearer ${token}` } });
                 setGroupName(response.data.name);
             } catch {
                 // Ignorujemy błąd, nazwa jest opcjonalna

@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from "../context/AuthContext";
-import axios from 'axios';
+import api from '../services/api';
 import { useModal } from '../context/ModalContext';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import ClientSelectModal from '../components/ClientSelectModal';
@@ -28,7 +28,6 @@ export default function TasksPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [completionFilter, setCompletionFilter] = useState<'all' | 'completed' | 'pending'>('all');
-    const api = import.meta.env.VITE_API_URL;
 
     const [newTaskTitle, setNewTaskTitle] = useState("");
     const [newTaskDescription, setNewTaskDescription] = useState("");
@@ -44,12 +43,12 @@ export default function TasksPage() {
         if (!user || !token) return;
         setLoading(true);
         try {
-            const tasksUrl = user.role === "admin" ? `${api}/admin/tasks` : `${api}/user/tasks`;
-            const customersUrl = `${api}/customers`;
+            const tasksUrl = user.role === "admin" ? "/admin/tasks" : "/user/tasks";
+            const customersUrl = "/Customers/";
 
             const [tasksRes, customersRes] = await Promise.all([
-                axios.get(tasksUrl, { headers: { Authorization: `Bearer ${token}` } }),
-                axios.get(customersUrl, { headers: { Authorization: `Bearer ${token}` } })
+                api.get(tasksUrl),
+                api.get(customersUrl)
             ]);
 
             const tasksData = tasksRes.data;
@@ -76,11 +75,13 @@ export default function TasksPage() {
         } finally {
             setLoading(false);
         }
-    }, [api, user]);
+    }, [user]);
 
     useEffect(() => {
-        fetchInitialData();
-    }, [fetchInitialData]);
+        if (user) {
+            fetchInitialData();
+        }
+    }, [user, fetchInitialData]);
 
     // Filtrowanie zadań na podstawie wyszukiwania
     useEffect(() => {
@@ -120,12 +121,12 @@ export default function TasksPage() {
             return;
         }
         try {
-            const res = await axios.post(`${api}/user/tasks`, {
+            const res = await api.post("/user/Tasks", {
                 title: newTaskTitle,
                 description: newTaskDescription,
                 dueDate: newTaskDueDate ? new Date(newTaskDueDate).toISOString() : null,
                 customerId: parseInt(selectedCustomerId),
-            }, { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } });
+            });
 
             await fetchInitialData();
             setNewTaskTitle("");
@@ -150,15 +151,14 @@ export default function TasksPage() {
         };
 
         try {
-            await axios.put(`${api}/user/tasks/${editingTask.id}`, updateDto, {
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
-            });
+            const updateUrl = user?.role === "admin" ? `/admin/tasks/${editingTask.id}` : `/user/tasks/${editingTask.id}`;
+            await api.put(updateUrl, updateDto);
             setTasks(prev => prev.map(t => t.id === editingTask.id ? editingTask : t));
             setEditingTask(null);
         } catch (err) {
             openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się zaktualizować zadania.' });
         }
-    }, [api, editingTask, openModal]);
+    }, [editingTask, openModal]);
 
     const handleDelete = (task: TaskItem) => {
         openModal({
@@ -169,7 +169,8 @@ export default function TasksPage() {
             onConfirm: async () => {
                 const token = localStorage.getItem("token");
                 try {
-                    await axios.delete(`${api}/user/tasks/${task.id}`, { headers: { Authorization: `Bearer ${token}` } });
+                    const deleteUrl = user?.role === "admin" ? `/admin/tasks/${task.id}` : `/user/tasks/${task.id}`;
+                    await api.delete(deleteUrl);
                     setTasks(prev => prev.filter(t => t.id !== task.id));
                     openToast('Zadanie zostało pomyślnie usunięte.', 'success');
                 } catch {
@@ -188,14 +189,27 @@ export default function TasksPage() {
             completed: !task.completed,
         };
         try {
-            await axios.put(`${api}/user/tasks/${task.id}`, updateDto, {
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
-            });
+            const toggleUrl = user.role === "admin" ? `/admin/tasks/${task.id}` : `/user/tasks/${task.id}`;
+            await api.put(toggleUrl, updateDto);
             setTasks(prev => prev.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t));
         } catch (err) {
             openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się zmienić statusu zadania.' });
         }
-    }, [api, openModal]);
+    }, [openModal]);
+
+    if (!user) {
+        return (
+            <div className="p-6 text-center">
+                <p className="text-red-500 mb-4">Musisz się zalogować, aby zobaczyć zadania.</p>
+                <button
+                    onClick={() => window.location.href = '/login'}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                >
+                    Przejdź do logowania
+                </button>
+            </div>
+        );
+    }
 
     if (loading) return <p className="p-6 text-gray-400">Ładowanie zadań...</p>;
 

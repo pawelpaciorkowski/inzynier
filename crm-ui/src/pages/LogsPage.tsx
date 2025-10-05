@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { useModal } from '../context/ModalContext';
@@ -31,13 +31,12 @@ export function LogsPage() {
 
         const fetchLogs = async () => {
             try {
-                const token = localStorage.getItem('token');
-                const response = await axios.get<any>('/api/Logs', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const response = await api.get<any>('/Logs');
                 const logsData = response.data.$values || response.data;
-                setLogs(logsData);
-                setFilteredLogs(logsData);
+                // Sprawdzamy czy data jest tablicą - jeśli nie, używamy pustej tablicy
+                const logsArray = Array.isArray(logsData) ? logsData : [];
+                setLogs(logsArray);
+                setFilteredLogs(logsArray);
             } catch {
                 setError('Nie udało się załadować logów. Upewnij się, że masz uprawnienia administratora.');
                 openModal({
@@ -71,9 +70,53 @@ export function LogsPage() {
     if (loading) return <div className="text-center p-8 text-white">Ładowanie logów...</div>;
     if (error) return <div className="text-center p-8 text-red-500">{error}</div>;
 
+    const handleExportLogs = async () => {
+        try {
+            const response = await api.get('/Logs/export', {
+                responseType: 'blob'
+            });
+
+            // Utwórz link do pobrania
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `logi_systemowe_${new Date().toISOString().slice(0, 10)}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+
+            openModal({
+                type: 'success',
+                title: 'Sukces',
+                message: 'Logi zostały wyeksportowane do pliku Excel.'
+            });
+        } catch (error) {
+            console.error('Błąd eksportu logów:', error);
+            openModal({
+                type: 'error',
+                title: 'Błąd',
+                message: 'Nie udało się wyeksportować logów.'
+            });
+        }
+    };
+
     return (
         <div className="p-6 text-white">
-            <h1 className="text-3xl font-bold mb-6">Systemowe Logi</h1>
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-bold">Systemowe Logi</h1>
+                {user?.role === 'Admin' && (
+                    <button
+                        onClick={handleExportLogs}
+                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center transition-colors"
+                    >
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Eksportuj do Excel
+                    </button>
+                )}
+            </div>
 
             {/* Wyszukiwarka */}
             <div className="mb-6">

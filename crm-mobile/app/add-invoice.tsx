@@ -25,7 +25,7 @@ export default function AddInvoiceScreen() {
     const [items, setItems] = useState<InvoiceItem[]>([{ serviceId: 0, quantity: '1' }]);
     const [loading, setLoading] = useState(false);
 
-    
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -46,127 +46,122 @@ export default function AddInvoiceScreen() {
         fetchData();
     }, [token]);
 
-const handleAddItem = () => {
-    setItems([...items, { serviceId: 0, quantity: '1' }]);
-};
+    const handleAddItem = () => {
+        setItems([...items, { serviceId: 0, quantity: '1' }]);
+    };
 
-const handleRemoveItem = (index: number) => {
-    const newItems = [...items];
-    newItems.splice(index, 1);
-    setItems(newItems);
-};
+    const handleRemoveItem = (index: number) => {
+        const newItems = [...items];
+        newItems.splice(index, 1);
+        setItems(newItems);
+    };
 
-const handleItemChange = (value: string | number, index: number, field: 'serviceId' | 'quantity') => {
-    const newItems = [...items];
-    if (field === 'serviceId') {
-        newItems[index].serviceId = typeof value === 'string' ? parseInt(value) : value;
-    } else {
-        newItems[index].quantity = value as string;
-    }
-    setItems(newItems);
-};
+    const handleItemChange = (value: string | number, index: number, field: 'serviceId' | 'quantity') => {
+        const newItems = [...items];
+        if (field === 'serviceId') {
+            newItems[index].serviceId = typeof value === 'string' ? parseInt(value) : value;
+        } else {
+            newItems[index].quantity = value as string;
+        }
+        setItems(newItems);
+    };
 
-const handleAddInvoice = async () => {
-    if (!invoiceNumber.trim() || selectedCustomerId === null) {
-        Alert.alert("Błąd walidacji", "Numer faktury i klient są wymagane.");
-        return;
-    }
+    const handleAddInvoice = async () => {
+        if (!invoiceNumber.trim() || selectedCustomerId === null) {
+            Alert.alert("Błąd walidacji", "Numer faktury i klient są wymagane.");
+            return;
+        }
 
-    if (items.some(item => item.serviceId === 0 || parseInt(item.quantity) <= 0)) {
-        Alert.alert("Błąd walidacji", "Wszystkie pozycje faktury muszą mieć wybraną usługę i ilość większą niż 0.");
-        return;
-    }
+        if (items.some(item => item.serviceId === 0 || parseInt(item.quantity) <= 0)) {
+            Alert.alert("Błąd walidacji", "Wszystkie pozycje faktury muszą mieć wybraną usługę i ilość większą niż 0.");
+            return;
+        }
 
-    setLoading(true);
-    try {
-        const invoiceItems = items.map(item => ({
-            serviceId: item.serviceId,
-            quantity: parseInt(item.quantity),
-        }));
+        setLoading(true);
+        try {
+            const invoiceItems = items.map(item => ({
+                serviceId: item.serviceId,
+                quantity: parseInt(item.quantity),
+            }));
 
-        await axios.post(`${API_URL}/api/Invoices`, {
-            invoiceNumber,
-            customerId: selectedCustomerId,
-            items: invoiceItems,
-        }, {
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`
-            }
-        });
+            await axios.post('/api/Invoices', {
+                invoiceNumber,
+                customerId: selectedCustomerId,
+                items: invoiceItems,
+            });
 
-        Alert.alert("Sukces", "Faktura została pomyślnie dodana.");
-        router.back();
-    } catch (err: any) {
-        Alert.alert("Błąd", `Nie udało się dodać faktury: ${err.message || err}`);
-    } finally {
-        setLoading(false);
-    }
-};
+            Alert.alert("Sukces", "Faktura została pomyślnie dodana.");
+            router.back();
+        } catch (err: any) {
+            Alert.alert("Błąd", `Nie udało się dodać faktury: ${err.message || err}`);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-return (
-    <>
-        <Stack.Screen options={{ title: 'Nowa Faktura' }} />
-        <ScrollView style={styles.container}>
-            <Text style={styles.label}>Numer faktury *</Text>
-            <TextInput style={styles.input} value={invoiceNumber} onChangeText={setInvoiceNumber} />
+    return (
+        <>
+            <Stack.Screen options={{ title: 'Nowa Faktura' }} />
+            <ScrollView style={styles.container}>
+                <Text style={styles.label}>Numer faktury *</Text>
+                <TextInput style={styles.input} value={invoiceNumber} onChangeText={setInvoiceNumber} />
 
-            <Text style={styles.label}>Wybierz klienta *</Text>
-            <View style={styles.pickerContainer}>
-                <Picker
-                    selectedValue={selectedCustomerId}
-                    onValueChange={(itemValue) => setSelectedCustomerId(itemValue)}
-                    style={styles.picker}
-                    dropdownIconColor={'#fff'}
-                >
-                    <Picker.Item label="-- Wybierz klienta --" value={null} />
-                    {customers.map(c => <Picker.Item key={c.id} label={c.name} value={c.id} />)}
-                </Picker>
-            </View>
-
-            <Text style={styles.label}>Pozycje faktury</Text>
-            {items.map((item, index) => (
-                <View key={index} style={styles.itemRow}>
-                    <View style={styles.itemPickerContainer}>
-                        <Picker
-                            selectedValue={item.serviceId}
-                            onValueChange={(value) => handleItemChange(value, index, 'serviceId')}
-                            style={styles.picker}
-                            dropdownIconColor={'#fff'}
-                        >
-                            <Picker.Item label="-- Wybierz usługę --" value={0} />
-                            {services.map(s => <Picker.Item key={s.id} label={`${s.name} (${s.price} PLN)`} value={s.id} />)}
-                        </Picker>
-                    </View>
-                    <TextInput
-                        style={styles.itemQuantityInput}
-                        value={item.quantity}
-                        onChangeText={(text) => handleItemChange(text, index, 'quantity')}
-                        keyboardType="numeric"
-                        placeholder="Ilość"
-                        placeholderTextColor="#9ca3af"
-                    />
-                    {items.length > 1 && (
-                        <TouchableOpacity onPress={() => handleRemoveItem(index)} style={styles.removeButton}>
-                            <FontAwesome name="minus-circle" size={24} color="#ef4444" />
-                        </TouchableOpacity>
-                    )}
+                <Text style={styles.label}>Wybierz klienta *</Text>
+                <View style={styles.pickerContainer}>
+                    <Picker
+                        selectedValue={selectedCustomerId}
+                        onValueChange={(itemValue) => setSelectedCustomerId(itemValue)}
+                        style={styles.picker}
+                        dropdownIconColor={'#fff'}
+                    >
+                        <Picker.Item label="-- Wybierz klienta --" value={null} />
+                        {customers.map(c => <Picker.Item key={c.id} label={c.name} value={c.id} />)}
+                    </Picker>
                 </View>
-            ))}
-            <TouchableOpacity onPress={handleAddItem} style={styles.addButton}>
-                <FontAwesome name="plus-circle" size={24} color="#10b981" />
-                <Text style={styles.addButtonText}>Dodaj pozycję</Text>
-            </TouchableOpacity>
 
-            <Button
-                title={loading ? "Dodaję..." : "Dodaj Fakturę"}
-                onPress={handleAddInvoice}
-                disabled={loading}
-                color="#10b981"
-            />
-        </ScrollView>
-    </>
-);
+                <Text style={styles.label}>Pozycje faktury</Text>
+                {items.map((item, index) => (
+                    <View key={index} style={styles.itemRow}>
+                        <View style={styles.itemPickerContainer}>
+                            <Picker
+                                selectedValue={item.serviceId}
+                                onValueChange={(value) => handleItemChange(value, index, 'serviceId')}
+                                style={styles.picker}
+                                dropdownIconColor={'#fff'}
+                            >
+                                <Picker.Item label="-- Wybierz usługę --" value={0} />
+                                {services.map(s => <Picker.Item key={s.id} label={`${s.name} (${s.price} PLN)`} value={s.id} />)}
+                            </Picker>
+                        </View>
+                        <TextInput
+                            style={styles.itemQuantityInput}
+                            value={item.quantity}
+                            onChangeText={(text) => handleItemChange(text, index, 'quantity')}
+                            keyboardType="numeric"
+                            placeholder="Ilość"
+                            placeholderTextColor="#9ca3af"
+                        />
+                        {items.length > 1 && (
+                            <TouchableOpacity onPress={() => handleRemoveItem(index)} style={styles.removeButton}>
+                                <FontAwesome name="minus-circle" size={24} color="#ef4444" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                ))}
+                <TouchableOpacity onPress={handleAddItem} style={styles.addButton}>
+                    <FontAwesome name="plus-circle" size={24} color="#10b981" />
+                    <Text style={styles.addButtonText}>Dodaj pozycję</Text>
+                </TouchableOpacity>
+
+                <Button
+                    title={loading ? "Dodaję..." : "Dodaj Fakturę"}
+                    onPress={handleAddInvoice}
+                    disabled={loading}
+                    color="#10b981"
+                />
+            </ScrollView>
+        </>
+    );
 }
 
 const styles = StyleSheet.create({

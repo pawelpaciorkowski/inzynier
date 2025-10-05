@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useModal } from '../context/ModalContext';
 
@@ -12,12 +12,9 @@ export function SettingsPage() {
     const { openModal, openToast } = useModal();
     const [settings, setSettings] = useState<SettingsData>({});
     const [loading, setLoading] = useState(true);
-    const api = import.meta.env.VITE_API_URL;
-
     useEffect(() => {
-        const token = localStorage.getItem('token');
         if (user?.role === 'Admin') {
-            axios.get(`${api}/settings`, { headers: { Authorization: `Bearer ${token}` } })
+            api.get('/Settings/')
                 .then(res => {
                     setSettings(res.data);
                 })
@@ -26,7 +23,7 @@ export function SettingsPage() {
         } else {
             setLoading(false);
         }
-    }, [api, user, openModal]);
+    }, [user, openModal]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -34,9 +31,8 @@ export function SettingsPage() {
     };
 
     const handleSaveSettings = async () => {
-        const token = localStorage.getItem('token');
         try {
-            await axios.post(`${api}/settings`, settings, { headers: { Authorization: `Bearer ${token}` } });
+            await api.post('/Settings/', settings);
             openToast('Ustawienia zostały zapisane.', 'success');
         } catch {
             openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się zapisać ustawień.' });
@@ -78,7 +74,6 @@ function ChangePasswordForm() {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const { openModal, openToast } = useModal();
-    const api = import.meta.env.VITE_API_URL;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -91,12 +86,11 @@ function ChangePasswordForm() {
             return;
         }
 
-        const token = localStorage.getItem('token');
         try {
-            await axios.put(`${api}/profile/change-password`,
-                { currentPassword, newPassword },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            await api.put('/Profile/change-password', {
+                currentPassword,
+                newPassword
+            });
             openToast('Hasło zostało pomyślnie zmienione.', 'success');
             setCurrentPassword('');
             setNewPassword('');

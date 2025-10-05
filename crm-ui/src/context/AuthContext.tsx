@@ -17,12 +17,20 @@ interface User {
 }
 
 // Interface definiujący strukturę payload tokena JWT
-// Używa standardowych claims JWT według specyfikacji Microsoft
+// Obsługuje zarówno claims .NET jak i Python backend
 interface JwtPayload {
-    // Claim zawierający nazwę użytkownika
-    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name": string;
-    // Claim zawierający rolę użytkownika
-    "http://schemas.microsoft.com/ws/2008/06/identity/claims/role": string;
+    // Claims .NET (Microsoft)
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"?: string;
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"?: string;
+    "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"?: string;
+    // Claims Python backend (proste nazwy)
+    username?: string;
+    role?: string;
+    // Dodatkowe pola
+    sub?: string;
+    user_id?: number;
+    exp?: number;
+    iat?: number;
 }
 
 // Interface definiujący typ kontekstu uwierzytelnienia
@@ -59,13 +67,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             try {
                 // Dekodujemy token JWT aby wyciągnąć dane użytkownika
                 const decoded = jwtDecode<JwtPayload>(token);
-                // Ustawiamy dane użytkownika w stanie na podstawie claims z tokena
+
+                // Pobierz dane użytkownika z tokenu
+                const username = decoded.username || decoded.sub;
+                const role = decoded.role;
+
+                // Ustawiamy dane użytkownika w stanie
                 setUser({
-                    username: decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"],
-                    role: decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"],
+                    username: username || '',
+                    role: role || '',
                 });
-                // Ustawiamy domyślny nagłówek Authorization dla wszystkich zapytań axios
-                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             } catch (error) {
                 // W przypadku błędu dekodowania (token nieprawidłowy/wygasły)
                 console.error("Błąd dekodowania tokena:", error);
@@ -82,12 +93,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const interceptor = axios.interceptors.response.use(
             // Dla udanych odpowiedzi - przekazuj je dalej bez zmian
             response => response,
-            // Dla błędów - wyświetl odpowiedni modal z komunikatem
+            // Dla błędów - obsłuż odpowiednio różne typy błędów
             error => {
                 // Sprawdzamy typ błędu i wyświetlamy odpowiedni komunikat
                 if (error.response) {
-                    // Błąd z odpowiedzią od serwera (4xx, 5xx)
                     const status = error.response.status;
+
+                    // Dla błędów 401 (Unauthorized) - wyloguj użytkownika
+                    if (status === 401) {
+                        console.log('🔒 Błąd 401 - wylogowywanie użytkownika');
+                        localStorage.removeItem('token');
+                        delete axios.defaults.headers.common['Authorization'];
+                        setUser(null);
+                        // Nie pokazuj modala dla 401 - po prostu wyloguj
+                        return Promise.reject(error);
+                    }
+
+                    // Dla innych błędów serwera - pokaż modal
                     const message = error.response.data?.message || error.response.data || `Błąd serwera: ${status}`;
                     openModal({
                         type: 'error',
@@ -124,8 +146,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const logout = () => {
         // Usuwamy token z localStorage przeglądarki
         localStorage.removeItem("token");
-        // Usuwamy nagłówek Authorization z domyślnych nagłówków axios
-        delete axios.defaults.headers.common['Authorization'];
         // Resetujemy stan użytkownika
         setUser(null);
     };

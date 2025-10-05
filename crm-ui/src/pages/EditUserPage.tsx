@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 // Definicja typów dla przejrzystości
@@ -27,7 +27,6 @@ export function EditUserPage() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const api = import.meta.env.VITE_API_URL;
     const token = localStorage.getItem('token');
 
     // Jeśli użytkownik nie ma uprawnień, zatrzymaj się po hookach
@@ -40,10 +39,10 @@ export function EditUserPage() {
         const fetchData = async () => {
             try {
                 const [userResponse, rolesResponse] = await Promise.all([
-                    axios.get(`${api}/auth/users/${id}`, {
+                    api.get(`/admin/Users/${id}`, {
                         headers: { Authorization: `Bearer ${token}` },
                     }),
-                    axios.get(`${api}/admin/roles`, {
+                    api.get('/admin/Roles', {
                         headers: { Authorization: `Bearer ${token}` },
                     })
                 ]);
@@ -74,7 +73,7 @@ export function EditUserPage() {
         };
 
         fetchData();
-    }, [id, api, token, isRestricted]);
+    }, [id, token, isRestricted]);
 
     // Obsługa zmian pól tekstowych
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,7 +99,7 @@ export function EditUserPage() {
         setSuccess(null);
 
         try {
-            await axios.put(`${api}/auth/users/${id}`, {
+            await api.put(`/admin/Users/${id}`, {
                 username: formData.username,
                 email: formData.email,
                 roleId: formData.roleId,

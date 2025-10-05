@@ -13,7 +13,7 @@ import UserCircleIcon from '@heroicons/react/24/solid/UserCircleIcon';
 import CheckCircleIcon from '@heroicons/react/24/solid/CheckCircleIcon';
 import { ClipboardDocumentListIcon, CalendarDaysIcon, DocumentDuplicateIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, BellIcon } from "@heroicons/react/24/solid";
 // Import biblioteki axios do wykonywania zapytań HTTP
-import axios from 'axios';
+import api from '../services/api';
 // Import funkcji formatDistanceToNow do formatowania dat jako "X minut temu"
 import { formatDistanceToNow } from 'date-fns';
 // Import polskiej lokalizacji dla date-fns
@@ -39,9 +39,9 @@ interface Reminder {
     // Treść notatki przypomnienia
     note: string;
     // Data i czas przypomnienia (format ISO string)
-    remindAt: string;
+    remind_at: string;
     // ID użytkownika któremu przypomnienie jest przypisane
-    userId: number;
+    user_id: number;
 }
 
 
@@ -62,7 +62,7 @@ export default function Layout() {
     // Referencja do elementu DOM dropdownu powiadomień
     const notificationsRef = useRef<HTMLDivElement>(null);
     // URL API z zmiennej środowiskowej Vite
-    const api = import.meta.env.VITE_API_URL;
+    const apiUrl = import.meta.env.VITE_API_URL;
     // Stan przechowujący listę przypomnień z backendu
     const [reminders, setReminders] = useState<Reminder[]>([]);
     // Stan aktualnie wyświetlanego przypomnienia (toast)
@@ -117,10 +117,7 @@ export default function Layout() {
 
     const fetchNotifications = useCallback(async () => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get(`${api}/Notifications/user`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await api.get('/Notifications/user');
             const data = response.data.$values || response.data;
             const unreadNotifications = data.filter((n: Notification) => !n.isRead);
 
@@ -151,14 +148,11 @@ export default function Layout() {
         } catch (err) {
             console.error("Błąd pobierania powiadomień:", err);
         }
-    }, [api]);
+    }, []); // Usunięto apiUrl z zależności
 
     const handleMarkAsRead = async (id: number) => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.post(`${api}/Notifications/mark-as-read/${id}`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.post(`/Notifications/mark-as-read/${id}`, {});
             fetchNotifications(); // Refresh notifications
         } catch (err) {
             console.error("Błąd oznaczania jako przeczytane:", err);
@@ -170,10 +164,15 @@ export default function Layout() {
         const fetchReminders = async () => {
             try {
                 console.log('🔄 Pobieram przypomnienia z API...');
-                const response = await axios.get('/api/Reminders');
+                const response = await api.get('/Reminders/');
                 const data = response.data.$values || response.data;
                 console.log('📥 Otrzymane przypomnienia:', data);
                 setReminders(data);
+
+                // Resetuj pokazane przypomnienia gdy ładują się nowe dane
+                // to pozwoli na wyświetlenie nowych przypomnień
+                console.log('🔄 Resetuję pokazane przypomnienia po załadowaniu nowych danych');
+                setShownReminders([]);
             } catch (error) {
                 console.error('❌ Błąd pobierania przypomnień:', error);
             }
@@ -201,7 +200,7 @@ export default function Layout() {
                     return false;
                 }
 
-                const reminderDate = parseBackendDate(r.remindAt);
+                const reminderDate = parseBackendDate(r.remind_at);
                 const reminderMinute = reminderDate.getMinutes();
                 const reminderHour = reminderDate.getHours();
                 const reminderDateStr = reminderDate.toDateString();
@@ -250,7 +249,7 @@ export default function Layout() {
                     return false;
                 }
 
-                const reminderDate = parseBackendDate(r.remindAt);
+                const reminderDate = parseBackendDate(r.remind_at);
                 const reminderMinute = reminderDate.getMinutes();
                 const reminderHour = reminderDate.getHours();
                 const reminderDateStr = reminderDate.toDateString();
@@ -258,7 +257,7 @@ export default function Layout() {
                 console.log('Sprawdzam przypomnienie ID:', r.id);
                 console.log('  - Treść:', r.note);
                 console.log('  - Czas przypomnienia:', reminderHour + ':' + reminderMinute, 'dnia:', reminderDateStr);
-                console.log('  - Surowa data z API:', r.remindAt);
+                console.log('  - Surowa data z API:', r.remind_at);
 
                 // Sprawdź czy to dokładnie ten sam dzień i ta sama godzina/minuta (bez sekund)
                 const dateMatches = reminderDateStr === currentDate;
@@ -298,13 +297,13 @@ export default function Layout() {
         const interval = setInterval(checkReminders, 60 * 1000);
 
         return () => clearInterval(interval);
-    }, [reminders, shownReminders, resetShownRemindersIfNewDay]);
+    }, [reminders, shownReminders]); // Usunięto resetShownRemindersIfNewDay z zależności
 
     useEffect(() => {
         fetchNotifications();
         const interval = setInterval(fetchNotifications, 30000); // Refresh every 30 seconds for real-time notifications
         return () => clearInterval(interval);
-    }, [fetchNotifications]);
+    }, []); // Usunięto fetchNotifications z zależności
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {

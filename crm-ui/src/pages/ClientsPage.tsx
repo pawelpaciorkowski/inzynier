@@ -43,9 +43,10 @@ export default function ClientsPage() {
     const fetchClients = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await api.get<ApiResponse<Client> | Client[]>('/Customers');
+            const response = await api.get<ApiResponse<Client> | Client[]>('/Customers/');
             const data = '$values' in response.data ? response.data.$values : response.data;
-            const validClients = data.filter(client => client && client.name);
+            const clientsArray = Array.isArray(data) ? data : [];
+            const validClients = clientsArray.filter(client => client && client.name);
             // Sortowanie po stronie frontu na wypadek, gdyby backend nie gwarantował
             const sorted = [...validClients].sort((a, b) => {
                 if (a.createdAt && b.createdAt) {
@@ -56,15 +57,35 @@ export default function ClientsPage() {
             setClients(sorted);
         } catch (error) {
             console.error("Błąd pobierania klientów:", error);
+
+            // Sprawdź czy to błąd autoryzacji
+            if (error && typeof error === 'object' && 'response' in error) {
+                const axiosErr = error as any;
+                const status = axiosErr.response?.status;
+
+                if (status === 401) {
+                    openModal({
+                        type: 'error',
+                        title: 'Błąd autoryzacji',
+                        message: 'Sesja wygasła. Zaloguj się ponownie.',
+                        onClose: () => {
+                            localStorage.removeItem('token');
+                            window.location.href = '/login';
+                        }
+                    });
+                    return;
+                }
+            }
+
             openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się załadować listy klientów.' });
         } finally {
             setLoading(false);
         }
-    }, [openModal]);
+    }, []); // Usunięto openModal z zależności
 
     useEffect(() => {
         fetchClients();
-    }, [fetchClients]);
+    }, []); // Usunięto fetchClients z zależności
 
     const handleDelete = (client: Client) => {
         openModal({

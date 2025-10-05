@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useCallback } from 'react';
 import { CreditCardIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
-import axios from 'axios';
+import api from '../services/api';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
@@ -30,7 +30,7 @@ export function PaymentsPage() {
         setLoading(true);
         setError(null);
         try {
-            const response = await axios.get<any>('/api/Payments');
+            const response = await api.get<any>('/Payments/');
             const paymentsData = response.data.$values || response.data;
             setPayments(paymentsData);
             setFilteredPayments(paymentsData);
@@ -49,9 +49,9 @@ export function PaymentsPage() {
     // Filtrowanie płatności na podstawie wyszukiwania
     useEffect(() => {
         const filtered = payments.filter(payment =>
-            payment.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
-            payment.amount.toString().includes(search) ||
-            payment.id.toString().includes(search)
+            (payment.invoiceNumber?.toLowerCase() || '').includes(search.toLowerCase()) ||
+            (payment.amount?.toString() || '').includes(search) ||
+            (payment.id?.toString() || '').includes(search)
         );
         setFilteredPayments(filtered);
     }, [payments, search]);
@@ -73,7 +73,7 @@ export function PaymentsPage() {
             confirmText: 'Usuń',
             onConfirm: async () => {
                 try {
-                    await axios.delete(`/api/Payments/${id}`);
+                    await api.delete(`/Payments/${id}`);
                     fetchPayments(); // Odśwież listę po usunięciu
                     openToast('Płatność została pomyślnie usunięta.', 'success');
                 } catch (err) {

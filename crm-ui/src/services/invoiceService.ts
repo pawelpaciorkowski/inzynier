@@ -78,7 +78,7 @@ const getAuthHeaders = () => {
 export const getInvoices = async (): Promise<InvoiceListItemDto[]> => {
     try {
         // Wykonujemy zapytanie GET do endpointa /api/invoices z nagłówkami autoryzacyjnymi
-        const response = await axios.get(`${API_URL}/invoices`, { headers: getAuthHeaders() });
+        const response = await axios.get(`${API_URL}/Invoices/`, { headers: getAuthHeaders() });
         // Obsługa formatu .$values z backendu .NET - jeśli API zwraca dane w tym formacie
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (response.data as any).$values || response.data;
@@ -94,7 +94,7 @@ export const getInvoices = async (): Promise<InvoiceListItemDto[]> => {
 export const getInvoiceById = async (id: number): Promise<InvoiceDetailsDto> => {
     try {
         // Wykonujemy zapytanie GET do endpointa /api/invoices/{id}
-        const response = await axios.get(`${API_URL}/invoices/${id}`, { headers: getAuthHeaders() });
+        const response = await axios.get(`${API_URL}/Invoices/${id}`, { headers: getAuthHeaders() });
         // Zwracamy dane faktury z odpowiedzi
         return response.data;
     } catch (error) {
@@ -109,7 +109,7 @@ export const getInvoiceById = async (id: number): Promise<InvoiceDetailsDto> => 
 export const createInvoice = async (invoiceData: CreateInvoiceDto) => {
     try {
         // Wykonujemy zapytanie POST z danymi faktury do endpointa /api/invoices
-        const response = await axios.post(`${API_URL}/invoices`, invoiceData, { headers: getAuthHeaders() });
+        const response = await axios.post(`${API_URL}/Invoices/`, invoiceData, { headers: getAuthHeaders() });
         // Zwracamy odpowiedź z serwera (ID nowej faktury, itp.)
         return response.data;
     } catch (error) {
@@ -124,7 +124,7 @@ export const createInvoice = async (invoiceData: CreateInvoiceDto) => {
 export const deleteInvoice = async (id: number): Promise<void> => {
     try {
         // Wykonujemy zapytanie DELETE do endpointa /api/invoices/{id}
-        await axios.delete(`${API_URL}/invoices/${id}`, { headers: getAuthHeaders() });
+        await axios.delete(`${API_URL}/Invoices/${id}`, { headers: getAuthHeaders() });
     } catch (error) {
         // Logujemy błąd usuwania z ID faktury
         console.error(`Błąd podczas usuwania faktury o ID ${id}:`, error);

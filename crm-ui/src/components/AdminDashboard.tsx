@@ -9,7 +9,7 @@ interface AdminDashboardProps {
         paymentsCount: number;
         usersCount: number;
         systemLogsCount: number;
-        taskPerUser?: { username: string; count: number }[] | { $id: string; $values: { username: string; count: number }[] };
+        taskPerUser?: { username: string; totalTasks: number; pendingTasks: number }[] | { $id: string; $values: { username: string; totalTasks: number; pendingTasks: number }[] };
     };
 }
 
@@ -53,7 +53,7 @@ export default function AdminDashboard({ data }: AdminDashboardProps) {
                                 <span className="text-indigo-400 font-medium">
                                     {entry.username || <i>Nieznany</i>}
                                 </span>
-                                <span className="text-gray-400">{entry.count} zadań</span>
+                                <span className="text-gray-400">{entry.totalTasks || entry.count || 0} zadań</span>
                             </li>
                         ))}
                     </ul>

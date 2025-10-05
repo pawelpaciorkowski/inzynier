@@ -2,8 +2,8 @@
 // Plik: crm-ui/src/pages/RemindersPage.tsx
 
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
 import { useModal } from '../context/ModalContext';
+import api from '../services/api';
 import { ReminderFormModal } from '../components/ReminderFormModal';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
@@ -13,8 +13,8 @@ import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 interface Reminder {
     id: number;
     note: string;
-    remindAt: string;
-    userId: number;
+    remind_at: string;
+    user_id: number;
 }
 
 // Typ dla opakowanej odpowiedzi z API
@@ -33,10 +33,11 @@ export function RemindersPage() {
     const fetchReminders = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await axios.get<ApiResponse<Reminder> | Reminder[]>('/api/Reminders');
+            const response = await api.get<ApiResponse<Reminder> | Reminder[]>('/Reminders/');
             const data = '$values' in response.data ? response.data.$values : response.data;
-            setReminders(data);
-            setFilteredReminders(data);
+            const remindersArray = Array.isArray(data) ? data : [];
+            setReminders(remindersArray);
+            setFilteredReminders(remindersArray);
         } catch {
             setError('Nie udało się pobrać przypomnień. Sprawdź, czy backend jest uruchomiony i czy konfiguracja proxy w vite.config.ts jest poprawna.');
         } finally {
@@ -46,7 +47,7 @@ export function RemindersPage() {
 
     useEffect(() => {
         fetchReminders();
-    }, [fetchReminders]);
+    }, []); // Usunięto fetchReminders z zależności
 
     useEffect(() => {
         const filtered = reminders.filter(r =>
@@ -78,11 +79,13 @@ export function RemindersPage() {
             message: 'Czy na pewno chcesz usunąć to przypomnienie?',
             onConfirm: async () => {
                 try {
-                    await axios.delete(`/api/Reminders/${id}`);
+                    await api.delete(`/Reminders/${id}`);
                     fetchReminders();
                     openToast('Przypomnienie zostało pomyślnie usunięte.', 'success');
                 } catch (err: any) {
-                    openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się usunąć przypomnienia.' });
+                    // Backend Python zwraca błędy w polu 'error', nie 'message'
+                    const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Nie udało się usunąć przypomnienia.';
+                    openModal({ type: 'error', title: 'Błąd', message: errorMessage });
                 }
             }
         });
@@ -122,7 +125,7 @@ export function RemindersPage() {
                             <div>
                                 <p className="font-semibold text-lg">{reminder.note}</p>
                                 <p className="text-gray-400 text-sm">
-                                    {format(new Date(reminder.remindAt.endsWith('Z') ? reminder.remindAt : reminder.remindAt + 'Z'), "d MMMM yyyy, HH:mm", { locale: pl })}
+                                    {reminder.remind_at ? format(new Date(reminder.remind_at.endsWith('Z') ? reminder.remind_at : reminder.remind_at + 'Z'), "d MMMM yyyy, HH:mm", { locale: pl }) : 'Brak daty'}
                                 </p>
                             </div>
                             <div className="flex items-center space-x-3">

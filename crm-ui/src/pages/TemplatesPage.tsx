@@ -28,7 +28,7 @@ export function TemplatesPage() {
     const fetchTemplates = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await api.get<ApiResponse<Template> | Template[]>('/Templates');
+            const response = await api.get<ApiResponse<Template> | Template[]>('/Templates/');
             const data = '$values' in response.data ? response.data.$values : response.data;
             setTemplates(data);
             setFilteredTemplates(data);

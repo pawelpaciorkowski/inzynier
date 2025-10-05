@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createInvoice, type CreateInvoiceDto } from '../services/invoiceService';
 import { useModal } from '../context/ModalContext';
 import ClientSelectModal from '../components/ClientSelectModal';
+import api from '../services/api';
 
 interface Customer { id: number; name: string; }
 interface Service { id: number; name: string; price: number; }
@@ -85,7 +86,7 @@ export function AddInvoicePage() {
 
     const navigate = useNavigate();
     const { openModal, openToast } = useModal();
-    const api = import.meta.env.VITE_API_URL;
+    const apiUrl = import.meta.env.VITE_API_URL;
 
     useEffect(() => {
         const fetchData = async () => {
@@ -94,8 +95,8 @@ export function AddInvoicePage() {
             const headers = { Authorization: `Bearer ${token}` };
             try {
                 const [customersRes, servicesRes] = await Promise.all([
-                    axios.get(`${api}/customers`, { headers }),
-                    axios.get(`${api}/services`, { headers }),
+                    api.get('/Customers/'),
+                    api.get('/Services/'),
                 ]);
 
                 const customerData = customersRes.data;
@@ -119,7 +120,7 @@ export function AddInvoicePage() {
             }
         };
         fetchData();
-    }, [api]);
+    }, []); // Usunięto api z zależności
 
     const handleAddItem = () => {
         if (!selectedServiceId) {

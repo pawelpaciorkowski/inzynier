@@ -1,9 +1,9 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
-import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { UsersIcon, TrashIcon, PlusIcon, ChartBarIcon, EyeIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
+import api from '../services/api';
 
 interface Group {
     id: number;
@@ -26,7 +26,6 @@ export function GroupsPage() {
     const [newGroupDesc, setNewGroupDesc] = useState('');
     const [search, setSearch] = useState('');
     const [userRole, setUserRole] = useState<string>('');
-    const api = import.meta.env.VITE_API_URL;
     const { openToast } = useModal();
 
     // Sprawdzenie roli użytkownika
@@ -87,19 +86,25 @@ export function GroupsPage() {
         userRole.toLowerCase() === 'superadmin';
 
     const fetchGroups = async () => {
-        const token = localStorage.getItem('token');
         setLoading(true);
         try {
-            // Użyj endpointu my-groups dla nie-adminów
-            const endpoint = isAdmin ? 'groups' : 'groups/my-groups';
-            const response = await axios.get(`${api}/${endpoint}`, { headers: { Authorization: `Bearer ${token}` } });
-            const groupsData = response.data.$values || response.data;
-            setGroups(groupsData);
-            setFilteredGroups(groupsData);
+            // Użyj endpointu /Groups dla wszystkich - backend sprawdzi uprawnienia
+            const response = await api.get('/Groups/');
+            const groupsData = response.data;
+
+            // Sprawdź czy dane to tablica, jeśli nie - stwórz pustą tablicę
+            const groupsArray = Array.isArray(groupsData) ? groupsData : [];
+
+            setGroups(groupsArray);
+            setFilteredGroups(groupsArray);
             setError(null);
-        } catch {
+        } catch (error) {
+            console.error('Error fetching groups:', error);
             setError("Nie udało się pobrać grup. Spróbuj odświeżyć stronę.");
             openToast('Błąd podczas pobierania grup', 'error');
+            // Ustaw puste tablice w przypadku błędu
+            setGroups([]);
+            setFilteredGroups([]);
         } finally {
             setLoading(false);
         }
@@ -107,7 +112,7 @@ export function GroupsPage() {
 
     useEffect(() => {
         fetchGroups();
-    }, []);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         const filtered = groups.filter(group =>
@@ -123,7 +128,7 @@ export function GroupsPage() {
 
         const token = localStorage.getItem('token');
         try {
-            await axios.post(`${api}/groups`, { name: newGroupName, description: newGroupDesc }, { headers: { Authorization: `Bearer ${token}` } });
+            await api.post('/Groups/', { name: newGroupName, description: newGroupDesc }, { headers: { Authorization: `Bearer ${token}` } });
             setNewGroupName('');
             setNewGroupDesc('');
             fetchGroups();
@@ -138,7 +143,7 @@ export function GroupsPage() {
 
         const token = localStorage.getItem('token');
         try {
-            await axios.delete(`${api}/groups/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+            await api.delete(`/Groups/${id}`, { headers: { Authorization: `Bearer ${token}` } });
             fetchGroups();
             openToast('Dział/zespół został usunięty pomyślnie', 'success');
         } catch {
@@ -214,46 +219,46 @@ export function GroupsPage() {
             </div>
 
             {/* Lista istniejących grup */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                 {filteredGroups.map(group => (
-                    <div key={group.id} className="bg-gray-800 p-5 rounded-lg shadow-lg flex flex-col justify-between">
-                        <div>
-                            <h3 className="text-lg font-bold text-white">{group.name}</h3>
-                            <p className="text-gray-400 text-sm mt-1">{group.description || 'Brak opisu'}</p>
+                    <div key={group.id} className="bg-gray-800 p-4 md:p-5 rounded-lg shadow-lg flex flex-col justify-between min-w-0">
+                        <div className="min-w-0">
+                            <h3 className="text-lg font-bold text-white truncate">{group.name}</h3>
+                            <p className="text-gray-400 text-sm mt-1 line-clamp-2">{group.description || 'Brak opisu'}</p>
 
                             {/* Statystyki grupy */}
                             <div className="mt-4 space-y-2">
                                 <div className="flex items-center text-gray-500 text-sm">
-                                    <UsersIcon className="w-4 h-4 mr-2" />
-                                    <span>{group.memberCount} członków</span>
+                                    <UsersIcon className="w-4 h-4 mr-2 flex-shrink-0" />
+                                    <span className="truncate">{group.memberCount} członków</span>
                                 </div>
-                                <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
-                                    <div>Klienci: {group.customerCount}</div>
-                                    <div>Zadania: {group.taskCount}</div>
-                                    <div>Kontrakty: {group.contractCount}</div>
-                                    <div>Faktury: {group.invoiceCount}</div>
+                                <div className="grid grid-cols-2 gap-1 md:gap-2 text-xs text-gray-500">
+                                    <div className="truncate">Klienci: {group.customerCount}</div>
+                                    <div className="truncate">Zadania: {group.taskCount}</div>
+                                    <div className="truncate">Kontrakty: {group.contractCount}</div>
+                                    <div className="truncate">Faktury: {group.invoiceCount}</div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="mt-4 flex justify-end space-x-2">
+                        <div className="mt-4 flex flex-wrap justify-end gap-1 md:gap-2">
                             <Link
                                 to={`/grupy/${group.id}`}
-                                className="text-sm bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded-md flex items-center"
+                                className="text-xs md:text-sm bg-blue-600 hover:bg-blue-700 text-white py-1 px-2 md:px-3 rounded-md flex items-center flex-shrink-0"
                             >
-                                <EyeIcon className="w-4 h-4 mr-1" />
-                                Szczegóły
+                                <EyeIcon className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                                <span className="hidden sm:inline">Szczegóły</span>
                             </Link>
                             <Link
                                 to={`/grupy/${group.id}/statystyki`}
-                                className="text-sm bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded-md flex items-center"
+                                className="text-xs md:text-sm bg-green-600 hover:bg-green-700 text-white py-1 px-2 md:px-3 rounded-md flex items-center flex-shrink-0"
                             >
-                                <ChartBarIcon className="w-4 h-4 mr-1" />
-                                Statystyki
+                                <ChartBarIcon className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                                <span className="hidden sm:inline">Statystyki</span>
                             </Link>
                             {isAdmin && (
-                                <button onClick={() => handleDeleteGroup(group.id)} className="p-2 bg-red-800 hover:bg-red-700 rounded-md">
-                                    <TrashIcon className="w-4 h-4 text-white" />
+                                <button onClick={() => handleDeleteGroup(group.id)} className="p-1 md:p-2 bg-red-800 hover:bg-red-700 rounded-md flex-shrink-0">
+                                    <TrashIcon className="w-3 h-3 md:w-4 md:h-4 text-white" />
                                 </button>
                             )}
                         </div>

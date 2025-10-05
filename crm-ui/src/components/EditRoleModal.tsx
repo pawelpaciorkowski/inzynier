@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useModal } from '../context/ModalContext';
+import api from '../services/api';
 
 type Role = {
     id: number;
@@ -19,8 +19,6 @@ export const EditRoleModal: React.FC<EditRoleModalProps> = ({ role, onSaveSucces
     const [editRoleName, setEditRoleName] = useState('');
     const [editRoleDesc, setEditRoleDesc] = useState('');
     const { openModal, openToast } = useModal();
-    const api = import.meta.env.VITE_API_URL;
-    const token = localStorage.getItem('token');
 
     useEffect(() => {
         setEditRoleName(role.name);
@@ -30,11 +28,9 @@ export const EditRoleModal: React.FC<EditRoleModalProps> = ({ role, onSaveSucces
     const handleEditRole = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await axios.put(`${api}/admin/roles/${role.id}`, {
+            await api.put(`/admin/Roles/${role.id}`, {
                 name: editRoleName,
                 description: editRoleDesc,
-            }, {
-                headers: { Authorization: `Bearer ${token}` },
             });
             openToast('Rola została zaktualizowana.', 'success');
             onSaveSuccess();

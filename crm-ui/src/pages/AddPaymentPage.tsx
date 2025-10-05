@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import InvoiceSelectModal from '../components/InvoiceSelectModal';
 
@@ -34,8 +35,14 @@ export function AddPaymentPage() {
 
     useEffect(() => {
         const fetchInvoices = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.warn('⚠️ Brak tokenu - pomijam pobieranie faktur');
+                return;
+            }
+
             try {
-                const response = await axios.get<any>('/api/Invoices');
+                const response = await api.get<any>('/Invoices/');
                 const invoicesData = response.data.$values || response.data;
                 setInvoices(invoicesData);
             } catch (err) {
@@ -58,7 +65,7 @@ export function AddPaymentPage() {
         }
 
         try {
-            await axios.post('/api/Payments', {
+            await api.post('/Payments/', {
                 invoiceId: parseInt(invoiceId as string),
                 amount: parseFloat(amount),
                 paidAt: new Date(paidAt).toISOString(),

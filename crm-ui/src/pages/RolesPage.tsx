@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useModal } from '../context/ModalContext';
 import { EditRoleModal } from '../components/EditRoleModal';
 
@@ -26,9 +26,6 @@ export function RolesPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
-    const api = import.meta.env.VITE_API_URL;
-
-    const token = localStorage.getItem('token');
 
     useEffect(() => {
         loadRoles();
@@ -45,9 +42,7 @@ export function RolesPage() {
 
     const loadRoles = () => {
         setLoading(true);
-        axios.get(`${api}/admin/roles`, {
-            headers: { Authorization: `Bearer ${token}` },
-        })
+        api.get('/admin/Roles')
             .then(res => {
                 const data = res.data;
                 if (data && Array.isArray((data as any).$values)) {
@@ -71,9 +66,7 @@ export function RolesPage() {
 
     const showUsers = (roleId: number, roleName: string) => {
         setLoading(true);
-        axios.get(`${api}/admin/roles/${roleId}/users`, {
-            headers: { Authorization: `Bearer ${token}` },
-        })
+        api.get(`/admin/Roles/${roleId}/users`)
             .then(res => {
                 const data = res.data;
                 let users: User[] = [];
@@ -114,11 +107,9 @@ export function RolesPage() {
         e.preventDefault();
         setError(null);
         try {
-            await axios.post(`${api}/admin/roles`, {
+            await api.post('/admin/Roles', {
                 name: newRoleName,
                 description: newRoleDesc,
-            }, {
-                headers: { Authorization: `Bearer ${token}` },
             });
             setSuccess('Dodano nową rolę!');
             setNewRoleName('');
@@ -151,13 +142,13 @@ export function RolesPage() {
             message: `Czy na pewno chcesz usunąć rolę ${role.name}?`,
             onConfirm: async () => {
                 try {
-                    await axios.delete(`${api}/admin/roles/${role.id}`, {
-                        headers: { Authorization: `Bearer ${token}` },
-                    });
+                    await api.delete(`/admin/Roles/${role.id}`);
                     openToast('Rola została usunięta.', 'success');
                     loadRoles();
                 } catch (err: any) {
-                    openModal({ type: 'error', title: 'Błąd', message: err.response?.data?.message || 'Nie udało się usunąć roli.' });
+                    // Backend Python zwraca błąd w polu 'error', nie 'message'
+                    const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Nie udało się usunąć roli.';
+                    openModal({ type: 'error', title: 'Błąd', message: errorMessage });
                 }
             }
         });

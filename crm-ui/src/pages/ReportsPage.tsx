@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import api from '../api';
+import api from '../services/api';
 import { UsersIcon, DocumentTextIcon, CurrencyDollarIcon, CheckCircleIcon, ClockIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
 
@@ -35,19 +35,20 @@ const unwrapValues = (obj: unknown): unknown => {
 // --- INTERFEJSY DANYCH --- 
 
 interface DashboardData {
-    summary: {
-        totalCustomers: number;
-        totalInvoices: number;
+    totalCustomers: number;
+    invoicesCount: number;
+    tasksCount: number;
+    contractsCount: number;
+    paidInvoices: number;
+    pendingTasks: number;
+    usersCount: number;
+    paymentsCount: number;
+    systemLogsCount: number;
+    taskPerUser: Array<{
+        username: string;
         totalTasks: number;
-        totalContracts: number;
-        totalMeetings: number;
-        totalInvoiceValue: number;
-        paidInvoiceValue: number;
-        unpaidInvoiceValue: number;
-        completedTasks: number;
-        pendingTasks: number;
-        upcomingMeetings: number;
-    };
+        pendingTasks: string;
+    }>;
     topGroups: Array<{
         id: number;
         name: string;
@@ -187,9 +188,9 @@ export function ReportsPage() {
         setLoading(true);
         try {
             const [dashboardRes, groupsRes, tagsRes] = await Promise.all([
-                api.get('/reports/dashboard'),
-                api.get('/groups'),
-                api.get('/tags')
+                api.get('/admin/dashboard'),
+                api.get('/Groups/'),
+                api.get('/Tags/')
             ]);
 
             setDashboardData(unwrapValues(dashboardRes.data) as DashboardData);
@@ -214,19 +215,31 @@ export function ReportsPage() {
                 api.get(`/reports/groups/${groupId}/tasks`)
             ]);
 
-            const unwrappedCustomers = unwrapValues(customersRes.data) as Record<string, unknown>;
-            const unwrappedSales = unwrapValues(salesRes.data) as Record<string, unknown>;
-            const unwrappedTasks = unwrapValues(tasksRes.data) as Record<string, unknown>;
+            // Backend zwraca dane w różnych strukturach
+            const customers = Array.isArray(customersRes.data) ? customersRes.data : [];
+            const salesData = salesRes.data;
+            const tasksData = tasksRes.data;
 
             setGroupReport({
                 summary: {
-                    ...(unwrappedCustomers.summary as Record<string, unknown>),
-                    ...(unwrappedSales.summary as Record<string, unknown>),
-                    ...(unwrappedTasks.summary as Record<string, unknown>),
-                } as GroupReport['summary'],
-                customers: unwrappedCustomers.customers as GroupReport['customers'],
-                invoices: unwrappedSales.invoices as GroupReport['invoices'],
-                tasks: unwrappedTasks.tasks as GroupReport['tasks'],
+                    totalCustomers: customers.length,
+                    totalInvoicesSales: salesData.totalInvoices || 0,
+                    totalAmount: salesData.totalAmount || 0,
+                    paidAmount: salesData.paidAmount || 0,
+                    unpaidAmount: salesData.unpaidAmount || 0,
+                    totalTasks: tasksData.totalTasks || 0,
+                    completedTasks: tasksData.completedTasks || 0,
+                    pendingTasks: tasksData.pendingTasks || 0,
+                    paidCount: 0,
+                    unpaidCount: 0,
+                    completionRate: 0,
+                    totalContracts: 0,
+                    totalInvoiceValue: 0,
+                    totalPaidValue: 0
+                },
+                customers: customers,
+                invoices: salesData.invoices || [],
+                tasks: tasksData.tasks || [],
             });
         } catch (err) {
             console.error(`Błąd ładowania raportu dla grupy ${groupId}:`, err);
@@ -328,12 +341,12 @@ export function ReportsPage() {
                 <h2 className="text-xl text-white font-semibold mb-4">Podsumowanie Ogólne</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                     {/* Kafelki z podsumowaniem */}
-                    <StatTile icon={UsersIcon} value={dashboardData.summary.totalCustomers} label="Klienci" color="text-blue-400" />
-                    <StatTile icon={DocumentTextIcon} value={dashboardData.summary.totalInvoices} label="Faktury" color="text-green-400" />
-                    <StatTile icon={CheckCircleIcon} value={dashboardData.summary.totalTasks} label="Zadania" color="text-yellow-400" />
-                    <StatTile icon={CurrencyDollarIcon} value={dashboardData.summary.totalContracts} label="Kontrakty" color="text-purple-400" />
-                    <StatTile icon={ClockIcon} value={dashboardData.summary.totalMeetings} label="Spotkania" color="text-indigo-400" />
-                    <StatTile icon={CurrencyDollarIcon} value={`${dashboardData.summary.totalInvoiceValue.toLocaleString()} PLN`} label="Wartość Faktur" color="text-pink-400" />
+                    <StatTile icon={UsersIcon} value={dashboardData.totalCustomers} label="Klienci" color="text-blue-400" />
+                    <StatTile icon={DocumentTextIcon} value={dashboardData.invoicesCount} label="Faktury" color="text-green-400" />
+                    <StatTile icon={CheckCircleIcon} value={dashboardData.tasksCount} label="Zadania" color="text-yellow-400" />
+                    <StatTile icon={CurrencyDollarIcon} value={dashboardData.contractsCount} label="Kontrakty" color="text-purple-400" />
+                    <StatTile icon={ClockIcon} value="0" label="Spotkania" color="text-indigo-400" />
+                    <StatTile icon={CurrencyDollarIcon} value="0 PLN" label="Wartość Faktur" color="text-pink-400" />
                 </div>
             </div>
 
@@ -389,10 +402,10 @@ const GroupReportDisplay = ({ report, groupName, onDownloadPdf }: { report: Grou
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
             <StatTile icon={UsersIcon} value={report.summary.totalCustomers} label="Klienci" color="text-blue-400" />
             <StatTile icon={DocumentTextIcon} value={report.summary.totalInvoicesSales} label="Faktury (Sprzedaż)" color="text-green-400" />
-            <StatTile icon={CurrencyDollarIcon} value={`${report.summary.totalAmount.toLocaleString()} PLN`} label="Wartość Sprzedaży" color="text-purple-400" />
+            <StatTile icon={CurrencyDollarIcon} value={`${(report.summary.totalAmount || 0).toLocaleString()} PLN`} label="Wartość Sprzedaży" color="text-purple-400" />
             <StatTile icon={CheckCircleIcon} value={report.summary.totalTasks} label="Zadania" color="text-yellow-400" />
-            <StatTile icon={CurrencyDollarIcon} value={`${report.summary.paidAmount.toLocaleString()} PLN`} label="Opłacone Faktury" color="text-green-400" />
-            <StatTile icon={CurrencyDollarIcon} value={`${report.summary.unpaidAmount.toLocaleString()} PLN`} label="Nieopłacone Faktury" color="text-red-400" />
+            <StatTile icon={CurrencyDollarIcon} value={`${(report.summary.paidAmount || 0).toLocaleString()} PLN`} label="Opłacone Faktury" color="text-green-400" />
+            <StatTile icon={CurrencyDollarIcon} value={`${(report.summary.unpaidAmount || 0).toLocaleString()} PLN`} label="Nieopłacone Faktury" color="text-red-400" />
             <StatTile icon={CheckCircleIcon} value={report.summary.completedTasks} label="Ukończone Zadania" color="text-green-400" />
             <StatTile icon={ClockIcon} value={report.summary.pendingTasks} label="Zadania w toku" color="text-orange-400" />
         </div>
@@ -402,13 +415,13 @@ const GroupReportDisplay = ({ report, groupName, onDownloadPdf }: { report: Grou
                 <div>
                     <div className="font-medium">{item.name as string} ({item.company as string})</div>
                     <div className="text-gray-400 text-sm">{item.email as string} | {item.phone as string}</div>
-                    <div className="text-gray-400 text-xs">Faktur: {item.invoiceCount as number} ({(item.totalInvoiceValue as number).toLocaleString()} PLN)</div>
+                    <div className="text-gray-400 text-xs">Faktur: {item.invoiceCount as number} ({(item.totalInvoiceValue as number || 0).toLocaleString()} PLN)</div>
                     {(item.tags as string[])?.length > 0 && <div className="text-gray-500 text-xs">Tagi: {(item.tags as string[]).join(', ')}</div>}
                 </div>
             )} />
             <ReportCard title="Faktury" data={report.invoices} renderItem={(item: ReportItem) => (
                 <div>
-                    <div className="font-medium">{item.number as string} ({(item.totalAmount as number).toLocaleString()} PLN)</div>
+                    <div className="font-medium">{item.number as string} ({(item.totalAmount as number || 0).toLocaleString()} PLN)</div>
                     <div className="text-gray-400 text-sm">{item.customerName as string} ({item.customerEmail as string})</div>
                     <div className={`text-xs ${item.isPaid ? 'text-green-400' : 'text-red-400'}`}>
                         {item.isPaid ? 'Opłacona' : 'Nieopłacona'} | {new Date(item.issuedAt as string).toLocaleDateString()} - {new Date(item.dueDate as string).toLocaleDateString()}
@@ -457,7 +470,7 @@ const TagReportDisplay = ({ report, tagName, onDownloadPdf }: { report: TagRepor
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
                 <StatTile icon={UsersIcon} value={totalCustomers} label="Klienci" color="text-blue-400" />
                 <StatTile icon={DocumentTextIcon} value={totalInvoices} label="Faktury" color="text-green-400" />
-                <StatTile icon={CurrencyDollarIcon} value={`${totalAmount.toLocaleString()} PLN`} label="Wartość Faktur" color="text-purple-400" />
+                <StatTile icon={CurrencyDollarIcon} value={`${(totalAmount || 0).toLocaleString()} PLN`} label="Wartość Faktur" color="text-purple-400" />
                 <StatTile icon={CheckCircleIcon} value={totalTasks} label="Zadania" color="text-yellow-400" />
                 <StatTile icon={CurrencyDollarIcon} value={`${paidAmount.toLocaleString()} PLN`} label="Opłacone Faktury" color="text-green-400" />
                 <StatTile icon={CurrencyDollarIcon} value={`${unpaidAmount.toLocaleString()} PLN`} label="Nieopłacone Faktury" color="text-red-400" />
@@ -469,7 +482,7 @@ const TagReportDisplay = ({ report, tagName, onDownloadPdf }: { report: TagRepor
                 <ReportCard title="Klienci" data={report.customers} renderItem={(item: ReportItem) => <div>{item.name as string}</div>} />
                 <ReportCard title="Faktury" data={report.invoices} renderItem={(item: ReportItem) => (
                     <div>
-                        <div className="font-medium">{item.number as string} ({(item.totalAmount as number).toLocaleString()} PLN)</div>
+                        <div className="font-medium">{item.number as string} ({(item.totalAmount as number || 0).toLocaleString()} PLN)</div>
                         <div className="text-gray-400 text-sm">{item.customerName as string}</div>
                         <div className={`text-xs ${item.isPaid ? 'text-green-400' : 'text-red-400'}`}>{item.isPaid ? 'Opłacona' : 'Nieopłacona'}</div>
                     </div>

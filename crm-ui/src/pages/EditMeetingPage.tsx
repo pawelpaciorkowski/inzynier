@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useModal } from '../context/ModalContext';
+import api from '../services/api';
 
 // Define interfaces for better type safety
 interface Customer {
@@ -43,8 +43,8 @@ export function EditMeetingPage() {
                 type CustomerApiResponse = ApiResponse<Customer> | Customer[];
 
                 const [meetingRes, customersRes] = await Promise.all([
-                    axios.get<Meeting>(`/api/Meetings/${id}`),
-                    axios.get<CustomerApiResponse>('/api/Customers'),
+                    api.get<Meeting>(`/Meetings/${id}`),
+                    api.get<CustomerApiResponse>('/Customers/'),
                 ]);
 
                 setTopic(meetingRes.data.topic);
@@ -55,14 +55,9 @@ export function EditMeetingPage() {
                 const customersData = '$values' in customersRes.data ? customersRes.data.$values : customersRes.data;
                 setCustomers(customersData);
 
-            } catch (err: unknown) { // Use 'unknown' for better type safety
-                let errorMessage = 'Nie udało się pobrać danych.';
-                if (axios.isAxiosError(err) && err.response) {
-                    errorMessage = err.response.data?.message || err.message;
-                } else if (err instanceof Error) {
-                    errorMessage = err.message;
-                }
-                setError(errorMessage); // Set the error state
+            } catch (err: any) {
+                const errorMessage = err.response?.data?.message || 'Nie udało się pobrać danych.';
+                setError(errorMessage);
                 openModal({ type: 'error', title: 'Błąd', message: errorMessage });
             } finally {
                 setLoading(false);
@@ -85,7 +80,7 @@ export function EditMeetingPage() {
             const adjustedScheduledAt = new Date(scheduledAt);
             adjustedScheduledAt.setMinutes(adjustedScheduledAt.getMinutes() - adjustedScheduledAt.getTimezoneOffset());
 
-            await axios.put(`/api/Meetings/${id}`, {
+            await api.put(`/Meetings/${id}`, {
                 id: parseInt(id as string),
                 topic,
                 scheduledAt: adjustedScheduledAt.toISOString(),

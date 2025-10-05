@@ -42,16 +42,33 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => { // Kom
     // Stan timeoutu toastu (do automatycznego ukrywania)
     const [toastTimeout, setToastTimeout] = useState<NodeJS.Timeout | null>(null); // Hook useState do zarządzania timeoutem toastu
 
+    // Stan timeoutu czyszczenia opcji modala
+    const [modalCleanupTimeout, setModalCleanupTimeout] = useState<NodeJS.Timeout | null>(null);
+
     // Funkcja otwierająca modal z podanymi opcjami
     const openModal = (newOptions: ModalOptions) => { // Funkcja przyjmująca nowe opcje modala
+        console.log('🟦 openModal wywołane z opcjami:', newOptions.type, newOptions.title);
+        // Wyczyść poprzedni timeout jeśli istnieje
+        if (modalCleanupTimeout) {
+            clearTimeout(modalCleanupTimeout);
+            setModalCleanupTimeout(null);
+        }
         setOptions(newOptions); // Ustawia nowe opcje modala w stanie
         setIsOpen(true); // Otwiera modal ustawiając isOpen na true
+        console.log('🟦 Modal otwarty, isOpen:', true);
     };
 
     // Funkcja zamykająca modal z animacją
     const closeModal = () => { // Funkcja zamykająca modal
+        console.log('🟥 closeModal wywołane - stack trace:', new Error().stack);
         setIsOpen(false); // Zamyka modal ustawiając isOpen na false
-        setTimeout(() => setOptions(null), 300); // Czyści opcje modala po 300ms (czas animacji)
+        // Wyczyść poprzedni timeout jeśli istnieje
+        if (modalCleanupTimeout) {
+            clearTimeout(modalCleanupTimeout);
+            setModalCleanupTimeout(null);
+        }
+        // TYMCZASOWO: Nie czyszczę opcji automatycznie - sprawdzę czy to powoduje problem
+        console.log('🟥 Modal zamknięty, opcje pozostają');
     };
 
     // Funkcja otwierająca toast (powiadomienie)
@@ -83,11 +100,16 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => { // Kom
     };
 
     // Funkcja obsługująca potwierdzenie w modalu
-    const handleConfirm = () => { // Funkcja obsługująca kliknięcie przycisku potwierdzenia
+    const handleConfirm = async () => { // Funkcja obsługująca kliknięcie przycisku potwierdzenia
+        console.log('🟢 handleConfirm wywołane - stack trace:', new Error().stack);
         if (options?.onConfirm) { // Sprawdza czy istnieje funkcja onConfirm
-            options.onConfirm(); // Wywołuje funkcję onConfirm
+            console.log('🟢 Wywołuję onConfirm...');
+            await options.onConfirm(); // Wywołuje funkcję onConfirm i czeka na jej zakończenie
+            console.log('🟢 onConfirm zakończone');
         }
-        closeModal(); // Zamyka modal
+        console.log('🟢 Zamykam modal...');
+        closeModal(); // Zamyka modal dopiero po zakończeniu operacji
+        // NIE czyść opcji automatycznie - pozwól modal błędu je nadpisać
     };
 
     return (
@@ -95,96 +117,108 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => { // Kom
             {children} {/* Renderuje dzieci komponentu */}
 
             {/* Renderuje modal jeśli jest otwarty i ma opcje */}
-            {isOpen && options && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 animate-fade-in"> {/* Kontener modala - pełny ekran z tłem */}
-                    <div className="bg-gray-800 rounded-lg p-8 w-full max-w-md shadow-2xl text-white"> {/* Główny kontener modala */}
-                        {options.type === 'custom' ? ( // Sprawdza czy modal jest typu 'custom'
-                            options.content // Renderuje niestandardową zawartość
-                        ) : (
-                            <>
-                                {/* Nagłówek modala z ikonami */}
-                                <h2 className="text-2xl font-bold mb-4">
-                                    {options.type === 'success' && '✅ Sukces'} {/* Ikona i tekst dla sukcesu */}
-                                    {options.type === 'error' && '❌ Błąd'} {/* Ikona i tekst dla błędu */}
-                                    {options.type === 'confirm' && options.title} {/* Tytuł dla potwierdzenia */}
-                                    {options.type === 'info' && options.title} {/* Tytuł dla informacji */}
-                                </h2>
-                                <p className="text-lg mb-6">{options.message}</p> {/* Wiadomość modala */}
+            {isOpen && options && (() => {
+                console.log('🟪 Renderuję modal, isOpen:', isOpen, 'options:', options?.type, options?.title);
+                return (
+                    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 animate-fade-in"> {/* Kontener modala - pełny ekran z tłem */}
+                        <div className="bg-gray-800 rounded-lg p-8 w-full max-w-md shadow-2xl text-white"> {/* Główny kontener modala */}
+                            {options.type === 'custom' ? ( // Sprawdza czy modal jest typu 'custom'
+                                options.content // Renderuje niestandardową zawartość
+                            ) : (
+                                <>
+                                    {/* Nagłówek modala z ikonami */}
+                                    <h2 className="text-2xl font-bold mb-4">
+                                        {options.type === 'success' && '✅ Sukces'} {/* Ikona i tekst dla sukcesu */}
+                                        {options.type === 'error' && '❌ Błąd'} {/* Ikona i tekst dla błędu */}
+                                        {options.type === 'confirm' && options.title} {/* Tytuł dla potwierdzenia */}
+                                        {options.type === 'info' && options.title} {/* Tytuł dla informacji */}
+                                    </h2>
+                                    <p className="text-lg mb-6">{options.message}</p> {/* Wiadomość modala */}
 
-                                {/* Przyciski dla modala potwierdzenia */}
-                                {options.type === 'confirm' && (
-                                    <div className="flex justify-end space-x-4"> {/* Kontener przycisków */}
-                                        <button
-                                            onClick={() => { // Obsługa kliknięcia anuluj
-                                                if (options.onCancel) options.onCancel(); // Wywołuje funkcję onCancel
-                                                closeModal(); // Zamyka modal
-                                            }}
-                                            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" // Styl przycisku anuluj
-                                        >
-                                            {options.cancelText || 'Anuluj'} {/* Tekst przycisku anuluj */}
-                                        </button>
-                                        <button
-                                            onClick={handleConfirm} // Obsługa kliknięcia potwierdź
-                                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" // Styl przycisku potwierdź
-                                        >
-                                            {options.confirmText || 'Potwierdź'} {/* Tekst przycisku potwierdź */}
-                                        </button>
-                                    </div>
-                                )}
-
-                                {/* Przyciski dla modalów sukces/błąd */}
-                                {(options.type === 'success' || options.type === 'error') && (
-                                    <div className="flex justify-end"> {/* Kontener przycisku OK */}
-                                        <button
-                                            onClick={closeModal} // Obsługa kliknięcia OK
-                                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" // Styl przycisku OK
-                                        >
-                                            OK {/* Tekst przycisku OK */}
-                                        </button>
-                                    </div>
-                                )}
-
-                                {/* Przyciski dla modala informacji */}
-                                {options.type === 'info' && (
-                                    <div className="flex justify-end space-x-4"> {/* Kontener przycisków */}
-                                        {options.cancelText && ( // Renderuje przycisk anuluj jeśli podano tekst
+                                    {/* Przyciski dla modala potwierdzenia */}
+                                    {options.type === 'confirm' && (
+                                        <div className="flex justify-end space-x-4"> {/* Kontener przycisków */}
                                             <button
                                                 onClick={() => { // Obsługa kliknięcia anuluj
+                                                    console.log('🟡 Kliknięto Anuluj');
                                                     if (options.onCancel) options.onCancel(); // Wywołuje funkcję onCancel
                                                     closeModal(); // Zamyka modal
+                                                    // Wyczyść opcje po anulowaniu
+                                                    setTimeout(() => {
+                                                        console.log('🟡 Czyszczenie opcji po anulowaniu');
+                                                        setOptions(null);
+                                                    }, 100);
                                                 }}
                                                 className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" // Styl przycisku anuluj
                                             >
-                                                {options.cancelText} {/* Tekst przycisku anuluj */}
+                                                {options.cancelText || 'Anuluj'} {/* Tekst przycisku anuluj */}
                                             </button>
-                                        )}
-                                        {options.confirmText && ( // Renderuje przycisk potwierdź jeśli podano tekst
                                             <button
-                                                onClick={() => { // Obsługa kliknięcia potwierdź
-                                                    if (options.onConfirm) options.onConfirm(); // Wywołuje funkcję onConfirm
-                                                    closeModal(); // Zamyka modal
-                                                }}
+                                                onClick={() => {
+                                                    console.log('🟡 Kliknięto Potwierdź');
+                                                    handleConfirm();
+                                                }} // Obsługa kliknięcia potwierdź
                                                 className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" // Styl przycisku potwierdź
                                             >
-                                                {options.confirmText} {/* Tekst przycisku potwierdź */}
+                                                {options.confirmText || 'Potwierdź'} {/* Tekst przycisku potwierdź */}
                                             </button>
-                                        )}
-                                        {!(options.cancelText || options.confirmText) && ( // Renderuje przycisk OK jeśli nie podano innych tekstów
+                                        </div>
+                                    )}
+
+                                    {/* Przyciski dla modalów sukces/błąd */}
+                                    {(options.type === 'success' || options.type === 'error') && (
+                                        <div className="flex justify-end"> {/* Kontener przycisku OK */}
                                             <button
                                                 onClick={closeModal} // Obsługa kliknięcia OK
                                                 className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" // Styl przycisku OK
                                             >
                                                 OK {/* Tekst przycisku OK */}
                                             </button>
-                                        )}
-                                    </div>
-                                )}
+                                        </div>
+                                    )}
 
-                            </>
-                        )}
+                                    {/* Przyciski dla modala informacji */}
+                                    {options.type === 'info' && (
+                                        <div className="flex justify-end space-x-4"> {/* Kontener przycisków */}
+                                            {options.cancelText && ( // Renderuje przycisk anuluj jeśli podano tekst
+                                                <button
+                                                    onClick={() => { // Obsługa kliknięcia anuluj
+                                                        if (options.onCancel) options.onCancel(); // Wywołuje funkcję onCancel
+                                                        closeModal(); // Zamyka modal
+                                                    }}
+                                                    className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" // Styl przycisku anuluj
+                                                >
+                                                    {options.cancelText} {/* Tekst przycisku anuluj */}
+                                                </button>
+                                            )}
+                                            {options.confirmText && ( // Renderuje przycisk potwierdź jeśli podano tekst
+                                                <button
+                                                    onClick={() => { // Obsługa kliknięcia potwierdź
+                                                        if (options.onConfirm) options.onConfirm(); // Wywołuje funkcję onConfirm
+                                                        closeModal(); // Zamyka modal
+                                                    }}
+                                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" // Styl przycisku potwierdź
+                                                >
+                                                    {options.confirmText} {/* Tekst przycisku potwierdź */}
+                                                </button>
+                                            )}
+                                            {!(options.cancelText || options.confirmText) && ( // Renderuje przycisk OK jeśli nie podano innych tekstów
+                                                <button
+                                                    onClick={closeModal} // Obsługa kliknięcia OK
+                                                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors" // Styl przycisku OK
+                                                >
+                                                    OK {/* Tekst przycisku OK */}
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+
+                                </>
+                            )}
+                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* Globalny toast - powiadomienie w prawym górnym rogu */}
             {toast && toast.visible && (

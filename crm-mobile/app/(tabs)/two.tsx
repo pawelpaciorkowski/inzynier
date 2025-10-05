@@ -41,7 +41,9 @@ export default function TabTwoScreen() {
                 return;
             }
             try {
-                const response = await axios.get('/api/Profile');
+                const response = await axios.get('/api/Profile', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
                 if (!response.data) throw new Error('Nie udało się pobrać danych profilu.');
                 const data = response.data;
                 setUserProfile(data);
@@ -76,6 +78,8 @@ export default function TabTwoScreen() {
             const response = await axios.put('/api/Profile/change-password', {
                 currentPassword,
                 newPassword,
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
             });
 
             if (!response.data) {

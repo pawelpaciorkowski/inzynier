@@ -1,36 +1,43 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { ListBulletIcon } from '@heroicons/react/24/outline';
 
 interface Activity {
     id: number;
-    note: string;
-    createdAt: string;
-    userName: string;
-    customerName: string;
+    title: string;
+    description?: string;
+    activityDate: string;
+    customerId?: number;
+    customerName?: string;
+    userId: number;
 }
 
 export function ActivitiesPage() {
     const [activities, setActivities] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(true);
-    const api = import.meta.env.VITE_API_URL;
 
     useEffect(() => {
         const fetchActivities = async () => {
-            const token = localStorage.getItem('token');
             try {
-                const response = await axios.get(`${api}/activities`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setActivities(response.data.$values || response.data);
+                const response = await api.get('/Activities/');
+                const data = response.data;
+
+                if (data && Array.isArray((data).$values)) {
+                    setActivities((data).$values);
+                } else if (Array.isArray(data)) {
+                    setActivities(data);
+                } else {
+                    setActivities([]);
+                }
             } catch (error) {
                 console.error("Błąd pobierania aktywności:", error);
+                setActivities([]);
             } finally {
                 setLoading(false);
             }
         };
         fetchActivities();
-    }, [api]);
+    }, []);
 
     if (loading) return <p className="p-6 text-gray-400">Wczytywanie aktywności...</p>;
 
@@ -47,15 +54,19 @@ export function ActivitiesPage() {
                                 </div>
                                 <div className="flex-1 space-y-1">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-sm font-medium text-white">{activity.note}</h3>
-                                        <p className="text-sm text-gray-500">{new Date(activity.createdAt.endsWith('Z') ? activity.createdAt : activity.createdAt + 'Z').toLocaleString('pl-PL')}</p>
+                                        <h3 className="text-sm font-medium text-white">{activity.title}</h3>
+                                        <p className="text-sm text-gray-500">{activity.activityDate ? new Date(activity.activityDate.endsWith('Z') ? activity.activityDate : activity.activityDate + 'Z').toLocaleString('pl-PL') : 'Brak daty'}</p>
                                     </div>
+                                    {activity.description && (
+                                        <p className="text-sm text-gray-300">{activity.description}</p>
+                                    )}
                                     <p className="text-sm text-gray-400">
-                                        Użytkownik: <span className="font-semibold">{activity.userName}</span> | Klient: <span className="font-semibold">{activity.customerName}</span>
+                                        Użytkownik ID: <span className="font-semibold">{activity.userId}</span> | Klient: <span className="font-semibold">{activity.customerName || 'Brak'}</span>
                                     </p>
                                 </div>
                             </div>
                         </li>
+
                     ))}
                 </ul>
             </div>

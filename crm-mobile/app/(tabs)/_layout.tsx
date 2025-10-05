@@ -16,28 +16,14 @@ import { useAuth } from '../../context/AuthContext';
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
   color: string;
-  unreadCount?: number; // Dodano właściwość unreadCount
+  unreadCount?: number;
 }) {
   return (
     <View style={{ position: 'relative' }}>
       <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />
       {props.unreadCount !== undefined && props.unreadCount > 0 && (
-        <View
-          style={{
-            position: 'absolute',
-            right: -6,
-            top: -3,
-            backgroundColor: 'red',
-            borderRadius: 9,
-            width: 18,
-            height: 18,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
-            {props.unreadCount}
-          </Text>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{props.unreadCount}</Text>
         </View>
       )}
     </View>
@@ -49,6 +35,25 @@ function TabBarIcon(props: {
  * Definiuje strukturę i wygląd paska zakładek oraz nagłówka.
  * @returns {JSX.Element} - Zwraca komponent zakładek.
  */
+const styles = {
+  badge: {
+    position: 'absolute' as const,
+    right: -6,
+    top: -3,
+    backgroundColor: 'red',
+    borderRadius: 9,
+    width: 18,
+    height: 18,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold' as const,
+  }
+};
+
 export default function TabLayout() {
   // Inicjalizuje hook do nawigacji
   const router = useRouter();
@@ -64,7 +69,7 @@ export default function TabLayout() {
       const response = await axios.get(`/api/Notifications/unread-count`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setUnreadCount(response.data);
+      setUnreadCount(response.data.count || 0);
     } catch (err) {
       console.error("Błąd pobierania liczby nieprzeczytanych powiadomień:", err);
     }
@@ -120,22 +125,8 @@ export default function TabLayout() {
                 color="white"
               />
               {unreadCount > 0 && (
-                <View
-                  style={{
-                    position: 'absolute',
-                    right: -6,
-                    top: -3,
-                    backgroundColor: 'red',
-                    borderRadius: 9,
-                    width: 18,
-                    height: 18,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
-                    {unreadCount}
-                  </Text>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unreadCount}</Text>
                 </View>
               )}
             </Pressable>

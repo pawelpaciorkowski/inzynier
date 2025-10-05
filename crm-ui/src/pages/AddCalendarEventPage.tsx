@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useModal } from '../context/ModalContext';
+import { useAuth } from '../context/AuthContext';
 
 export function AddCalendarEventPage() {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [searchParams] = useSearchParams();
     const [title, setTitle] = useState('');
     const [start, setStart] = useState<string>('');
@@ -82,7 +84,7 @@ export function AddCalendarEventPage() {
             const adjustedEndDate = new Date(end);
             adjustedEndDate.setMinutes(adjustedEndDate.getMinutes() - adjustedEndDate.getTimezoneOffset());
 
-            await axios.post('/api/CalendarEvents', {
+            await api.post('/CalendarEvents', {
                 title,
                 start: adjustedStartDate.toISOString(),
                 end: adjustedEndDate.toISOString(),
@@ -97,6 +99,20 @@ export function AddCalendarEventPage() {
             setLoading(false);
         }
     };
+
+    if (!user) {
+        return (
+            <div className="p-6 text-center">
+                <p className="text-red-500 mb-4">Musisz się zalogować, aby dodawać wydarzenia kalendarza.</p>
+                <button
+                    onClick={() => navigate('/login')}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                >
+                    Przejdź do logowania
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="p-6 text-white">

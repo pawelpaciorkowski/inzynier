@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useModal } from '../context/ModalContext';
+import api from '../services/api';
 
 interface Tag {
     id: number;
@@ -27,7 +27,7 @@ export function EditClientPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { openModal, openToast } = useModal();
-    const api = import.meta.env.VITE_API_URL;
+    const apiUrl = import.meta.env.VITE_API_URL;
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -39,14 +39,15 @@ export function EditClientPage() {
         const fetchClientAndTags = async () => {
             try {
                 // Fetch client data
-                const clientResponse = await axios.get(`${api}/customers/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+                const clientResponse = await api.get(`/Customers/${id}`);
                 const clientData = clientResponse.data;
 
                 // Fetch all tags
-                const tagsResponse = await axios.get(`${api}/tags`, { headers: { Authorization: `Bearer ${token}` } });
+                const tagsResponse = await api.get('/Tags/');
                 const tagsData = tagsResponse.data.$values || tagsResponse.data;
 
-                setAllTags(tagsData);
+                // Ensure tagsData is always an array
+                setAllTags(Array.isArray(tagsData) ? tagsData : []);
 
                 // Set form data
                 setFormData({
@@ -66,8 +67,9 @@ export function EditClientPage() {
 
             } catch (err: unknown) {
                 let errorMessage = 'Nie udało się załadować danych klienta lub tagów.';
-                if (axios.isAxiosError(err) && err.response) {
-                    errorMessage = (err.response.data as { message?: string })?.message || err.message;
+                if (err && typeof err === 'object' && 'response' in err) {
+                    const axiosError = err as { response?: { data?: { message?: string } }; message?: string };
+                    errorMessage = axiosError.response?.data?.message || axiosError.message || errorMessage;
                 }
                 openModal({ type: 'error', title: 'Błąd', message: errorMessage });
             } finally {
@@ -76,7 +78,7 @@ export function EditClientPage() {
         };
 
         fetchClientAndTags();
-    }, [api, id, navigate, openModal]);
+    }, [apiUrl, id, navigate, openModal]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -100,15 +102,14 @@ export function EditClientPage() {
         };
 
         try {
-            await axios.put(`${api}/customers/${id}`, updatedClientData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.put(`/Customers/${id}`, updatedClientData);
             navigate('/klienci');
             openToast('Dane klienta zostały zaktualizowane.', 'success');
         } catch (err: unknown) {
             let errorMessage = 'Nie udało się zaktualizować danych.';
-            if (axios.isAxiosError(err) && err.response) {
-                errorMessage = (err.response.data as { message?: string })?.message || err.message;
+            if (err && typeof err === 'object' && 'response' in err) {
+                const axiosError = err as { response?: { data?: { message?: string } }; message?: string };
+                errorMessage = axiosError.response?.data?.message || axiosError.message || errorMessage;
             }
             openModal({ type: 'error', title: 'Błąd', message: errorMessage });
         }
@@ -141,7 +142,7 @@ export function EditClientPage() {
                 <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Tagi (kliknij aby wybrać)</label>
                     <div className="max-h-32 overflow-y-auto border border-gray-600 rounded bg-gray-700 p-2">
-                        {allTags.length > 0 ? (
+                        {Array.isArray(allTags) && allTags.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
                                 {allTags.map(tag => (
                                     <button
@@ -149,8 +150,8 @@ export function EditClientPage() {
                                         type="button"
                                         onClick={() => handleTagToggle(tag.id)}
                                         className={`px-3 py-1 rounded-full text-sm font-medium transition-all ${selectedTagIds.includes(tag.id)
-                                                ? 'ring-2 ring-white ring-opacity-50'
-                                                : 'opacity-70 hover:opacity-100'
+                                            ? 'ring-2 ring-white ring-opacity-50'
+                                            : 'opacity-70 hover:opacity-100'
                                             }`}
                                         style={{
                                             backgroundColor: tag.color || '#3B82F6',
@@ -170,7 +171,7 @@ export function EditClientPage() {
                             <p className="text-xs text-gray-400 mb-1">Wybrane tagi:</p>
                             <div className="flex flex-wrap gap-1">
                                 {selectedTagIds.map(tagId => {
-                                    const tag = allTags.find(t => t.id === tagId);
+                                    const tag = Array.isArray(allTags) ? allTags.find(t => t.id === tagId) : undefined;
                                     return tag ? (
                                         <span
                                             key={tag.id}

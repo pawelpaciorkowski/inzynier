@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useModal } from '../context/ModalContext';
@@ -56,30 +56,30 @@ export function EditPaymentPage() {
             }
 
             try {
-                // Używamy typów w zapytaniach axios dla bezpieczeństwa
-                const paymentRes = await axios.get<Payment>(`/api/Payments/${id}`);
-                const invoicesRes = await axios.get<ApiResponse<Invoice> | Invoice[]>('/api/Invoices');
+                // Używamy typów w zapytaniach api dla bezpieczeństwa
+                const paymentRes = await api.get<Payment>(`/Payments/${id}`);
+                const invoicesRes = await api.get<ApiResponse<Invoice> | Invoice[]>('/Invoices/');
 
                 // Przypisanie danych do stanu
                 const paymentData = paymentRes.data;
-                setInvoiceId(paymentData.invoiceId.toString());
-                setAmount(paymentData.amount.toString());
+                setInvoiceId(paymentData.invoiceId?.toString() || '');
+                setAmount(paymentData.amount?.toString() || '');
                 // Formatowanie daty do użycia w <input type="datetime-local">
-                setPaidAt(format(new Date(paymentData.paidAt), 'yyyy-MM-dd\'T\'HH:mm'));
+                if (paymentData.paidAt) {
+                    setPaidAt(format(new Date(paymentData.paidAt), 'yyyy-MM-dd\'T\'HH:mm'));
+                }
 
                 // Sprawdzamy, czy odpowiedź jest "opakowana" w $values
                 const invoicesData = '$values' in invoicesRes.data ? invoicesRes.data.$values : invoicesRes.data;
                 setInvoices(invoicesData);
-                
+
                 // Ustaw wybraną fakturę
                 const currentInvoice = invoicesData.find((inv: Invoice) => inv.id === paymentData.invoiceId);
                 setSelectedInvoice(currentInvoice || null);
 
-            } catch (err: unknown) { // Używamy 'unknown' zamiast 'any' dla lepszego bezpieczeństwa
+            } catch (err: unknown) {
                 let errorMessage = 'Nie udało się pobrać danych.';
-                if (axios.isAxiosError(err) && err.response) {
-                    errorMessage = err.response.data?.message || err.message;
-                } else if (err instanceof Error) {
+                if (err instanceof Error) {
                     errorMessage = err.message;
                 }
                 setError(errorMessage);
@@ -103,17 +103,17 @@ export function EditPaymentPage() {
         }
 
         try {
-            await axios.put(`/api/Payments/${id}`, {
+            await api.put(`/Payments/${id}`, {
                 id: parseInt(id as string),
-                invoiceId: parseInt(invoiceId), // invoiceId jest już stringiem
+                invoiceId: parseInt(invoiceId),
                 amount: parseFloat(amount),
                 paidAt: new Date(paidAt).toISOString(),
             });
             openToast('Płatność została pomyślnie zaktualizowana.', 'success');
             navigate('/platnosci');
-        } catch {
-            // Interceptor Axios (jeśli go masz) lub hook 'useModal' obsłuży błąd
-            // Nie ma potrzeby powielać logiki tutaj
+        } catch (err) {
+            console.error('Błąd aktualizacji płatności:', err);
+            openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się zaktualizować płatności' });
         } finally {
             setLoading(false);
         }
@@ -187,3 +187,5 @@ export function EditPaymentPage() {
         </div>
     );
 }
+
+export default EditPaymentPage;

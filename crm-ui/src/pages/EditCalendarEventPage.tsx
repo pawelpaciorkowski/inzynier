@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useModal } from '../context/ModalContext';
+import { useAuth } from '../context/AuthContext';
 
 interface CalendarEvent {
     id: number;
@@ -14,6 +15,7 @@ interface CalendarEvent {
 export function EditCalendarEventPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const { openModal, openToast } = useModal();
 
     const [title, setTitle] = useState('');
@@ -26,20 +28,26 @@ export function EditCalendarEventPage() {
 
     useEffect(() => {
         const fetchData = async () => {
+            if (!user) {
+                setError("Musisz się zalogować, aby edytować wydarzenia.");
+                setLoading(false);
+                return;
+            }
             if (!id) {
                 setError("Brak ID wydarzenia w adresie URL.");
                 setLoading(false);
                 return;
             }
             try {
-                const response = await axios.get<CalendarEvent>(`/api/CalendarEvents/${id}`);
+                const response = await api.get<CalendarEvent>(`/CalendarEvents/${id}`);
                 setTitle(response.data.title);
                 setStart(format(new Date(response.data.start), 'yyyy-MM-dd\'T\'HH:mm'));
                 setEnd(format(new Date(response.data.end), 'yyyy-MM-dd\'T\'HH:mm'));
             } catch (err: unknown) {
                 let errorMessage = 'Nie udało się pobrać danych.';
-                if (axios.isAxiosError(err) && err.response) {
-                    errorMessage = err.response.data?.message || err.message;
+                if (err && typeof err === 'object' && 'response' in err) {
+                    const axiosErr = err as any;
+                    errorMessage = axiosErr.response?.data?.message || axiosErr.message;
                 } else if (err instanceof Error) {
                     errorMessage = err.message;
                 }
@@ -50,7 +58,7 @@ export function EditCalendarEventPage() {
             }
         };
         fetchData();
-    }, [id, openModal]);
+    }, [id, openModal, user]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -76,7 +84,7 @@ export function EditCalendarEventPage() {
             const adjustedEndDate = new Date(end);
             adjustedEndDate.setMinutes(adjustedEndDate.getMinutes() - adjustedEndDate.getTimezoneOffset());
 
-            await axios.put(`/api/CalendarEvents/${id}`, {
+            await api.put(`/CalendarEvents/${id}`, {
                 id: parseInt(id as string),
                 title,
                 start: adjustedStartDate.toISOString(),
@@ -90,6 +98,20 @@ export function EditCalendarEventPage() {
             setLoading(false);
         }
     };
+
+    if (!user) {
+        return (
+            <div className="p-6 text-center">
+                <p className="text-red-500 mb-4">Musisz się zalogować, aby edytować wydarzenia kalendarza.</p>
+                <button
+                    onClick={() => navigate('/login')}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                >
+                    Przejdź do logowania
+                </button>
+            </div>
+        );
+    }
 
     if (loading) {
         return (

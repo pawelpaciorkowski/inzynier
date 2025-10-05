@@ -17,7 +17,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     {/* BrowserRouter opakowuje całą aplikację, umożliwiając routing */}
     {/* Używa HTML5 History API do zarządzania URL bez przeładowywania strony */}
-    <BrowserRouter>
+    {/* Future flags dla React Router v7 - włączamy nowe funkcjonalności wcześniej */}
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true
+      }}
+    >
       {/* Renderowanie głównego komponentu aplikacji */}
       <App />
     </BrowserRouter>
