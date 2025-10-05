@@ -1,0 +1,33 @@
+# Podstawowe zależności dla prostego backendu CRM w Python
+# Używamy Flask - prosty framework webowy, idealny dla juniora
+
+# Flask - główny framework webowy
+Flask==2.3.3
+
+# SQLAlchemy - ORM do bazy danych (prostszy niż Entity Framework)
+Flask-SQLAlchemy==3.0.5
+
+# Migracje bazy danych - usunięte dla prostoty
+# Flask-Migrate==4.0.5
+
+# JWT do autoryzacji
+PyJWT==2.8.0
+# Flask-JWT-Extended==4.5.3  # Nie używamy - mamy własny middleware
+
+# Hashowanie haseł
+bcrypt==4.0.1
+
+# CORS dla frontendu
+Flask-CORS==4.0.0
+
+# Walidacja danych
+marshmallow==3.20.1
+
+# MySQL driver
+PyMySQL==1.1.0
+
+# Środowisko wirtualne
+python-dotenv==1.0.0
+
+# Podstawowe narzędzia
+requests==2.31.0
