@@ -44,6 +44,7 @@ interface DashboardData {
     usersCount: number;
     paymentsCount: number;
     systemLogsCount: number;
+    totalInvoicesValue: number;
     taskPerUser: Array<{
         username: string;
         totalTasks: number;
@@ -346,7 +347,7 @@ export function ReportsPage() {
                     <StatTile icon={CheckCircleIcon} value={dashboardData.tasksCount} label="Zadania" color="text-yellow-400" />
                     <StatTile icon={CurrencyDollarIcon} value={dashboardData.contractsCount} label="Kontrakty" color="text-purple-400" />
                     <StatTile icon={ClockIcon} value="0" label="Spotkania" color="text-indigo-400" />
-                    <StatTile icon={CurrencyDollarIcon} value="0 PLN" label="Wartość Faktur" color="text-pink-400" />
+                    <StatTile icon={CurrencyDollarIcon} value={`${(dashboardData.totalInvoicesValue || 0).toFixed(2)} PLN`} label="Wartość Faktur" color="text-pink-400" />
                 </div>
             </div>
 

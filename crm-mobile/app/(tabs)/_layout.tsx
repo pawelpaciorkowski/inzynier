@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link, Tabs, useRouter, useFocusEffect } from 'expo-router';
 import { Pressable, View, Text } from 'react-native';
-import axios from 'axios';
+import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 /**
@@ -66,9 +66,7 @@ export default function TabLayout() {
   const fetchUnreadCount = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await axios.get(`/api/Notifications/unread-count`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get(`/Notifications/unread-count`);
       setUnreadCount(response.data.count || 0);
     } catch (err) {
       console.error("Błąd pobierania liczby nieprzeczytanych powiadomień:", err);

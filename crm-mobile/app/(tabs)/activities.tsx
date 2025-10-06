@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, FlatList, ActivityIndicator, Text, View } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { Stack } from 'expo-router';
-import axios from 'axios';
+import api from '../../services/api';
 
 // Definiuje strukturę obiektu aktywności
 interface Activity {
@@ -41,7 +41,7 @@ export default function ActivitiesScreen() {
 
       try {
         // Wykonuje zapytanie GET do API w celu pobrania aktywności
-        const response = await axios.get('/api/Activities');
+        const response = await api.get('/Activities');
 
         // Sprawdza, czy odpowiedź zawiera dane
         if (!response.data) {

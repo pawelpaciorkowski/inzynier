@@ -3,7 +3,7 @@ import { StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, Tex
 import { Link, Stack, useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import axios from 'axios';
+import api from '../../services/api';
 
 // Definicja interfejsu dla obiektu faktury.
 interface Invoice {
@@ -65,7 +65,7 @@ export default function InvoicesScreen() {
         setError(null);
 
         try {
-            const response = await axios.get('/api/Invoices');
+            const response = await api.get('/Invoices');
 
             const data = response.data;
             console.log("Odpowiedź z backendu (raw):", JSON.stringify(data, null, 2));

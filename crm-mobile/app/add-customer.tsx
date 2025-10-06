@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import api from '../services/api';
 import { useRouter, Stack } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
@@ -33,7 +33,7 @@ export default function AddCustomerScreen() {
 
         setLoading(true);
         try {
-            const response = await axios.post(`/api/Customers`, {
+            const response = await api.post(`/Customers`, {
                 name: name.trim(),
                 email: email.trim(),
                 phone: phone.trim() || null,

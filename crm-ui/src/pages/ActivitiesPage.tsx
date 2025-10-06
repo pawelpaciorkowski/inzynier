@@ -4,12 +4,12 @@ import { ListBulletIcon } from '@heroicons/react/24/outline';
 
 interface Activity {
     id: number;
-    title: string;
-    description?: string;
-    activityDate: string;
+    note: string;  // Backend zwraca 'note' zamiast 'title'
+    createdAt: string;  // Backend zwraca 'createdAt' zamiast 'activityDate'
     customerId?: number;
     customerName?: string;
     userId: number;
+    userName?: string;  // Backend zwraca 'userName'
 }
 
 export function ActivitiesPage() {
@@ -54,14 +54,13 @@ export function ActivitiesPage() {
                                 </div>
                                 <div className="flex-1 space-y-1">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-sm font-medium text-white">{activity.title}</h3>
-                                        <p className="text-sm text-gray-500">{activity.activityDate ? new Date(activity.activityDate.endsWith('Z') ? activity.activityDate : activity.activityDate + 'Z').toLocaleString('pl-PL') : 'Brak daty'}</p>
+                                        <h3 className="text-sm font-medium text-white">{activity.note}</h3>
+                                        <p className="text-sm text-gray-500">
+                                            {activity.createdAt ? new Date(activity.createdAt.endsWith('Z') ? activity.createdAt : activity.createdAt + 'Z').toLocaleString('pl-PL') : 'Brak daty'}
+                                        </p>
                                     </div>
-                                    {activity.description && (
-                                        <p className="text-sm text-gray-300">{activity.description}</p>
-                                    )}
                                     <p className="text-sm text-gray-400">
-                                        Użytkownik ID: <span className="font-semibold">{activity.userId}</span> | Klient: <span className="font-semibold">{activity.customerName || 'Brak'}</span>
+                                        Użytkownik: <span className="font-semibold">{activity.userName || 'Nieznany'}</span> | Klient: <span className="font-semibold">{activity.customerName || 'Brak'}</span>
                                     </p>
                                 </div>
                             </div>

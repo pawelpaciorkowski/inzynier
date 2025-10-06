@@ -4,7 +4,7 @@ import { StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, Tex
 import { Link, Stack, useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import axios from 'axios';
+import api from '../../services/api';
 
 // Definicja interfejsu dla obiektu klienta, odzwierciedlająca model danych z backendu.
 interface Customer {
@@ -65,7 +65,7 @@ export default function CustomersScreen() {
             // Logowanie rozpoczęcia pobierania danych.
             console.log("Pobieranie klientów...");
             // Wykonanie zapytania GET do API.
-            const response = await axios.get('/api/Customers');
+            const response = await api.get('/Customers');
             // Logowanie odpowiedzi z serwera.
             console.log("Odpowiedź z serwera:", response.data);
 

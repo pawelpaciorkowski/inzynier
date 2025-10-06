@@ -1,6 +1,6 @@
 import { View, Text, FlatList, ActivityIndicator, StyleSheet, Pressable, TextInput, Alert, Modal, ScrollView } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -48,9 +48,7 @@ export default function RemindersPage() {
         setLoading(true);
         setError(null);
         try {
-            const response = await axios.get('/api/Reminders', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await api.get('/Reminders');
             const data = response.data.$values || response.data;
             setReminders(data);
         } catch (err) {
@@ -104,11 +102,9 @@ export default function RemindersPage() {
 
         setSaving(true);
         try {
-            await axios.post('/api/Reminders', {
+            await api.post('/Reminders', {
                 note: newNote.trim(),
                 remind_at: reminderDate.toISOString()
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
             });
 
             setNewNote('');
@@ -137,9 +133,7 @@ export default function RemindersPage() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await axios.delete(`/api/Reminders/${id}`, {
-                                headers: { Authorization: `Bearer ${token}` }
-                            });
+                            await api.delete(`/Reminders/${id}`);
                             fetchReminders();
                             Alert.alert('Sukces', 'Przypomnienie zostało usunięte');
                         } catch (err) {

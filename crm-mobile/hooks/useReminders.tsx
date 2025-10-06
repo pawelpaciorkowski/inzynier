@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
-import axios from 'axios';
+import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 interface Reminder {
@@ -34,9 +34,7 @@ export const useReminders = () => {
 
         try {
             console.log('🔄 Pobieram przypomnienia z API...');
-            const response = await axios.get('/api/Reminders', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await api.get('/Reminders');
             const data = response.data.$values || response.data;
             console.log('📥 Otrzymane przypomnienia:', data);
             setReminders(data);

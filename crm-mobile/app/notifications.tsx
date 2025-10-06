@@ -1,5 +1,5 @@
 import { View, Text, FlatList, ActivityIndicator, StyleSheet, Pressable, Modal, ScrollView } from 'react-native';
-import axios from 'axios';
+import api from '../services/api';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -58,9 +58,7 @@ export default function NotificationsPage() {
             return;
         }
         try {
-            const response = await axios.get(`/api/Notifications/user`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await api.get(`/Notifications/user`);
             const data = response.data.$values || response.data;
             setNotifications(data);
         } catch (err) {
@@ -80,9 +78,7 @@ export default function NotificationsPage() {
     const handleMarkAsRead = async (id: number) => {
         if (!token) return;
         try {
-            await axios.post(`/api/Notifications/mark-as-read/${id}`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.post(`/Notifications/mark-as-read/${id}`, {});
             fetchNotifications(); // Odświeża listę powiadomień
         } catch (err) {
             console.error("Błąd oznaczania jako przeczytane:", err);
@@ -97,9 +93,7 @@ export default function NotificationsPage() {
         if (!token) return;
         try {
             await Promise.all(unreadNotifications.map(n =>
-                axios.post(`/api/Notifications/mark-as-read/${n.id}`, {}, {
-                    headers: { Authorization: `Bearer ${token}` }
-                })
+                api.post(`/Notifications/mark-as-read/${n.id}`, {})
             ));
             fetchNotifications();
         } catch (err) {
@@ -112,9 +106,7 @@ export default function NotificationsPage() {
         if (!token) return null;
         try {
             setLoadingDetails(true);
-            const response = await axios.get(`/api/Messages/${messageId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await api.get(`/Messages/${messageId}`);
             return response.data;
         } catch (err) {
             console.error("Błąd pobierania szczegółów wiadomości:", err);

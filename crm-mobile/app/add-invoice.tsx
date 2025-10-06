@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, TouchableOpacity } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import api from '../services/api';
 import { useRouter, Stack } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -30,8 +30,8 @@ export default function AddInvoiceScreen() {
         const fetchData = async () => {
             try {
                 const [customersRes, servicesRes] = await Promise.all([
-                    axios.get(`/api/Customers`), // Usunięto nagłówki, bo są globalne
-                    axios.get(`/api/Services`)   // Usunięto nagłówki, bo są globalne
+                    api.get(`/Customers`), // Usunięto nagłówki, bo są globalne
+                    api.get(`/Services`)   // Usunięto nagłówki, bo są globalne
                 ]);
 
                 const customersData = customersRes.data.$values || customersRes.data;
@@ -84,7 +84,7 @@ export default function AddInvoiceScreen() {
                 quantity: parseInt(item.quantity),
             }));
 
-            await axios.post('/api/Invoices', {
+            await api.post('/Invoices', {
                 invoiceNumber,
                 customerId: selectedCustomerId,
                 items: invoiceItems,

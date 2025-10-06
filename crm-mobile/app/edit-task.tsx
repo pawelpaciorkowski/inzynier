@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import api from '../services/api';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 
@@ -51,12 +51,16 @@ export default function EditTaskScreen() {
         // Asynchroniczna funkcja do pobierania danych
         const fetchData = async () => {
             // Przerywa, jeśli brakuje tokena lub ID zadania
-            if (!token || !taskId) return;
+            if (!token || !taskId) {
+                setLoading(false);
+                return;
+            }
+            setLoading(true);
             try {
                 // Równoległe zapytania o listę klientów i dane konkretnego zadania
                 const [customersRes, taskRes] = await Promise.all([
-                    axios.get(`/api/Customers`),
-                    axios.get(`/api/user/tasks/${taskId}`)
+                    api.get(`/Customers`),
+                    api.get(`/user/tasks/${taskId}`)
                 ]);
 
                 // Przetwarza odpowiedź z listą klientów
@@ -102,7 +106,7 @@ export default function EditTaskScreen() {
 
         try {
             // Wykonuje zapytanie PUT do API w celu aktualizacji zadania
-            await axios.put(`/api/user/tasks/${taskId}`, updateDto);
+            await api.put(`/user/tasks/${taskId}`, updateDto);
 
             // Wyświetla alert o sukcesie
             Alert.alert("Sukces", "Zadanie zostało zaktualizowane.");

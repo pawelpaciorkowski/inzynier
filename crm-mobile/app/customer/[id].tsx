@@ -3,7 +3,7 @@ import { View, StyleSheet, ActivityIndicator, ScrollView, Text, Alert, Platform,
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import axios from 'axios';
+import api from '../../services/api';
 
 // Definicja interfejsu dla szczegółowych danych klienta.
 interface CustomerDetails {
@@ -68,7 +68,7 @@ export default function CustomerDetailScreen() {
                 return;
             }
             try {
-                const response = await axios.get(`/api/Customers/${id}`);
+                const response = await api.get(`/Customers/${id}`);
                 if (!response.data) throw new Error('Nie udało się pobrać danych klienta.');
                 const data = response.data;
                 setCustomer(data);
@@ -88,7 +88,7 @@ export default function CustomerDetailScreen() {
         if (!customer || !token) return;
 
         try {
-            const response = await axios.put(`/api/Customers/${customer.id}`, editForm);
+            const response = await api.put(`/Customers/${customer.id}`, editForm);
             if (response.status === 200) { // Backend zwraca status 200
                 setCustomer({ ...customer, ...editForm });
                 setIsEditing(false); // Wyłączenie trybu edycji.
@@ -113,7 +113,7 @@ export default function CustomerDetailScreen() {
                     onPress: async () => {
                         if (!customer || !token) return;
                         try {
-                            await axios.delete(`/api/Customers/${customer.id}`);
+                            await api.delete(`/Customers/${customer.id}`);
                             Alert.alert("Sukces", "Klient został usunięty");
                             router.back(); // Powrót do poprzedniego ekranu.
                         } catch (err: any) {

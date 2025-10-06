@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Button, ActivityIndicator, TextInput, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-import axios from 'axios';
+import api from '../../services/api';
 
 // Definicja interfejsu dla profilu użytkownika.
 interface UserProfile {
@@ -41,9 +41,7 @@ export default function TabTwoScreen() {
                 return;
             }
             try {
-                const response = await axios.get('/api/Profile', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const response = await api.get('/Profile');
                 if (!response.data) throw new Error('Nie udało się pobrać danych profilu.');
                 const data = response.data;
                 setUserProfile(data);
@@ -75,11 +73,9 @@ export default function TabTwoScreen() {
         setChangingPassword(true);
         try {
             // Wysłanie zapytania PUT do API w celu zmiany hasła.
-            const response = await axios.put('/api/Profile/change-password', {
+            const response = await api.put('/Profile/change-password', {
                 currentPassword,
                 newPassword,
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
             });
 
             if (!response.data) {

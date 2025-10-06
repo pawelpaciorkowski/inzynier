@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Modal, FlatList } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import api from '../services/api';
 import { useRouter, Stack } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
@@ -49,7 +49,7 @@ export default function AddTaskScreen() {
         const fetchCustomers = async () => {
             try {
                 // Wykonuje zapytanie GET do API w celu pobrania klientów
-                const res = await axios.get(`/api/Customers`);
+                const res = await api.get(`/Customers`);
                 // Pobiera dane z odpowiedzi
                 const data = res.data;
                 // Inicjalizuje pustą tablicę na dane klientów
@@ -135,7 +135,7 @@ export default function AddTaskScreen() {
         setLoading(true);
         try {
             // Wykonuje zapytanie POST do API w celu dodania zadania
-            const response = await axios.post(`/api/user/tasks`, {
+            const response = await api.post(`/user/tasks`, {
                 title: title.trim(),
                 description: description.trim() || null,
                 customerId: selectedCustomerId,

@@ -62,25 +62,75 @@ npm run ios         # (macOS) emulator iOS lub Expo Go
 
 ---
 
-## 🛠️ Funkcjonalności (planowane)
+## 🛠️ Zaimplementowane Funkcjonalności
 
-* Logowanie użytkownika (JWT)
-* Lista zadań przypisanych użytkownikowi
-* Lista klientów i dane kontaktowe
-* Powiadomienia push (Expo Notifications)
-* Synchronizacja z backendem REST API
+✅ **Logowanie użytkownika (JWT)**
+- Bezpieczne logowanie z tokenem JWT
+- Automatyczne przechowywanie sesji w SecureStore
+- Logowanie z różnych urządzeń
+
+✅ **Lista zadań**
+- Wyświetlanie zadań przypisanych użytkownikowi
+- Oznaczanie zadań jako ukończone
+- Dodawanie nowych zadań
+- Edycja i usuwanie zadań
+
+✅ **Lista klientów**
+- Przeglądanie klientów
+- Szczegóły kontaktu
+- Podstawowe informacje biznesowe
+
+✅ **Przypomnienia**
+- System przypomnień z powiadomieniami
+- Automatyczne alerty o terminach
+- Zarządzanie przypomnieniami
+
+✅ **Powiadomienia**
+- Ikona powiadomień z licznikiem nieprzeczytanych
+- Lista powiadomień
+- Oznaczanie jako przeczytane
+
+✅ **Aktywności**
+- Historia aktywności użytkownika
+- Logi działań w systemie
+- Szczegóły operacji
+
+✅ **Synchronizacja z backendem**
+- Pełna integracja z REST API
+- Automatyczna synchronizacja danych
+- Obsługa błędów sieciowych
 
 ---
 
-## 📬 Kontakt
+## 📱 Screenshots
 
-Jeśli masz pytania, napisz przez platformę uczelni lub GitLaba.
+### Ekran logowania
+- Prosty formularz logowania
+- Automatyczne wypełnianie danych testowych
+- Obsługa błędów autoryzacji
+
+### Dashboard
+- Przegląd zadań
+- Najnowsze przypomnienia
+- Szybki dostęp do funkcji
+
+### Zadania
+- Lista zadań z statusami
+- Filtrowanie i sortowanie
+- Akcje: edycja, usuwanie, oznaczanie
+
+### Klienci
+- Lista klientów z podstawowymi danymi
+- Szczegóły kontaktu
+- Historia interakcji
 
 ---
 
 ## 🧪 Status
 
-Projekt mobilny jest w fazie wstępnej. Docelowo będzie zawierać uproszczone wersje kluczowych widoków dostępnych w wersji webowej systemu CRM.
+✅ **Projekt ukończony i gotowy do produkcji**
+
+Aplikacja mobilna jest w pełni funkcjonalna i zsynchronizowana z backendem. Wszystkie zaplanowane funkcjonalności zostały zaimplementowane i przetestowane.
 
 ````
 

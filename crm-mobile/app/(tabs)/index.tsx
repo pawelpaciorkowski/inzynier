@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl, Alert, TextInput, Pressable } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-import axios from 'axios';
+import api from '../../services/api';
 import { useFocusEffect, Link } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
@@ -50,7 +50,7 @@ export default function TabOneScreen() {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get('/api/user/tasks');
+      const res = await api.get('/user/tasks');
       const data = res.data;
 
       // Logika do obsługi formatu danych z serwera .NET (pole .$values).
@@ -65,10 +65,10 @@ export default function TabOneScreen() {
 
       setTasks(tasksData);
       setFilteredTasks(tasksData);
-    } catch (err) {
+    } catch (err: any) {
       setError('Nie udało się pobrać zadań.');
       // Automatyczne wylogowanie w przypadku błędu autoryzacji (401).
-      if (axios.isAxiosError(err) && err.response?.status === 401) logout();
+      if (err.response?.status === 401) logout();
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -118,7 +118,7 @@ export default function TabOneScreen() {
 
     try {
       // Wysłanie zapytania PUT do API.
-      await axios.put(`/api/user/tasks/${task.id}`, updateDto);
+      await api.put(`/user/tasks/${task.id}`, updateDto);
     } catch (error) {
       alert('Nie udało się zaktualizować zadania.');
       // Przywrócenie poprzedniego stanu w przypadku błędu.
@@ -142,7 +142,7 @@ export default function TabOneScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await axios.delete(`/api/user/tasks/${taskToDelete.id}`);
+              await api.delete(`/user/tasks/${taskToDelete.id}`);
               // Usunięcie zadania z lokalnego stanu po pomyślnym usunięciu na serwerze.
               setTasks(prev => prev.filter(task => task.id !== taskToDelete.id));
             } catch (error) {

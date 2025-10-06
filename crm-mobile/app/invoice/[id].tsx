@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import axios from 'axios';
+import api from '../../services/api';
 
 // Definicja interfejsu dla pozycji na fakturze.
 interface InvoiceItemDetails {
@@ -71,7 +71,7 @@ export default function InvoiceDetailScreen() {
             if (!id || !token) { setLoading(false); return; }
             setLoading(true);
             try {
-                const response = await axios.get(`/api/Invoices/${id}`);
+                const response = await api.get(`/Invoices/${id}`);
                 if (!response.data) throw new Error(`Nie udało się pobrać danych faktury (status: ${response.status})`);
                 const data = response.data;
                 console.log("Dane faktury z backendu:", data);
@@ -98,8 +98,8 @@ export default function InvoiceDetailScreen() {
             const fileName = `${invoice.invoiceNumber.replace(/\//g, '_')}.pdf`;
             const fileUri = FileSystem.documentDirectory + fileName;
 
-            // Pobranie pliku PDF jako blob.
-            const response = await axios.get(`/api/Invoices/${id}/pdf`, { responseType: 'blob' });
+            // Pobranie pliku PDF jako blob (token przekazywany w URL bo api.get nie zadziała dla blob)
+            const response = await api.get(`/Invoices/${id}/pdf?token=${token}`, { responseType: 'blob' });
 
             // Użycie FileReader do odczytania bloba jako Base64.
             const reader = new FileReader();

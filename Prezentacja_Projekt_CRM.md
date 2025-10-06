@@ -169,17 +169,17 @@ Trójwarstwowy system CRM składający się z:
 - **React Native** - natywne komponenty
 - **TypeScript** - typy dla lepszej jakości kodu
 
-### **Backend (ASP.NET Core):**
-- **.NET 9.0** - najnowsza wersja frameworka
-- **Entity Framework Core** - ORM do bazy danych
+### **Backend (Python Flask):**
+- **Python 3.12** - najnowsza wersja języka
+- **Flask 2.3.3** - lekki framework webowy
+- **SQLAlchemy** - ORM do bazy danych
 - **JWT Authentication** - stateless autoryzacja
-- **Swagger/OpenAPI** - dokumentacja API
-- **Dependency Injection** - inversion of control
-- **AutoMapper** - mapowanie obiektów
+- **PyMySQL** - driver MySQL/MariaDB
+- **bcrypt** - bezpieczne hashowanie haseł
 
 ### **Baza Danych:**
 - **MySQL/MariaDB** - relacyjna baza danych
-- **Entity Framework Migrations** - wersjonowanie schematu
+- **SQLAlchemy Migrations** - wersjonowanie schematu
 - **Connection Pooling** - optymalizacja połączeń
 
 ### **DevOps:**
@@ -231,39 +231,62 @@ useEffect(() => {
 }, [shownReminders]);
 ```
 
-### **3. JWT Authentication z refreshem**
-```csharp
-[ApiController]
-[Authorize]
-public class BaseController : ControllerBase {
-    protected int GetCurrentUserId() {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-        return int.Parse(userIdClaim.Value);
-    }
-}
+### **3. JWT Authentication z middleware**
+```python
+# app/middleware.py
+def require_auth(f):
+    """Dekorator wymagający autoryzacji"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'error': 'Brak tokenu autoryzacji'}), 401
+        
+        try:
+            token = token.replace('Bearer ', '')
+            payload = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=['HS256'])
+            g.current_user_id = payload['sub']
+        except jwt.ExpiredSignatureError:
+            return jsonify({'error': 'Token wygasł'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'error': 'Nieprawidłowy token'}), 401
+        
+        return f(*args, **kwargs)
+    return decorated
 ```
 
 ### **4. Generowanie dokumentów PDF**
-```csharp
-public class DocumentGenerationService {
-    public byte[] GenerateCustomerReport(List<Customer> customers) {
-        return Document.Create(container => {
-            container.Page(page => {
-                page.Content().Table(table => {
-                    table.ColumnsDefinition(columns => {
-                        columns.RelativeColumn();
-                        columns.RelativeColumn();
-                    });
-                    
-                    foreach(var customer in customers) {
-                        table.Cell().Text(customer.Name);
-                        table.Cell().Text(customer.Email);
-                    }
-                });
-            });
-        }).GeneratePdf();
-    }
-}
+```python
+# app/controllers/reports.py
+def create_pdf_table(data, headers, title):
+    """Tworzy tabelę PDF z polskimi znakami"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4))
+    
+    elements = []
+    elements.append(Paragraph(title, title_style))
+    elements.append(Spacer(1, 20))
+    
+    # Przygotuj dane tabeli
+    table_data = [headers]
+    for row in data:
+        table_data.append(row)
+    
+    table = Table(table_data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 14),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    
+    elements.append(table)
+    doc.build(elements)
+    return buffer
 ```
 
 ### **5. Cross-platform navigation**
