@@ -10,13 +10,22 @@ activities_bp = Blueprint('activities', __name__)
 @activities_bp.route('/', methods=['GET'])
 @require_auth
 def get_activities():
-    """Pobiera listę aktywności"""
+    """Pobiera listę aktywności z nazwami klientów i użytkowników"""
     try:
-        # Użyj poprawne nazwy kolumn z bazy danych
+        # JOIN z tabelami Customers i Users aby pobrać nazwy
         activities = db.session.execute(text("""
-            SELECT Id, Note, CreatedAt, UserId, CustomerId
-            FROM Activities
-            ORDER BY CreatedAt DESC
+            SELECT 
+                a.Id, 
+                a.Note, 
+                a.CreatedAt, 
+                a.UserId, 
+                a.CustomerId,
+                c.Name as CustomerName,
+                u.username as UserName
+            FROM Activities a
+            LEFT JOIN Customers c ON a.CustomerId = c.Id
+            LEFT JOIN users u ON a.UserId = u.id
+            ORDER BY a.CreatedAt DESC
             LIMIT 50
         """)).fetchall()
         
@@ -24,12 +33,12 @@ def get_activities():
         for activity in activities:
             activities_list.append({
                 'id': activity[0],
-                'title': activity[1],  # Note -> title dla frontendu
-                'description': None,   # Brak opisu w bazie
-                'activityDate': activity[2].isoformat() if activity[2] else None,  # CreatedAt -> activityDate
+                'note': activity[1],  # Note - opis aktywności
+                'createdAt': activity[2].isoformat() if activity[2] and hasattr(activity[2], 'isoformat') else str(activity[2]) if activity[2] else None,  # CreatedAt
                 'customerId': activity[4],  # CustomerId
-                'customerName': None,  # Bez JOIN nie mamy nazwy klienta
-                'userId': activity[3]   # UserId
+                'customerName': activity[5] if activity[5] else 'Brak klienta',  # CustomerName z JOIN
+                'userId': activity[3],   # UserId
+                'userName': activity[6] if activity[6] else 'Nieznany użytkownik'  # UserName z JOIN
             })
         
         return jsonify(activities_list), 200
@@ -66,6 +75,26 @@ def create_activity():
             'customerId': new_activity.customer_id,
             'userId': new_activity.user_id
         }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@activities_bp.route('/<int:activity_id>', methods=['PUT'])
+@require_auth
+def update_activity(activity_id):
+    """Aktualizuje aktywność"""
+    try:
+        activity = Activity.query.get_or_404(activity_id)
+        data = request.get_json()
+        
+        if 'note' in data:
+            activity.Note = data['note']
+        if 'customerId' in data:
+            activity.CustomerId = data['customerId']
+        
+        db.session.commit()
+        
+        return jsonify({'message': 'Aktywność została zaktualizowana', 'activity': activity.to_dict()}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500

@@ -133,3 +133,6 @@ To jest podstawowa wersja. Można łatwo dodać:
 
 
 
+
+
+
