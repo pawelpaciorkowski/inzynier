@@ -56,7 +56,6 @@ export function RemindersPage() {
         setFilteredReminders(filtered);
     }, [searchQuery, reminders]);
 
-    // ✅ POPRAWKA: Ta funkcja jest kluczowa do otwierania modala
     const handleOpenFormModal = (reminder: Reminder | null) => {
         openModal({
             type: 'custom',

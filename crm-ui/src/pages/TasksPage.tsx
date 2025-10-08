@@ -14,9 +14,11 @@ interface TaskItem {
     dueDate?: string;
     completed: boolean;
     user?: { username: string };
+    customer?: { id: number; name: string };
+    customerId?: number;
 }
 interface Customer { id: number; name: string; }
-interface UpdateTaskDto { title: string; description?: string; dueDate?: string; completed: boolean; }
+interface UpdateTaskDto { title: string; description?: string; dueDate?: string; completed: boolean; customerId?: number; }
 
 export default function TasksPage() {
     const { user } = useAuth();
@@ -37,6 +39,8 @@ export default function TasksPage() {
     const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
     const [showClientModal, setShowClientModal] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+    const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+    const [showEditClientModal, setShowEditClientModal] = useState(false);
 
     const fetchInitialData = useCallback(async () => {
         const token = localStorage.getItem("token");
@@ -52,18 +56,21 @@ export default function TasksPage() {
             ]);
 
             const tasksData = tasksRes.data;
+            let tasksArray = [];
             if (tasksData && Array.isArray((tasksData as any).$values)) {
-                setTasks((tasksData as any).$values);
-                setFilteredTasks((tasksData as any).$values);
+                tasksArray = (tasksData as any).$values;
             }
             else if (Array.isArray(tasksData)) {
-                setTasks(tasksData);
-                setFilteredTasks(tasksData);
+                tasksArray = tasksData;
             }
             else {
-                setTasks([]);
-                setFilteredTasks([]);
+                tasksArray = [];
             }
+
+            // Sortuj zadania - najnowsze na górze (po ID malejąco)
+            const sortedTasks = tasksArray.sort((a: TaskItem, b: TaskItem) => b.id - a.id);
+            setTasks(sortedTasks);
+            setFilteredTasks(sortedTasks);
 
             const customerData = customersRes.data;
             if (customerData && Array.isArray((customerData as any).$values)) setCustomers((customerData as any).$values);
@@ -128,11 +135,18 @@ export default function TasksPage() {
                 customerId: parseInt(selectedCustomerId),
             });
 
-            await fetchInitialData();
+            // Wyczyść formularz
             setNewTaskTitle("");
             setNewTaskDescription("");
             setNewTaskDueDate("");
             setSelectedCustomerId("");
+            setSelectedCustomer(null);
+
+            // Pokaż toast o sukcesie
+            openToast('Zadanie zostało dodane!', 'success');
+
+            // Odśwież dane
+            await fetchInitialData();
         } catch {
             openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się dodać zadania.' });
         }
@@ -148,6 +162,7 @@ export default function TasksPage() {
             description: editingTask.description,
             dueDate: editingTask.dueDate ? new Date(editingTask.dueDate).toISOString() : undefined,
             completed: editingTask.completed,
+            customerId: editingTask.customerId,
         };
 
         try {
@@ -159,6 +174,14 @@ export default function TasksPage() {
             openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się zaktualizować zadania.' });
         }
     }, [editingTask, openModal]);
+
+    const handleEditCustomerSelect = (customer: Customer) => {
+        if (editingTask) {
+            setEditingTask({ ...editingTask, customerId: customer.id, customer: customer });
+        }
+        setEditingCustomer(customer);
+        setShowEditClientModal(false);
+    };
 
     const handleDelete = (task: TaskItem) => {
         openModal({
@@ -288,9 +311,22 @@ export default function TasksPage() {
                     editingTask?.id === task.id ? (
                         <li key={task.id} className="p-4 rounded-md border border-yellow-400 bg-gray-800">
                             <form onSubmit={handleUpdate} className="flex flex-col gap-3">
-                                <input type="text" value={editingTask.title} onChange={e => setEditingTask({ ...editingTask, title: e.target.value })} className="rounded-md px-4 py-2 bg-gray-700 text-white border border-gray-600" />
-                                <textarea value={editingTask.description || ''} onChange={e => setEditingTask({ ...editingTask, description: e.target.value })} className="rounded-md px-4 py-2 bg-gray-700 text-white border border-gray-600 resize-none" rows={2} />
+                                <input type="text" value={editingTask.title} onChange={e => setEditingTask({ ...editingTask, title: e.target.value })} className="rounded-md px-4 py-2 bg-gray-700 text-white border border-gray-600" placeholder="Tytuł zadania" />
+                                <textarea value={editingTask.description || ''} onChange={e => setEditingTask({ ...editingTask, description: e.target.value })} className="rounded-md px-4 py-2 bg-gray-700 text-white border border-gray-600 resize-none" rows={2} placeholder="Opis zadania" />
                                 <input type="date" value={editingTask.dueDate ? editingTask.dueDate.split('T')[0] : ''} onChange={e => setEditingTask({ ...editingTask, dueDate: e.target.value })} className="rounded-md px-4 py-2 bg-gray-700 text-white border border-gray-600" />
+
+                                {/* Wybór klienta */}
+                                <div className="flex items-center gap-3">
+                                    <span className="text-sm text-gray-300">Klient:</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowEditClientModal(true)}
+                                        className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-md border border-gray-500"
+                                    >
+                                        {editingTask.customer?.name || editingCustomer?.name || 'Wybierz klienta'}
+                                    </button>
+                                </div>
+
                                 <div className="flex gap-2 self-start">
                                     <button type="submit" className="bg-green-600 hover:bg-green-700 px-4 py-1 rounded-md">Zapisz</button>
                                     <button type="button" onClick={() => setEditingTask(null)} className="bg-gray-600 hover:bg-gray-500 px-4 py-1 rounded-md">Anuluj</button>
@@ -302,9 +338,30 @@ export default function TasksPage() {
                             <div className="flex justify-between items-start">
                                 <div className={`font-semibold ${task.completed && "line-through text-gray-400"}`}>{task.title}</div>
                                 <div className="flex items-center gap-3">
-                                    <button onClick={() => setEditingTask(task)} title="Edytuj"><PencilIcon className="w-5 h-5 text-gray-400 hover:text-yellow-400" /></button>
-                                    <button onClick={() => handleDelete(task)} title="Usuń"><TrashIcon className="w-5 h-5 text-gray-400 hover:text-red-500" /></button>
-                                    <input type="checkbox" checked={task.completed} onChange={() => toggleComplete(task)} className="w-5 h-5 text-indigo-500 bg-gray-900 border-gray-600 rounded" />
+                                    <button
+                                        onClick={() => {
+                                            setEditingTask(task);
+                                            setEditingCustomer(task.customer || null);
+                                        }}
+                                        title="Edytuj zadanie"
+                                        className="p-1 rounded hover:bg-gray-600 transition-colors"
+                                    >
+                                        <PencilIcon className="w-5 h-5 text-gray-400 hover:text-yellow-400" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(task)}
+                                        title="Usuń zadanie"
+                                        className="p-1 rounded hover:bg-gray-600 transition-colors"
+                                    >
+                                        <TrashIcon className="w-5 h-5 text-gray-400 hover:text-red-500" />
+                                    </button>
+                                    <input
+                                        type="checkbox"
+                                        checked={task.completed}
+                                        onChange={() => toggleComplete(task)}
+                                        title={task.completed ? "Oznacz jako nieukończone" : "Oznacz jako ukończone"}
+                                        className="w-5 h-5 text-indigo-500 bg-gray-900 border-gray-600 rounded cursor-pointer"
+                                    />
                                 </div>
                             </div>
                             {task.description && <p className={`text-sm text-gray-400 ${task.completed && "line-through"}`}>{task.description}</p>}
@@ -314,6 +371,15 @@ export default function TasksPage() {
                     )
                 ))}
             </ul>
+
+            {/* Modal do wyboru klienta w edycji */}
+            {showEditClientModal && (
+                <ClientSelectModal
+                    clients={customers}
+                    onSelect={(customer) => handleEditCustomerSelect(customer)}
+                    onClose={() => setShowEditClientModal(false)}
+                />
+            )}
         </div>
     );
 }

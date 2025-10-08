@@ -12,8 +12,11 @@ export function parseBackendDate(dateString: string | null | undefined): Date {
     if (dateString.endsWith('Z')) {
         return new Date(dateString);
     }
-    // W przeciwnym razie traktuj jako czas lokalny (bez dodawania 'Z')
-    return new Date(dateString);
+    
+    // Jeśli data nie ma 'Z', dodaj 'Z' na końcu żeby JavaScript traktował jako UTC
+    // Następnie konwertuj na czas lokalny
+    const utcDate = new Date(dateString + 'Z');
+    return utcDate;
 }
 
 /**

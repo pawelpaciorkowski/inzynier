@@ -71,7 +71,6 @@ export function RolesPage() {
                 const data = res.data;
                 let users: User[] = [];
 
-                // Obsługa odpowiedzi z backend Python
                 if (data && data.users && Array.isArray(data.users)) {
                     users = data.users;
                 } else if (data && Array.isArray((data as any).$values)) {

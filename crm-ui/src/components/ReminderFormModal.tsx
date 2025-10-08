@@ -41,11 +41,12 @@ export const ReminderFormModal: React.FC<ReminderFormModalProps> = ({ currentRem
         }
 
         // remindAt z input datetime-local jest w strefie lokalnej
-        // Wysyłamy go jako czas lokalny (bez konwersji na UTC)
+        // Konwertujemy na pełny format ISO z informacją o strefie czasowej (jak w wersji mobilnej)
+        const localDate = new Date(remindAt);
         const reminderData = {
             id: currentReminder?.id ?? 0,
             note,
-            remind_at: remindAt + ':00', // Format: YYYY-MM-DDTHH:mm:00
+            remind_at: localDate.toISOString(), // Format ISO z strefą czasową
         };
 
         try {
