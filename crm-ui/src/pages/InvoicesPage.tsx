@@ -1,14 +1,23 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getInvoices, deleteInvoice, type InvoiceListItemDto } from '../services/invoiceService';
+import api from '../services/api';
 import { EyeIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
 import Pagination from '../components/Pagination';
 
+// Interfejs faktury - dane zwracane z backendu
+interface Invoice {
+    id: number;
+    invoiceNumber: string;
+    issuedAt: string;
+    totalAmount: number;
+    customerName: string;
+}
+
 export function InvoicesPage() {
-    const [invoices, setInvoices] = useState<InvoiceListItemDto[]>([]);
-    const [filteredInvoices, setFilteredInvoices] = useState<InvoiceListItemDto[]>([]);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -20,19 +29,12 @@ export function InvoicesPage() {
         const fetchInvoices = async () => {
             try {
                 setLoading(true);
-                const data = await getInvoices();
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                if (data && Array.isArray((data as any).$values)) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    setInvoices((data as any).$values);
-                } else if (Array.isArray(data)) {
-                    setInvoices(data);
-                } else {
-                    setInvoices([]);
-                }
-                setFilteredInvoices(Array.isArray(data) ? data : (data as { $values: InvoiceListItemDto[] }).$values || []);
+                const response = await api.get<Invoice[] | { $values: Invoice[] }>('/Invoices/');
+                const data = '$values' in response.data ? response.data.$values : response.data;
+                const invoicesArray = Array.isArray(data) ? data : [];
+                setInvoices(invoicesArray);
+                setFilteredInvoices(invoicesArray);
                 setError(null);
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
             } catch (err) {
                 setError('Nie udało się pobrać faktur. Spróbuj ponownie później.');
             } finally {
@@ -69,7 +71,7 @@ export function InvoicesPage() {
             confirmText: 'Usuń',
             onConfirm: async () => {
                 try {
-                    await deleteInvoice(invoiceId);
+                    await api.delete(`/Invoices/${invoiceId}`);
                     setInvoices(prev => prev.filter(invoice => invoice.id !== invoiceId));
                     openToast('Faktura została pomyślnie usunięta.', 'success');
                 } catch (err) {

@@ -43,6 +43,7 @@ export default function EditInvoicePage() {
 
                 const invoice = invoiceRes.data;
                 console.log('DEBUG: Invoice data:', invoice);
+                console.log('DEBUG: Invoice items:', invoice.items); // ← DODANE
 
                 const customerId = invoice.customerId || 0;
                 const customerName = invoice.customerName || 'Klient nie znaleziony';
@@ -56,13 +57,16 @@ export default function EditInvoicePage() {
                 console.log('DEBUG: customerName:', customerName);
                 console.log('DEBUG: invoiceNum:', invoiceNum);
 
-                setInvoiceItems((invoice.items?.$values || invoice.items || []).map((item: any) => ({
-                    serviceId: item.serviceId, // Dodajemy serviceId
-                    name: item.name || item.description || '',
-                    quantity: item.quantity,
-                    price: item.unitPrice || item.price || 0,
-                    total: (item.unitPrice || item.price || 0) * item.quantity,
-                }) as InvoiceItem));
+                setInvoiceItems((invoice.items?.$values || invoice.items || []).map((item: any) => {
+                    console.log('DEBUG: Item from backend:', item); // ← DODANE
+                    return {
+                        serviceId: item.serviceId,
+                        name: item.serviceName || item.name || item.description || 'Nieznana usługa', // ← POPRAWIONE
+                        quantity: item.quantity,
+                        price: item.unitPrice || item.price || 0,
+                        total: (item.unitPrice || item.price || 0) * item.quantity,
+                    } as InvoiceItem;
+                }));
             } catch (err: any) {
                 const errorMessage = err.response?.data?.message || 'Nie udało się załadować danych faktury.';
                 openModal({ type: 'error', title: 'Błąd', message: errorMessage });

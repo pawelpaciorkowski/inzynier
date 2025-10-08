@@ -112,6 +112,7 @@
 7. 📑 **NAPRAWKA_MOBILE_FINAL.md** - naprawki mobilne
 8. 📑 **TECHNICAL_DOCUMENTATION.md** - kompletna dokumentacja techniczna
 9. 📑 **PYTANIA_I_ODPOWIEDZI_OBRONA.md** - przygotowane odpowiedzi na pytania
+10. 📑 **SYSTEM_UPRAWNIEN_I_ROLI.md** - system uprawnień i ról z kodem
 
 ---
 

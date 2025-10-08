@@ -242,3 +242,5 @@
 **Powodzenia na obronie! 🎓🚀**
 
 *Ten dokument zawiera kompletne odpowiedzi na przewidywane pytania podczas obrony pracy inżynierskiej. Każda odpowiedź jest przygotowana tak, aby pokazać zrozumienie tematu i umiejętności techniczne.*
+
+

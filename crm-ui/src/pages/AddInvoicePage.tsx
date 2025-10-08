@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
-import { createInvoice, type CreateInvoiceDto } from '../services/invoiceService';
 import { useModal } from '../context/ModalContext';
 import ClientSelectModal from '../components/ClientSelectModal';
 import api from '../services/api';
@@ -159,7 +157,7 @@ export function AddInvoicePage() {
         setIsSubmitting(true);
         setError(null);
 
-        const invoiceData: CreateInvoiceDto = {
+        const invoiceData = {
             customerId: parseInt(selectedCustomerId, 10),
             invoiceNumber: invoiceNumber,
             items: invoiceItems.map(item => ({
@@ -169,7 +167,7 @@ export function AddInvoicePage() {
         };
 
         try {
-            await createInvoice(invoiceData);
+            await api.post('/Invoices/', invoiceData);
             openToast('Faktura została pomyślnie utworzona.', 'success');
             navigate('/faktury');
         } catch (err: any) {

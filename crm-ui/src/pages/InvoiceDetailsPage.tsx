@@ -2,12 +2,32 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getInvoiceById, type InvoiceDetailsDto } from '../services/invoiceService';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import api from '../services/api';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import { PrinterIcon } from '@heroicons/react/24/outline';
+
+// Interfejsy - dane zwracane z backendu
+interface InvoiceItem {
+    id: number;
+    serviceId: number;
+    serviceName: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+}
+
+interface Invoice {
+    id: number;
+    invoiceNumber: string;
+    issuedAt: string;
+    dueDate?: string;
+    totalAmount: number;
+    customerName: string;
+    isPaid?: boolean;
+    items?: InvoiceItem[];  // Pozycje faktury
+}
 
 interface Payment {
     id: number;
@@ -19,7 +39,7 @@ interface Payment {
 
 export function InvoiceDetailsPage() {
     const { id } = useParams<{ id: string }>();
-    const [invoice, setInvoice] = useState<InvoiceDetailsDto | null>(null);
+    const [invoice, setInvoice] = useState<Invoice | null>(null);
     const [payments, setPayments] = useState<Payment[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -30,8 +50,8 @@ export function InvoiceDetailsPage() {
         const fetchInvoiceDetails = async () => {
             try {
                 setLoading(true);
-                const invoiceData = await getInvoiceById(Number(id));
-                setInvoice(invoiceData);
+                const invoiceResponse = await api.get<Invoice>(`/Invoices/${id}`);
+                setInvoice(invoiceResponse.data);
 
                 const paymentsResponse = await api.get<any>(`/Payments/?invoiceId=${id}`);
                 const paymentsData = paymentsResponse.data.$values || paymentsResponse.data;
@@ -51,8 +71,6 @@ export function InvoiceDetailsPage() {
     if (loading) return <p className="p-6 text-center text-gray-400">Ładowanie danych...</p>;
     if (error) return <p className="p-6 text-center text-red-500">{error}</p>;
     if (!invoice) return <p className="p-6 text-center text-gray-500">Nie znaleziono faktury.</p>;
-
-    const itemsToRender = Array.isArray(invoice.items) ? invoice.items : invoice.items?.$values || [];
 
     const totalPaidAmount = Array.isArray(payments) ? payments.reduce((sum, payment) => sum + payment.amount, 0) : 0;
     const remainingAmount = invoice.totalAmount - totalPaidAmount;
@@ -117,27 +135,32 @@ export function InvoiceDetailsPage() {
                         </div>
                     </div>
 
-                    <h3 className="text-xl font-semibold border-b border-gray-700 pb-2 mb-4">Pozycje na fakturze</h3>
-                    <table className="min-w-full">
-                        <thead>
-                            <tr className="border-b border-gray-700">
-                                <th className="py-2 text-left font-semibold">Opis</th>
-                                <th className="py-2 text-right font-semibold">Ilość</th>
-                                <th className="py-2 text-right font-semibold">Cena jedn.</th>
-                                <th className="py-2 text-right font-semibold">Wartość brutto</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {itemsToRender.map((item: any) => (
-                                <tr key={item.id} className="border-b border-gray-800 hover:bg-gray-700/50">
-                                    <td className="py-3">{item.description}</td>
-                                    <td className="py-3 text-right">{item.quantity}</td>
-                                    <td className="py-3 text-right">{item.unitPrice.toFixed(2)} PLN</td>
-                                    <td className="py-3 text-right">{item.grossAmount.toFixed(2)} PLN</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    {/* Pozycje faktury */}
+                    {invoice.items && invoice.items.length > 0 && (
+                        <>
+                            <h3 className="text-xl font-semibold border-b border-gray-700 pb-2 mb-4 mt-8">Pozycje na fakturze</h3>
+                            <table className="min-w-full">
+                                <thead>
+                                    <tr className="border-b border-gray-700">
+                                        <th className="py-2 text-left font-semibold">Usługa</th>
+                                        <th className="py-2 text-right font-semibold">Ilość</th>
+                                        <th className="py-2 text-right font-semibold">Cena jedn.</th>
+                                        <th className="py-2 text-right font-semibold">Wartość</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {invoice.items.map((item) => (
+                                        <tr key={item.id} className="border-b border-gray-800 hover:bg-gray-700/50">
+                                            <td className="py-3">{item.serviceName}</td>
+                                            <td className="py-3 text-right">{item.quantity}</td>
+                                            <td className="py-3 text-right">{item.unitPrice.toFixed(2)} PLN</td>
+                                            <td className="py-3 text-right">{item.totalPrice.toFixed(2)} PLN</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </>
+                    )}
 
                     <div className="flex justify-end mt-8">
                         <div className="w-full max-w-xs space-y-2 text-right">
