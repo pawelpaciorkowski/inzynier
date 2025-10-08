@@ -380,3 +380,49 @@ def get_all_tasks():
         print(f"Błąd w get_all_tasks: {str(e)}")
         print(f"Traceback: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/Roles/<int:role_id>/users', methods=['GET'])
+@require_auth
+def get_users_by_role(role_id):
+    """Pobiera użytkowników należących do danej roli"""
+    try:
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
+        
+        # Sprawdź czy użytkownik ma uprawnienia administratora
+        if user.role.name != 'Admin':
+            return jsonify({'error': 'Brak uprawnień administratora'}), 403
+        
+        # Sprawdź czy rola istnieje
+        role = Role.query.get(role_id)
+        if not role:
+            return jsonify({'error': 'Rola nie znaleziona'}), 404
+        
+        # Pobierz użytkowników z tą rolą
+        users = db.session.execute(text("""
+            SELECT u.id, u.username, u.email
+            FROM users u
+            WHERE u.role_id = :role_id
+            ORDER BY u.username ASC
+        """), {'role_id': role_id}).fetchall()
+        
+        result = []
+        for row in users:
+            result.append({
+                'id': row[0],
+                'username': row[1],
+                'email': row[2]
+            })
+        
+        return jsonify({
+            'role': role.to_dict(),
+            'users': result,
+            'count': len(result)
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        print(f"Błąd w get_users_by_role: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
