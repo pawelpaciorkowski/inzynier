@@ -70,18 +70,26 @@ export function RolesPage() {
             .then(res => {
                 const data = res.data;
                 let users: User[] = [];
-                if (data && Array.isArray((data as any).$values)) {
+
+                // Obsługa odpowiedzi z backend Python
+                if (data && data.users && Array.isArray(data.users)) {
+                    users = data.users;
+                } else if (data && Array.isArray((data as any).$values)) {
                     users = (data as any).$values;
                 } else if (Array.isArray(data)) {
                     users = data;
                 } else {
                     console.error("Otrzymano nieoczekiwany format danych dla użytkowników w roli:", data);
                 }
+
                 openModal({
                     type: 'custom',
                     content: (
                         <div className="bg-gray-900 text-white p-8 rounded shadow max-w-md w-full">
                             <h2 className="text-xl font-bold mb-4">👥 Użytkownicy roli: {roleName}</h2>
+                            <div className="mb-4 text-sm text-gray-400">
+                                Liczba użytkowników: {users.length}
+                            </div>
                             {users.length === 0 ? (
                                 <div>Brak użytkowników.</div>
                             ) : (
