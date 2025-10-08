@@ -22,8 +22,8 @@ export default defineConfig({
       // Konfiguracja proxy - przekierowanie zapytań do backendu
       // Wszystkie zapytania zaczynające się od '/api' będą proxowane
       '/api': {
-        // Adres docelowy backendu - Python backend na porcie 5000
-        target: 'http://localhost:5000', 
+        // Adres docelowy backendu - Python backend na porcie 8100
+        target: 'http://localhost:8100', 
         // Zmiana nagłówka Origin na target URL (potrzebne dla CORS)
         changeOrigin: true,
         // Wyłączenie weryfikacji certyfikatów SSL (dla developmentu)

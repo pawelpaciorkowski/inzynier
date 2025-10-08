@@ -49,12 +49,13 @@ export const useReminders = () => {
         resetShownRemindersIfNewDay();
 
         const now = new Date();
-        const currentMinute = now.getMinutes();
-        const currentHour = now.getHours();
-        const currentDate = now.toDateString();
+        // Pobierz aktualny czas w UTC
+        const currentMinute = now.getUTCMinutes();
+        const currentHour = now.getUTCHours();
+        const currentDate = now.toISOString().slice(0, 10); // Data w formacie YYYY-MM-DD UTC
 
         console.log('=== SPRAWDZANIE PRZYPOMNIEŃ (MOBILE) ===');
-        console.log('Aktualny czas:', currentHour + ':' + currentMinute, 'dnia:', currentDate);
+        console.log('Aktualny czas UTC:', currentHour + ':' + currentMinute, 'dnia:', currentDate);
         console.log('Liczba przypomnień w pamięci:', reminders.length);
         console.log('Pokazane przypomnienia:', shownReminders);
 
@@ -69,21 +70,24 @@ export const useReminders = () => {
                 return false;
             }
 
+            // Surowa data z API (powinna być w UTC z 'Z')
+            console.log('  - Surowa data z API:', r.remind_at);
             const reminderDate = new Date(r.remind_at);
-            const reminderMinute = reminderDate.getMinutes();
-            const reminderHour = reminderDate.getHours();
-            const reminderDateStr = reminderDate.toDateString();
+            // Pobierz czas przypomnienia w UTC
+            const reminderMinute = reminderDate.getUTCMinutes();
+            const reminderHour = reminderDate.getUTCHours();
+            const reminderDateStr = reminderDate.toISOString().slice(0, 10); // Data przypomnienia w formacie YYYY-MM-DD UTC
 
             console.log('Sprawdzam przypomnienie ID:', r.id);
             console.log('  - Treść:', r.note);
-            console.log('  - Czas przypomnienia:', reminderHour + ':' + reminderMinute, 'dnia:', reminderDateStr);
+            console.log('  - Czas przypomnienia UTC:', reminderHour + ':' + reminderMinute, 'dnia:', reminderDateStr);
 
-            // Sprawdź czy to ten sam dzień i ta sama godzina/minuta
+            // Sprawdź czy to ten sam dzień i ta sama godzina/minuta w UTC
             const dateMatches = reminderDateStr === currentDate;
             const hourMatches = reminderHour === currentHour;
             const minuteMatches = reminderMinute === currentMinute;
 
-            console.log('  - Porównania:');
+            console.log('  - Porównania UTC:');
             console.log('    * Dzień pasuje:', dateMatches, `(${reminderDateStr} === ${currentDate})`);
             console.log('    * Godzina pasuje:', hourMatches, `(${reminderHour} === ${currentHour})`);
             console.log('    * Minuta pasuje:', minuteMatches, `(${reminderMinute} === ${currentMinute})`);

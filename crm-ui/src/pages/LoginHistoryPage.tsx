@@ -34,7 +34,7 @@ export function LoginHistoryPage() {
 
                 const data = response.data;
 
-               
+
                 if (data && typeof data === 'object' && '$values' in data && Array.isArray(data.$values)) {
                     setHistory(data.$values);
                 }
@@ -120,7 +120,7 @@ export function LoginHistoryPage() {
                             {history.map((entry) => (
                                 <tr key={entry.id} className={`hover:bg-gray-700 ${!entry.success ? 'bg-red-900/20' : ''}`}>
                                     <td className="px-5 py-4 border-b border-gray-600 text-sm">
-                                        {entry.loginTime ? new Date(entry.loginTime.endsWith('Z') ? entry.loginTime : entry.loginTime + 'Z').toLocaleString('pl-PL') : 'Brak daty'}
+                                        {entry.loginTime ? new Date(entry.loginTime).toLocaleString('pl-PL', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : 'Brak daty'}
                                     </td>
                                     <td className="px-5 py-4 border-b border-gray-600 text-sm">
                                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${entry.success

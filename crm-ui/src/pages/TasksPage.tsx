@@ -121,7 +121,7 @@ export default function TasksPage() {
             return;
         }
         try {
-            const res = await api.post("/user/Tasks", {
+            const res = await api.post("/user/tasks", {
                 title: newTaskTitle,
                 description: newTaskDescription,
                 dueDate: newTaskDueDate ? new Date(newTaskDueDate).toISOString() : null,
@@ -182,6 +182,7 @@ export default function TasksPage() {
 
     const toggleComplete = useCallback(async (task: TaskItem) => {
         const token = localStorage.getItem("token");
+        if (!user) return; // Add null check for user
         const updateDto: UpdateTaskDto = {
             title: task.title,
             description: task.description,

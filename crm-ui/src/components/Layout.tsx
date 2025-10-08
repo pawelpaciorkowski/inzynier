@@ -421,7 +421,7 @@ export default function Layout() {
                             { to: "/klienci/tagi", text: "Tagi" },
                         ])}
 
-                        {user?.role !== 'Sprzedawca' && renderMenu("uzytkownicy", <UserCircleIcon className="h-5 w-5 inline mr-2" />, "Użytkownicy", [
+                        {user?.role === 'Admin' && renderMenu("uzytkownicy", <UserCircleIcon className="h-5 w-5 inline mr-2" />, "Użytkownicy", [
                             { to: "/uzytkownicy", text: "Lista użytkowników" },
                             { to: "/uzytkownicy/dodaj", text: "Dodaj użytkownika" },
                             { to: "/role", text: "Role" },
@@ -430,7 +430,7 @@ export default function Layout() {
 
                         {renderMenu("zadania", <CheckCircleIcon className="h-5 w-5 inline mr-2" />, "Zadania", [
                             { to: "/zadania", text: "Moje zadania" },
-                            ...(user?.role !== 'Sprzedawca' ? [{ to: "/zadania/wszystkie", text: "Wszystkie zadania" }] : []),
+                            ...(user?.role === 'Admin' ? [{ to: "/zadania/wszystkie", text: "Wszystkie zadania" }] : []),
                             { to: "/aktywnosci", text: "Aktywności" },
                         ])}
 
@@ -448,7 +448,7 @@ export default function Layout() {
 
                         {renderMenu("szablony", <DocumentDuplicateIcon className="h-5 w-5 inline mr-2" />, "Szablony i eksport", [
                             { to: "/szablony", text: "Szablony" },
-                            { to: "/raporty", text: "Raporty" },
+                            ...(user?.role === 'Admin' ? [{ to: "/raporty", text: "Raporty" }] : []),
                             { to: "/eksporty", text: "Eksporty" },
                         ])}
 
@@ -458,10 +458,12 @@ export default function Layout() {
                             { to: "/powiadomienia", text: "Powiadomienia" },
                         ])}
 
-                        {renderMenu("system", <Cog6ToothIcon className="h-5 w-5 inline mr-2" />, "System", [
-                            { to: "/logowania", text: "Historia logowań" },
-                            { to: "/logi", text: "Logi systemowe" },
-                            { to: "/ustawienia", text: "Ustawienia" },
+                        {renderMenu("ustawienia", <Cog6ToothIcon className="h-5 w-5 inline mr-2" />, "Ustawienia", [
+                            { to: "/ustawienia", text: "Ustawienia i profil" },
+                            ...(user?.role === 'Admin' ? [
+                                { to: "/logowania", text: "Historia logowań" },
+                                { to: "/logi", text: "Logi systemowe" }
+                            ] : [])
                         ])}
 
                     </nav>

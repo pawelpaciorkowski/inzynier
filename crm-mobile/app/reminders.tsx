@@ -150,10 +150,8 @@ export default function RemindersPage() {
     useEffect(() => {
         if (modalVisible) {
             const now = new Date();
-            const tomorrow = new Date(now);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-
-            setDateInput(format(tomorrow, 'dd.MM.yyyy'));
+            // Ustaw datę na dziś (bez dodawania dnia)
+            setDateInput(format(now, 'dd.MM.yyyy'));
             setTimeInput(format(now, 'HH:mm'));
         }
     }, [modalVisible]);

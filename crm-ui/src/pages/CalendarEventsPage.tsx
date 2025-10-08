@@ -116,7 +116,6 @@ export function CalendarEventsPage() {
                                                     onConfirm: async () => {
                                                         console.log('🟢 onConfirm wywołane dla wydarzenia:', event.id);
                                                         try {
-                                                            console.log('🟡 Rozpoczynam usuwanie wydarzenia:', event.id);
                                                             await api.delete(`/CalendarEvents/${event.id}`);
                                                             console.log('✅ Wydarzenie usunięte pomyślnie:', event.id);
                                                             openToast('Wydarzenie zostało usunięte.', 'success');

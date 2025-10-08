@@ -74,7 +74,7 @@ export function AddUserPage() {
         setError(null);
         setSuccess(null);
         try {
-            await api.post('/admin/Users', {
+            await api.post('/admin/users', {
                 username: formData.username,
                 email: formData.email,
                 password: formData.password,

@@ -241,7 +241,7 @@ export function ExportsPage() {
 
             let errorMessage = 'Nie udało się wyeksportować danych.';
             if (error.response?.status === 403) {
-                errorMessage = 'Brak uprawnień do eksportu. Zaloguj się jako Admin, Manager lub Sprzedawca.';
+                errorMessage = 'Brak uprawnień do eksportu. Zaloguj się jako Admin, Manager lub User.';
             } else if (error.response?.status === 401) {
                 errorMessage = 'Sesja wygasła. Zaloguj się ponownie.';
             } else if (error.response?.data?.message) {
@@ -283,7 +283,7 @@ export function ExportsPage() {
     const TypeIcon = getTypeIcon(config.type);
 
     // Sprawdź czy użytkownik ma uprawnienia do eksportu
-    const hasExportPermission = user && ['Admin', 'Manager', 'Sprzedawca'].includes(user.role);
+    const hasExportPermission = user && ['Admin', 'Manager', 'User'].includes(user.role);
 
     if (dataLoading) {
         return <div className="p-6 text-white text-center">Ładowanie opcji eksportu...</div>;
@@ -295,7 +295,7 @@ export function ExportsPage() {
                 <h1 className="text-3xl font-bold mb-6">📤 Eksport Danych</h1>
                 <div className="bg-red-900 p-6 rounded-lg shadow-lg">
                     <h2 className="text-xl font-semibold mb-4">Brak uprawnień</h2>
-                    <p>Nie masz uprawnień do eksportu danych. Zaloguj się jako Admin, Manager lub Sprzedawca.</p>
+                    <p>Nie masz uprawnień do eksportu danych. Zaloguj się jako Admin, Manager lub User.</p>
                     <p className="mt-2 text-sm text-gray-300">Twoja rola: {user?.role || 'Nieznana'}</p>
                 </div>
             </div>

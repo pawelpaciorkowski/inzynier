@@ -1,7 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, useCallback, type ReactNode } from 'react';
 import api from '../services/api';
 import { UsersIcon, DocumentTextIcon, CurrencyDollarIcon, CheckCircleIcon, ClockIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
+import { useAuth } from '../context/AuthContext';
 
 // --- HELPER: Rozpakowywanie $values z obiektów .NET --- 
 interface DotNetObject {
@@ -172,6 +173,7 @@ interface TagReport {
 // --- KOMPONENT GŁÓWNY --- 
 
 export function ReportsPage() {
+    const { user } = useAuth();
     const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
     const [groups, setGroups] = useState<Group[]>([]);
     const [tags, setTags] = useState<Tag[]>([]);
@@ -188,8 +190,11 @@ export function ReportsPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
+            // Wybierz odpowiedni endpoint dashboard w zależności od roli użytkownika
+            const dashboardEndpoint = user?.role === 'Admin' ? '/admin/dashboard' : '/dashboard/user';
+            
             const [dashboardRes, groupsRes, tagsRes] = await Promise.all([
-                api.get('/admin/dashboard'),
+                api.get(dashboardEndpoint),
                 api.get('/Groups/'),
                 api.get('/Tags/')
             ]);
@@ -306,8 +311,10 @@ export function ReportsPage() {
     };
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        if (user) {
+            fetchData();
+        }
+    }, [user]);
 
     useEffect(() => {
         if (selectedGroup) {
