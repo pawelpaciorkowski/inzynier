@@ -12,6 +12,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from io import BytesIO
 import os
 from datetime import datetime
+from decimal import Decimal
 
 invoices_bp = Blueprint('invoices', __name__)
 
@@ -281,13 +282,21 @@ def create_invoice():
 
         # Oblicz totalAmount na podstawie items
         items_data = data.get('items', [])
-        total_amount = 0
+        total_amount = Decimal(0)
 
         for item_data in items_data:
             service = Service.query.get(item_data['serviceId'])
             if service:
                 quantity = item_data.get('quantity', 1)
-                total_amount += float(service.Price) * quantity
+                # Użyj stawki podatku z usługi, jeśli dostępna, w przeciwnym razie domyślnej 0.23
+                tax_rate = service.TaxRate if service.TaxRate is not None else Decimal('0.23')
+                
+                unit_price = Decimal(str(service.Price))
+                net_amount = unit_price * quantity
+                tax_amount = net_amount * tax_rate
+                gross_amount = net_amount + tax_amount
+
+                total_amount += gross_amount
 
         new_invoice = Invoice(
             Number=data.get('invoiceNumber'),
@@ -307,11 +316,25 @@ def create_invoice():
         for item_data in items_data:
             service = Service.query.get(item_data['serviceId'])
             if service:
+                # Użyj stawki podatku z usługi, jeśli dostępna, w przeciwnym razie domyślnej 0.23
+                tax_rate = service.TaxRate if service.TaxRate is not None else Decimal('0.23')
+                unit_price = service.Price  # Zapisz cenę z momentu utworzenia
+                quantity = item_data.get('quantity', 1)
+                
+                net_amount = unit_price * quantity
+                tax_amount = net_amount * tax_rate
+                gross_amount = net_amount + tax_amount
+
                 invoice_item = InvoiceItem(
                     InvoiceId=new_invoice.Id,
                     ServiceId=service.Id,
-                    Quantity=item_data.get('quantity', 1),
-                    UnitPrice=service.Price  # Zapisz cenę z momentu utworzenia
+                    Quantity=quantity,
+                    UnitPrice=unit_price,
+                    Description=service.Name,
+                    TaxRate=tax_rate,
+                    NetAmount=net_amount,
+                    TaxAmount=tax_amount,
+                    GrossAmount=gross_amount
                 )
                 db.session.add(invoice_item)
 
@@ -339,18 +362,18 @@ def get_invoice(invoice_id):
 @invoices_bp.route('/<int:invoice_id>', methods=['PUT'])
 @require_auth
 def update_invoice(invoice_id):
-    """Aktualizuje fakturę"""
+    """Aktualizuje fakturę wraz z pozycjami"""
     try:
-        invoice = Invoice.query.get(invoice_id)
+        invoice = Invoice.query.options(joinedload(Invoice.invoice_items)).get(invoice_id)
         if not invoice:
             return jsonify({'error': 'Faktura nie znaleziona'}), 404
         
         data = request.get_json()
-        
+        from app.models import InvoiceItem, Service
+
+        # Aktualizuj podstawowe pola faktury
         if 'invoiceNumber' in data:
             invoice.Number = data['invoiceNumber']
-        if 'amount' in data:
-            invoice.TotalAmount = data['amount']
         if 'isPaid' in data:
             invoice.IsPaid = data['isPaid']
         if 'dueDate' in data:
@@ -358,10 +381,52 @@ def update_invoice(invoice_id):
             invoice.DueDate = datetime.fromisoformat(data['dueDate'].replace('Z', '+00:00')) if data['dueDate'] else None
         if 'assignedGroupId' in data:
             invoice.AssignedGroupId = data['assignedGroupId']
-        
+        if 'customerId' in data: # Umożliwia zmianę klienta dla faktury
+            invoice.CustomerId = data['customerId']
+
+        # Obsługa pozycji faktury
+        if 'items' in data:
+            # Usuń wszystkie istniejące pozycje faktury
+            InvoiceItem.query.filter_by(InvoiceId=invoice_id).delete()
+            db.session.flush() # Upewnij się, że usunięcia są wykonane przed dodaniem nowych
+
+            new_total_amount = Decimal(0)
+            # Dodaj nowe pozycje faktury i przelicz TotalAmount
+            for item_data in data['items']:
+                service = Service.query.get(item_data['serviceId'])
+                if service:
+                    quantity = item_data.get('quantity', 1)
+                    unit_price = Decimal(str(service.Price)) # Użyj aktualnej ceny usługi i skonwertuj na Decimal
+                    # Użyj stawki podatku z usługi, jeśli dostępna, w przeciwnym razie domyślnej 0.23
+                    tax_rate = service.TaxRate if service.TaxRate is not None else Decimal('0.23')
+
+                    net_amount = unit_price * quantity
+                    tax_amount = net_amount * tax_rate
+                    gross_amount = net_amount + tax_amount
+
+                    invoice_item = InvoiceItem(
+                        InvoiceId=invoice.Id,
+                        ServiceId=service.Id,
+                        Quantity=quantity,
+                        UnitPrice=unit_price,
+                        Description=service.Name,
+                        TaxRate=tax_rate,
+                        NetAmount=net_amount,
+                        TaxAmount=tax_amount,
+                        GrossAmount=gross_amount
+                    )
+                    db.session.add(invoice_item)
+                    new_total_amount += gross_amount
+                else:
+                    db.session.rollback()
+                    return jsonify({'error': f'Usługa o ID {item_data["serviceId"]} nie znaleziona.'}), 400
+            
+            invoice.TotalAmount = new_total_amount
+
         db.session.commit()
         
-        return jsonify(invoice.to_dict()), 200
+        # Zwróć zaktualizowaną fakturę z pozycjami
+        return jsonify(invoice.to_dict(include_items=True)), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500

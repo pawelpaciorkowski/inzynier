@@ -9,28 +9,27 @@ import json
 
 calendar_events_bp = Blueprint('calendar_events', __name__)
 
-def conditional_auth(f):
-    "wrapsorator sprawdzający autoryzację tylko dla GET/POST, nie dla OPTIONS"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if request.method == 'OPTIONS':
-            return f(*args, **kwargs)
-        else:
-            return require_auth(f)(*args, **kwargs)
-    return decorated_function
 
-@calendar_events_bp.route('/api/CalendarEvents', methods=['GET', 'OPTIONS'])
-@calendar_events_bp.route('/api/CalendarEvents/', methods=['GET', 'OPTIONS'])
-@conditional_auth
+
+@calendar_events_bp.route('/', methods=['GET', 'OPTIONS'])
+@calendar_events_bp.route('', methods=['GET', 'OPTIONS'])
+@require_auth
 def get_calendar_events():
     """Pobierz wszystkie wydarzenia kalendarza dla zalogowanego użytkownika"""
+    # Obsługa żądań OPTIONS (CORS pre-flight)
+    if request.method == 'OPTIONS':
+        return '', 200
+    
     try:
+        user_id = get_current_user_id()
+        if not user_id:
+            return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
         
         # Pobierz parametry filtrowania
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
         
-        query = CalendarEvent.query  # Usunięto filtrowanie po UserId, bo kolumna nie istnieje
+        query = CalendarEvent.query.filter_by(UserId=user_id)
         
         if start_date:
             start_date_obj = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
@@ -47,16 +46,24 @@ def get_calendar_events():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@calendar_events_bp.route('/api/CalendarEvents', methods=['POST', 'OPTIONS'])
-@calendar_events_bp.route('/api/CalendarEvents/', methods=['POST', 'OPTIONS'])
-@conditional_auth
+@calendar_events_bp.route('/', methods=['POST', 'OPTIONS'])
+@calendar_events_bp.route('', methods=['POST', 'OPTIONS'])
+@require_auth
 def create_calendar_event():
     """Utwórz nowe wydarzenie kalendarza"""
+    # Obsługa żądań OPTIONS (CORS pre-flight)
+    if request.method == 'OPTIONS':
+        return '', 200
+    
     try:
+        user_id = get_current_user_id()
+        if not user_id:
+            return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
+        
         data = request.get_json()
         
         # Walidacja wymaganych pól
-        required_fields = ['title', 'start_time', 'end_time']
+        required_fields = ['title', 'start', 'end']
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'Pole {field} jest wymagane'}), 400
@@ -64,8 +71,9 @@ def create_calendar_event():
         # Utwórz nowe wydarzenie
         event = CalendarEvent(
             Title=data['title'],
-            Start=datetime.fromisoformat(data['start_time'].replace('Z', '+00:00')),
-            End=datetime.fromisoformat(data['end_time'].replace('Z', '+00:00'))
+            Start=datetime.fromisoformat(data['start'].replace('Z', '+00:00')),
+            End=datetime.fromisoformat(data['end'].replace('Z', '+00:00')),
+            UserId=user_id
         )
         
         db.session.add(event)
@@ -111,12 +119,12 @@ def update_calendar_event(event_id):
             event.Title = data['title']
         if 'description' in data:
             event.Description = data['description']
-        if 'start_time' in data:
-            event.StartTime = datetime.fromisoformat(data['start_time'].replace('Z', '+00:00'))
-        if 'end_time' in data:
-            event.EndTime = datetime.fromisoformat(data['end_time'].replace('Z', '+00:00'))
+        if 'start' in data:
+            event.Start = datetime.fromisoformat(data['start'].replace('Z', '+00:00'))
+        if 'end' in data:
+            event.End = datetime.fromisoformat(data['end'].replace('Z', '+00:00'))
         if 'is_all_day' in data:
-            event.IsAllDay = data['is_all_day']
+            event.AllDay = data['is_all_day']
         
         db.session.commit()
         

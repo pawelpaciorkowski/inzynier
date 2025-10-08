@@ -7,6 +7,10 @@ def require_auth(f):
     """Dekorator wymagający autoryzacji"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # Pomiń autoryzację dla zapytań OPTIONS (CORS pre-flight)
+        if request.method == 'OPTIONS':
+            return f(*args, **kwargs)
+
         token = None
         
         # Sprawdź nagłówek Authorization

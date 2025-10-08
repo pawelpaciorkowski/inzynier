@@ -1,4 +1,5 @@
 from app.database import db
+from decimal import Decimal
 
 class InvoiceItem(db.Model):
     """Model reprezentujący pozycję na fakturze (relacja Invoice <-> Service)"""
@@ -9,6 +10,11 @@ class InvoiceItem(db.Model):
     ServiceId = db.Column(db.Integer, db.ForeignKey('Services.Id'), nullable=False)
     Quantity = db.Column(db.Integer, default=1)
     UnitPrice = db.Column(db.Numeric(65, 30))  # Cena w momencie utworzenia faktury
+    Description = db.Column(db.String(255), nullable=True) # Dodana kolumna Description
+    TaxRate = db.Column(db.Numeric(65, 30), default=Decimal('0.23'), nullable=False) # Dodana kolumna TaxRate z domyślną wartością 23%
+    NetAmount = db.Column(db.Numeric(65, 30), default=Decimal('0.00'), nullable=False) # Dodana kolumna NetAmount
+    TaxAmount = db.Column(db.Numeric(65, 30), default=Decimal('0.00'), nullable=False) # Dodana kolumna TaxAmount
+    GrossAmount = db.Column(db.Numeric(65, 30), default=Decimal('0.00'), nullable=False) # Dodana kolumna GrossAmount
 
     # Relacje
     invoice = db.relationship('Invoice', backref='invoice_items')

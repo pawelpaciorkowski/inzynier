@@ -53,7 +53,6 @@ def create_task():
         # Dodaj aktywność (automatyczne logowanie akcji)
         try:
             from app.models import Activity
-            from datetime import datetime
             
             activity = Activity(
                 Note=f'Utworzono nowe zadanie: {data.get("title", "Bez tytułu")}',

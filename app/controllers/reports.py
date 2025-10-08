@@ -158,8 +158,207 @@ def register_polish_fonts():
 
 POLISH_FONT = register_polish_fonts()
 
+def truncate_text(text, max_length=20):
+    """Skraca długi tekst do określonej długości"""
+    if text is None:
+        return ''
+    text_str = str(text)
+    if len(text_str) <= max_length:
+        return text_str
+    return text_str[:max_length-3] + '...'
+
+def create_multi_part_pdf_table(data, headers, title):
+    """Tworzy PDF z tabelą podzieloną na części"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), 
+                          leftMargin=15, rightMargin=15, 
+                          topMargin=20, bottomMargin=20)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontName=POLISH_FONT,
+        fontSize=18,
+        spaceAfter=25,
+        alignment=1,
+        textColor=colors.darkblue
+    )
+    
+    # Style dla nagłówków sekcji
+    section_title_style = ParagraphStyle(
+        'SectionTitle',
+        parent=styles['Heading2'],
+        fontName=POLISH_FONT,
+        fontSize=14,
+        spaceAfter=15,
+        spaceBefore=20,
+        alignment=0,
+        textColor=colors.darkblue,
+        borderWidth=1,
+        borderColor=colors.darkblue,
+        borderPadding=8
+    )
+    
+    # Style dla tabeli
+    header_style = ParagraphStyle(
+        'HeaderStyle',
+        parent=styles['Normal'],
+        fontName=POLISH_FONT,
+        fontSize=9,
+        textColor=colors.white,
+        alignment=1,
+        spaceAfter=6,
+        spaceBefore=6
+    )
+    
+    cell_style = ParagraphStyle(
+        'CellStyle',
+        parent=styles['Normal'],
+        fontName=POLISH_FONT,
+        fontSize=8,
+        textColor=colors.black,
+        alignment=0,
+        spaceAfter=4,
+        spaceBefore=4,
+        leftIndent=6,
+        rightIndent=6
+    )
+    
+    elements = []
+    elements.append(Paragraph(title, title_style))
+    elements.append(Spacer(1, 20))
+    
+    # Podziel kolumny na części
+    num_cols = len(headers)
+    if num_cols <= 12:
+        # Podziel na 2 części
+        mid_point = num_cols // 2
+        part1_headers = headers[:mid_point]
+        part2_headers = headers[mid_point:]
+        
+        # Część 1 - podstawowe informacje
+        elements.append(Paragraph("📋 Podstawowe informacje", section_title_style))
+        elements.append(create_single_table(data, part1_headers, range(len(part1_headers))))
+        elements.append(Spacer(1, 20))
+        
+        # Część 2 - dodatkowe informacje  
+        elements.append(Paragraph("📊 Szczegóły i dodatkowe dane", section_title_style))
+        elements.append(create_single_table(data, part2_headers, range(len(part1_headers), len(headers))))
+        
+    else:
+        # Podziel na 3 części
+        part_size = num_cols // 3
+        part1_headers = headers[:part_size]
+        part2_headers = headers[part_size:part_size*2]
+        part3_headers = headers[part_size*2:]
+        
+        # Część 1
+        elements.append(Paragraph("📋 Podstawowe informacje", section_title_style))
+        elements.append(create_single_table(data, part1_headers, range(part_size)))
+        elements.append(Spacer(1, 20))
+        
+        # Część 2
+        elements.append(Paragraph("📊 Szczegóły finansowe", section_title_style))
+        elements.append(create_single_table(data, part2_headers, range(part_size, part_size*2)))
+        elements.append(Spacer(1, 20))
+        
+        # Część 3
+        elements.append(Paragraph("🏷️ Dodatkowe informacje", section_title_style))
+        elements.append(create_single_table(data, part3_headers, range(part_size*2, len(headers))))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
+def create_single_table(data, headers, column_indices):
+    """Tworzy pojedynczą tabelę z określonymi kolumnami"""
+    page_width = landscape(A4)[0] - 30
+    num_cols = len(headers)
+    
+    # Oblicz szerokości kolumn
+    col_widths = [page_width / num_cols] * num_cols
+    
+    # Style
+    header_style = ParagraphStyle(
+        'HeaderStyle',
+        parent=getSampleStyleSheet()['Normal'],
+        fontName=POLISH_FONT,
+        fontSize=9,
+        textColor=colors.white,
+        alignment=1,
+        spaceAfter=6,
+        spaceBefore=6
+    )
+    
+    cell_style = ParagraphStyle(
+        'CellStyle',
+        parent=getSampleStyleSheet()['Normal'],
+        fontName=POLISH_FONT,
+        fontSize=8,
+        textColor=colors.black,
+        alignment=0,
+        spaceAfter=4,
+        spaceBefore=4,
+        leftIndent=6,
+        rightIndent=6
+    )
+    
+    # Przygotuj dane tabeli
+    table_data = []
+    
+    # Nagłówki
+    header_row = []
+    for header in headers:
+        header_row.append(Paragraph(header, header_style))
+    table_data.append(header_row)
+    
+    # Dane
+    for row in data:
+        data_row = []
+        for i, header in enumerate(headers):
+            col_index = list(column_indices)[i] if i < len(column_indices) else i
+            cell_text = str(row[col_index]) if col_index < len(row) and row[col_index] is not None else ''
+            # Skróć długie teksty
+            if len(cell_text) > 25:
+                cell_text = cell_text[:22] + '...'
+            data_row.append(Paragraph(cell_text, cell_style))
+        table_data.append(data_row)
+    
+    table = Table(table_data, colWidths=col_widths, repeatRows=1)
+    
+    # Styl tabeli
+    table_style = [
+        ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), POLISH_FONT),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('TOPPADDING', (0, 0), (-1, 0), 8),
+        
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+        ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 1), (-1, -1), POLISH_FONT),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+        ('TOPPADDING', (0, 1), (-1, -1), 6),
+        
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('LINEBELOW', (0, 0), (-1, 0), 2, colors.darkblue),
+    ]
+    
+    # Alternujące kolory wierszy
+    for i in range(1, len(table_data)):
+        if i % 2 == 0:
+            table_style.append(('BACKGROUND', (0, i), (-1, i), colors.lightgrey))
+    
+    table.setStyle(TableStyle(table_style))
+    return table
+
 def create_pdf_table(data, headers, title):
-    """Tworzy tabelę PDF z polskimi znakami"""
+    """Tworzy tabelę PDF z polskimi znakami - dzieli na części jeśli za dużo kolumn"""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), 
                           leftMargin=15, rightMargin=15, 
@@ -179,12 +378,20 @@ def create_pdf_table(data, headers, title):
     # Oblicz optymalne szerokości kolumn
     num_cols = len(headers)
     
-    # Style dla nagłówków tabeli
+    # Jeśli za dużo kolumn (więcej niż 8), podziel na części
+    if num_cols > 8:
+        return create_multi_part_pdf_table(data, headers, title)
+    
+    # Style dla nagłówków tabeli - dynamiczne rozmiary czcionek
     header_font_size = 10
-    if num_cols > 10:
+    if num_cols >= 12:
+        header_font_size = 4
+    elif num_cols >= 10:
+        header_font_size = 5
+    elif num_cols >= 8:
+        header_font_size = 6
+    elif num_cols >= 6:
         header_font_size = 7
-    elif num_cols > 6:
-        header_font_size = 8
 
     header_style = ParagraphStyle(
         'HeaderStyle',
@@ -193,15 +400,19 @@ def create_pdf_table(data, headers, title):
         fontSize=header_font_size,
         textColor=colors.white,
         alignment=1,
-        spaceAfter=6,
-        spaceBefore=6
+        spaceAfter=3,
+        spaceBefore=3
     )
     
-    # Style dla danych w tabeli
+    # Style dla danych w tabeli - dynamiczne rozmiary czcionek
     cell_font_size = 9
-    if num_cols > 10:
+    if num_cols >= 12:
+        cell_font_size = 4
+    elif num_cols >= 10:
+        cell_font_size = 5
+    elif num_cols >= 8:
         cell_font_size = 6
-    elif num_cols > 6:
+    elif num_cols >= 6:
         cell_font_size = 7
 
     cell_style = ParagraphStyle(
@@ -237,9 +448,9 @@ def create_pdf_table(data, headers, title):
     elements = []
     elements.append(Paragraph(title, title_style))
     elements.append(Spacer(1, 20))
-    page_width = landscape(A4)[0] - 30  # Dostępna szerokość minus marginesy
+    page_width = landscape(A4)[0] - 20  # Dostępna szerokość minus marginesy (10+10)
     
-    # Domyślne szerokości w zależności od liczby kolumn
+    # Inteligentne szerokości kolumn w zależności od liczby i typu kolumn
     if num_cols == 1:
         col_widths = [page_width * 0.9]
     elif num_cols == 2:
@@ -252,8 +463,26 @@ def create_pdf_table(data, headers, title):
         col_widths = [page_width * 0.15, page_width * 0.2, page_width * 0.2, page_width * 0.2, page_width * 0.2]
     elif num_cols == 6:
         col_widths = [page_width * 0.12, page_width * 0.16, page_width * 0.16, page_width * 0.16, page_width * 0.16, page_width * 0.2]
+    elif num_cols == 7:
+        col_widths = [page_width * 0.1, page_width * 0.13, page_width * 0.13, page_width * 0.13, page_width * 0.13, page_width * 0.13, page_width * 0.15]
+    elif num_cols == 8:
+        col_widths = [page_width * 0.08, page_width * 0.11, page_width * 0.11, page_width * 0.11, page_width * 0.11, page_width * 0.11, page_width * 0.11, page_width * 0.13]
+    elif num_cols == 9:
+        col_widths = [page_width * 0.07, page_width * 0.1, page_width * 0.1, page_width * 0.1, page_width * 0.1, page_width * 0.1, page_width * 0.1, page_width * 0.1, page_width * 0.12]
+    elif num_cols == 10:
+        # Specjalne szerokości dla raportu faktur (10 kolumn)
+        col_widths = [page_width * 0.06, page_width * 0.08, page_width * 0.08, page_width * 0.08, page_width * 0.08, 
+                     page_width * 0.06, page_width * 0.08, page_width * 0.08, page_width * 0.08, page_width * 0.08]
+    elif num_cols == 11:
+        col_widths = [page_width * 0.06, page_width * 0.07, page_width * 0.07, page_width * 0.07, page_width * 0.07, 
+                     page_width * 0.07, page_width * 0.07, page_width * 0.07, page_width * 0.07, page_width * 0.07, page_width * 0.07]
+    elif num_cols == 12:
+        # Specjalne szerokości dla raportu faktur z tags i items (12 kolumn)
+        col_widths = [page_width * 0.04, page_width * 0.06, page_width * 0.06, page_width * 0.06, page_width * 0.06, 
+                     page_width * 0.04, page_width * 0.06, page_width * 0.06, page_width * 0.06, page_width * 0.06, 
+                     page_width * 0.06, page_width * 0.06]
     else:
-        # Dla więcej niż 6 kolumn - równe szerokości
+        # Dla więcej niż 12 kolumn - bardzo małe równe szerokości
         col_widths = [page_width / num_cols] * num_cols
     
     # Przygotuj dane tabeli z Paragraph objects dla lepszego formatowania
@@ -278,6 +507,14 @@ def create_pdf_table(data, headers, title):
                 is_section_header = True
                 data_row.append(Paragraph(cell_text, section_header_style))
             else:
+                # Skróć tekst w zależności od liczby kolumn
+                if num_cols >= 10:
+                    cell_text = truncate_text(cell_text, 15)
+                elif num_cols >= 8:
+                    cell_text = truncate_text(cell_text, 20)
+                elif num_cols >= 6:
+                    cell_text = truncate_text(cell_text, 25)
+                
                 data_row.append(Paragraph(cell_text, cell_style))
         
         table_data.append(data_row)
@@ -291,18 +528,18 @@ def create_pdf_table(data, headers, title):
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), POLISH_FONT),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('TOPPADDING', (0, 0), (-1, 0), 12),
+        ('FONTSIZE', (0, 0), (-1, 0), header_font_size),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 4 if num_cols >= 12 else 6),
+        ('TOPPADDING', (0, 0), (-1, 0), 4 if num_cols >= 12 else 6),
         
         # Dane - domyślne style
         ('BACKGROUND', (0, 1), (-1, -1), colors.white),
         ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
         ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
         ('FONTNAME', (0, 1), (-1, -1), POLISH_FONT),
-        ('FONTSIZE', (0, 1), (-1, -1), 9),
-        ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
-        ('TOPPADDING', (0, 1), (-1, -1), 6),
+        ('FONTSIZE', (0, 1), (-1, -1), cell_font_size),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 2 if num_cols >= 12 else 4),
+        ('TOPPADDING', (0, 1), (-1, -1), 2 if num_cols >= 12 else 4),
         
         # Ramki
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
@@ -322,9 +559,9 @@ def create_pdf_table(data, headers, title):
                     ('BACKGROUND', (0, row_idx), (-1, row_idx), colors.lightblue),
                     ('TEXTCOLOR', (0, row_idx), (-1, row_idx), colors.darkblue),
                     ('FONTNAME', (0, row_idx), (-1, row_idx), POLISH_FONT),
-                    ('FONTSIZE', (0, row_idx), (-1, row_idx), 11),
-                    ('BOTTOMPADDING', (0, row_idx), (-1, row_idx), 10),
-                    ('TOPPADDING', (0, row_idx), (-1, row_idx), 10),
+                    ('FONTSIZE', (0, row_idx), (-1, row_idx), max(cell_font_size, 7)),
+                    ('BOTTOMPADDING', (0, row_idx), (-1, row_idx), 6),
+                    ('TOPPADDING', (0, row_idx), (-1, row_idx), 6),
                     ('LINEBELOW', (0, row_idx), (-1, row_idx), 1, colors.darkblue),
                 ])
     
@@ -1409,9 +1646,39 @@ def export_invoices():
         if not columns or columns == ['']:
             columns = ['id', 'number', 'customerName', 'customerEmail', 'totalAmount', 'isPaid', 'issuedAt', 'dueDate', 'assignedGroup', 'createdBy']
         
-        # Pobierz dane
-        query = text("""
-            SELECT i.Id, i.Number, c.Name as CustomerName, c.Email as customerEmail, i.TotalAmount, i.IsPaid, i.IssuedAt, i.DueDate, g.Name as assignedGroup, u.username as createdBy
+        # Pobierz dane - dynamiczne zapytanie w zależności od kolumn
+        select_fields = []
+        for col in columns:
+            if col == 'id':
+                select_fields.append('i.Id')
+            elif col == 'number':
+                select_fields.append('i.Number')
+            elif col == 'customerName':
+                select_fields.append('c.Name as CustomerName')
+            elif col == 'customerEmail':
+                select_fields.append('c.Email as customerEmail')
+            elif col == 'totalAmount':
+                select_fields.append('i.TotalAmount')
+            elif col == 'isPaid':
+                select_fields.append('i.IsPaid')
+            elif col == 'issuedAt':
+                select_fields.append('i.IssuedAt')
+            elif col == 'dueDate':
+                select_fields.append('i.DueDate')
+            elif col == 'assignedGroup':
+                select_fields.append('g.Name as assignedGroup')
+            elif col == 'createdBy':
+                select_fields.append('u.username as createdBy')
+            elif col == 'tags':
+                select_fields.append('(SELECT GROUP_CONCAT(t.Name SEPARATOR \', \') FROM Tags t JOIN CustomerTags ct ON t.Id = ct.CustomerId WHERE ct.CustomerId = c.Id) as tags')
+            elif col == 'items':
+                select_fields.append('(SELECT GROUP_CONCAT(ii.Description SEPARATOR \', \') FROM InvoiceItems ii WHERE ii.InvoiceId = i.Id) as items')
+        
+        if not select_fields:
+            select_fields = ['i.Id', 'i.Number', 'c.Name as CustomerName', 'c.Email as customerEmail', 'i.TotalAmount', 'i.IsPaid', 'i.IssuedAt', 'i.DueDate', 'g.Name as assignedGroup', 'u.username as createdBy']
+        
+        query = text(f"""
+            SELECT {', '.join(select_fields)}
             FROM Invoices i
             LEFT JOIN Customers c ON i.CustomerId = c.Id
             LEFT JOIN `Groups` g ON c.AssignedGroupId = g.Id
@@ -1444,6 +1711,10 @@ def export_invoices():
                 headers.append('Grupa')
             elif col == 'createdBy':
                 headers.append('Wystawiona przez')
+            elif col == 'tags':
+                headers.append('Tagi')
+            elif col == 'items':
+                headers.append('Przedmioty')
             else:
                 headers.append(col)
         
@@ -1632,10 +1903,39 @@ def export_contracts():
         if not columns or columns == ['']:
             columns = ['id', 'title', 'contractNumber', 'customerId', 'netAmount', 'signedAt']
         
-        # Pobierz dane
-        query = text("""
-            SELECT co.Id, co.Title, co.ContractNumber, co.CustomerId, c.Name as CustomerName, 
-                   co.NetAmount, co.SignedAt
+        # Pobierz dane - dynamiczne zapytanie w zależności od kolumn
+        select_fields = []
+        for col in columns:
+            if col == 'id':
+                select_fields.append('co.Id')
+            elif col == 'title':
+                select_fields.append('co.Title')
+            elif col == 'contractNumber':
+                select_fields.append('co.ContractNumber')
+            elif col == 'customerId':
+                select_fields.append('co.CustomerId')
+            elif col == 'customerName':
+                select_fields.append('c.Name as CustomerName')
+            elif col == 'placeOfSigning':
+                select_fields.append('co.PlaceOfSigning')
+            elif col == 'signedAt':
+                select_fields.append('co.SignedAt')
+            elif col == 'startDate':
+                select_fields.append('co.StartDate')
+            elif col == 'endDate':
+                select_fields.append('co.EndDate')
+            elif col == 'netAmount':
+                select_fields.append('co.NetAmount')
+            elif col == 'paymentTermDays':
+                select_fields.append('co.PaymentTermDays')
+            elif col == 'scopeOfServices':
+                select_fields.append('co.ScopeOfServices')
+        
+        if not select_fields:
+            select_fields = ['co.Id', 'co.Title', 'co.ContractNumber', 'co.CustomerId', 'c.Name as CustomerName', 'co.NetAmount', 'co.SignedAt']
+        
+        query = text(f"""
+            SELECT {', '.join(select_fields)}
             FROM Contracts co
             LEFT JOIN Customers c ON co.CustomerId = c.Id
             ORDER BY co.SignedAt DESC
@@ -1656,10 +1956,20 @@ def export_contracts():
                 headers.append('ID klienta')
             elif col == 'customerName':
                 headers.append('Klient')
-            elif col == 'netAmount':
-                headers.append('Kwota netto')
+            elif col == 'placeOfSigning':
+                headers.append('Miejsce podpisania')
             elif col == 'signedAt':
                 headers.append('Data podpisania')
+            elif col == 'startDate':
+                headers.append('Data rozpoczęcia')
+            elif col == 'endDate':
+                headers.append('Data zakończenia')
+            elif col == 'netAmount':
+                headers.append('Kwota netto')
+            elif col == 'paymentTermDays':
+                headers.append('Termin płatności (dni)')
+            elif col == 'scopeOfServices':
+                headers.append('Zakres usług')
             else:
                 headers.append(col)
         
@@ -1699,19 +2009,30 @@ def export_contracts():
             return response
             
         elif format_type == 'pdf':
-            # Przygotuj dane dla PDF
+            # Przygotuj dane dla PDF z dynamicznym formatowaniem
             pdf_data = []
             for row in data:
                 pdf_row = list(row)
-                # Format netAmount (index 5)
-                if len(pdf_row) > 5 and pdf_row[5] is not None:
-                    try:
-                        pdf_row[5] = f"{float(pdf_row[5]):.2f} PLN"
-                    except (ValueError, TypeError):
-                        pdf_row[5] = str(pdf_row[5])
-                # Format signedAt (index 6)
-                if len(pdf_row) > 6 and pdf_row[6] is not None and hasattr(pdf_row[6], 'strftime'):
-                    pdf_row[6] = pdf_row[6].strftime('%d.%m.%Y')
+                
+                # Formatuj dane w zależności od typu kolumny
+                for i, col in enumerate(columns):
+                    if i < len(pdf_row) and pdf_row[i] is not None:
+                        # Format kwot
+                        if col in ['netAmount']:
+                            try:
+                                pdf_row[i] = f"{float(pdf_row[i]):.2f} PLN"
+                            except (ValueError, TypeError):
+                                pdf_row[i] = str(pdf_row[i])
+                        # Format dat
+                        elif col in ['signedAt', 'startDate', 'endDate']:
+                            if hasattr(pdf_row[i], 'strftime'):
+                                pdf_row[i] = pdf_row[i].strftime('%d.%m.%Y')
+                            else:
+                                pdf_row[i] = str(pdf_row[i])
+                        # Inne dane jako string
+                        else:
+                            pdf_row[i] = str(pdf_row[i])
+                
                 pdf_data.append(pdf_row)
 
             buffer = create_pdf_table(pdf_data, headers, "Raport umów")
@@ -1726,3 +2047,4 @@ def export_contracts():
             
     except Exception as e:
         return jsonify({'error': f'Błąd eksportu: {str(e)}'}), 500
+    

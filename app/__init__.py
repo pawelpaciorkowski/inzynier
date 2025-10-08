@@ -57,7 +57,7 @@ def create_app():
     app.register_blueprint(settings_bp, url_prefix='/api/Settings')
     app.register_blueprint(contracts_bp, url_prefix='/api/Contracts')
     app.register_blueprint(meetings_bp)
-    app.register_blueprint(calendar_events_bp)
+    app.register_blueprint(calendar_events_bp, url_prefix='/api/CalendarEvents')
     app.register_blueprint(payments_bp, url_prefix='/api/Payments')
     app.register_blueprint(templates_bp, url_prefix='/api/Templates')
     

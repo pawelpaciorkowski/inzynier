@@ -1,13 +1,14 @@
 from app.database import db
 from datetime import datetime
 from app.utils import get_device_info
+import pytz # Importuj pytz
 
 class LoginHistory(db.Model):
     __tablename__ = 'LoginHistory'
     
     Id = db.Column(db.Integer, primary_key=True)
     UserId = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    LoginTime = db.Column(db.DateTime, default=datetime.utcnow)
+    LoginTime = db.Column(db.DateTime, default=lambda: pytz.utc.localize(datetime.utcnow())) # Użyj datetime.utcnow() i jawnie oznacz jako UTC
     IpAddress = db.Column(db.String(45))
     UserAgent = db.Column(db.Text)
     Success = db.Column(db.Boolean, default=True)
@@ -24,10 +25,13 @@ class LoginHistory(db.Model):
         operating_system = device_parts[1] if len(device_parts) > 1 else 'Unknown'
         browser = device_parts[2] if len(device_parts) > 2 else 'Unknown'
         
+        # Użyj isoformat() bez ręcznego dodawania 'Z', ponieważ datetime.now(pytz.utc) stworzy świadomy obiekt
+        login_time_iso = self.LoginTime.isoformat() if self.LoginTime else None 
+        
         return {
             'id': self.Id,
             'userId': self.UserId,
-            'loginTime': self.LoginTime.isoformat() if self.LoginTime else None,
+            'loginTime': login_time_iso,
             'ipAddress': self.IpAddress,
             'userAgent': self.UserAgent,
             'deviceType': device_type,

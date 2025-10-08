@@ -84,7 +84,7 @@ def create_activity():
 def update_activity(activity_id):
     """Aktualizuje aktywność"""
     try:
-        activity = Activity.query.get_or_404(activity_id)
+        activity = Activity.query.get_or_404(activity_id) 
         data = request.get_json()
         
         if 'note' in data:
