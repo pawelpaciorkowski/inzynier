@@ -9,6 +9,7 @@ interface UserDashboardProps {
         messagesCount: number; // Liczba nowych wiadomości
         remindersCount: number; // Liczba przypomnień
         loginHistory: { date: string; ipAddress: string }[]; // Historia logowań z datą i adresem IP
+        notesCount: number; // Liczba notatek
     };
 }
 
@@ -37,6 +38,7 @@ export default function UserDashboard({ data }: UserDashboardProps) {
                 <DashboardWidget title="Nowe wiadomości" count={data.messagesCount} to="/wiadomosci" />
                 {/* Widget przypomnień - link do strony przypomnień */}
                 <DashboardWidget title="Przypomnienia" count={data.remindersCount} to="/przypomnienia" />
+                <DashboardWidget title="Notatki" count={data.notesCount} to="/notatki" />
             </div>
 
             {/* Sekcja historii logowań */}

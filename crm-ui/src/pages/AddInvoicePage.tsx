@@ -73,6 +73,7 @@ export function AddInvoicePage() {
 
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
     const [invoiceNumber, setInvoiceNumber] = useState<string>('');
+    const [dueDate, setDueDate] = useState<string>('');
     const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
 
     const [selectedServiceId, setSelectedServiceId] = useState<string>('');
@@ -160,6 +161,7 @@ export function AddInvoicePage() {
         const invoiceData = {
             customerId: parseInt(selectedCustomerId, 10),
             invoiceNumber: invoiceNumber,
+            dueDate: dueDate || null,
             items: invoiceItems.map(item => ({
                 serviceId: item.serviceId,
                 quantity: item.quantity,
@@ -204,6 +206,10 @@ export function AddInvoicePage() {
                     <div>
                         <label htmlFor="invoice-number" className="block text-sm font-medium text-gray-300 mb-2">Numer faktury</label>
                         <input type="text" id="invoice-number" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} className="w-full p-2 rounded bg-gray-700 text-white border-gray-600" placeholder="np. FV/2025/06/01" required />
+                    </div>
+                    <div>
+                        <label htmlFor="due-date" className="block text-sm font-medium text-gray-300 mb-2">Termin płatności</label>
+                        <input type="date" id="due-date" value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full p-2 rounded bg-gray-700 text-white border-gray-600" />
                     </div>
                 </div>
 

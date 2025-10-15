@@ -11,10 +11,16 @@ const api = axios.create({
 api.interceptors.request.use(
     config => {
         const token = localStorage.getItem('token');
+        
+        // Lista endpointów, które nie wymagają tokenu (logowanie, rejestracja)
+        const publicEndpoints = ['/Auth/login', '/Auth/register'];
+        const isPublicEndpoint = publicEndpoints.some(endpoint => config.url?.includes(endpoint));
+        
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
             console.log('🔐 Token dodany do requestu:', config.url);
-        } else {
+        } else if (!isPublicEndpoint) {
+            // Tylko ostrzegaj jeśli to NIE jest publiczny endpoint
             console.warn('⚠️ Brak tokenu dla requestu:', config.url);
         }
         return config;

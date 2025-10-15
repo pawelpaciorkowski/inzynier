@@ -5,6 +5,7 @@ import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useModal } from '../context/ModalContext';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
+import { AxiosError } from 'axios';
 
 // Definicja typu dla notatki, zgodna z DTO z API
 interface Note {
@@ -42,14 +43,13 @@ export function NotesPage() {
             setFilteredNotes(notesArray);
         } catch (err: unknown) {
             let errorMessage = 'Nie udało się pobrać notatek.';
-            if (err && typeof err === 'object' && 'response' in err) {
-                const axiosErr = err as any;
-                const status = axiosErr.response?.status;
+            if (err instanceof AxiosError) {
+                const status = err.response?.status;
 
                 if (status === 401) {
                     errorMessage = 'Błąd autoryzacji. Spróbuj się zalogować ponownie.';
                 } else {
-                    errorMessage = axiosErr.response?.data?.message || axiosErr.message;
+                    errorMessage = err.response?.data?.message || err.message;
                 }
             }
             setError(errorMessage);
@@ -83,10 +83,9 @@ export function NotesPage() {
                     openToast('Notatka została pomyślnie usunięta.', 'success');
                 } catch (err: unknown) {
                     let errorMessage = 'Nie udało się usunąć notatki.';
-                    if (err && typeof err === 'object' && 'response' in err) {
-                        const axiosErr = err as any;
+                    if (err instanceof AxiosError) {
                         // Backend Python zwraca błędy w polu 'error', nie 'message'
-                        errorMessage = axiosErr.response?.data?.error || axiosErr.response?.data?.message || axiosErr.message;
+                        errorMessage = err.response?.data?.error || err.response?.data?.message || err.message;
                     }
                     // Otwórz modal błędu po zamknięciu modal potwierdzenia
                     setTimeout(() => {

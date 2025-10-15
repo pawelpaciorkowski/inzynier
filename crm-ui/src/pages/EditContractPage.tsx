@@ -30,7 +30,7 @@ export function EditContractPage() {
     const [title, setTitle] = useState('');
     const [contractNumber, setContractNumber] = useState('');
     const [placeOfSigning, setPlaceOfSigning] = useState('');
-    const [signedAt, setSignedAt] = useState<string>(format(new Date(), 'yyyy-MM-ddTHH:mm'));
+    const [signedAt, setSignedAt] = useState<string>('');
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>('');
     const [netAmount, setNetAmount] = useState<string>('');
@@ -53,9 +53,9 @@ export function EditContractPage() {
                 setTitle(contractRes.data.title);
                 setContractNumber(contractRes.data.contractNumber);
                 setPlaceOfSigning(contractRes.data.placeOfSigning);
-                setSignedAt(format(new Date(contractRes.data.signedAt), 'yyyy-MM-ddTHH:mm'));
-                setStartDate(contractRes.data.startDate ? format(new Date(contractRes.data.startDate), 'yyyy-MM-ddTHH:mm') : '');
-                setEndDate(contractRes.data.endDate ? format(new Date(contractRes.data.endDate), 'yyyy-MM-ddTHH:mm') : '');
+                setSignedAt(contractRes.data.signedAt ? format(new Date(contractRes.data.signedAt), 'yyyy-MM-dd') : '');
+                setStartDate(contractRes.data.startDate ? format(new Date(contractRes.data.startDate), 'yyyy-MM-dd') : '');
+                setEndDate(contractRes.data.endDate ? format(new Date(contractRes.data.endDate), 'yyyy-MM-dd') : '');
                 setNetAmount(contractRes.data.netAmount ? contractRes.data.netAmount.toString() : '');
                 setPaymentTermDays(contractRes.data.paymentTermDays ? contractRes.data.paymentTermDays.toString() : '');
                 setScopeOfServices(contractRes.data.scopeOfServices);
@@ -170,7 +170,7 @@ export function EditContractPage() {
                     <div className="mb-4">
                         <label htmlFor="signedAt" className="block text-gray-300 text-sm font-bold mb-2">Data Podpisania:</label>
                         <input
-                            type="datetime-local"
+                            type="date"
                             id="signedAt"
                             className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600 placeholder-gray-400"
                             value={signedAt}
@@ -181,7 +181,7 @@ export function EditContractPage() {
                     <div className="mb-4">
                         <label htmlFor="startDate" className="block text-gray-300 text-sm font-bold mb-2">Data Rozpoczęcia:</label>
                         <input
-                            type="datetime-local"
+                            type="date"
                             id="startDate"
                             className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600 placeholder-gray-400"
                             value={startDate}
@@ -191,7 +191,7 @@ export function EditContractPage() {
                     <div className="mb-4">
                         <label htmlFor="endDate" className="block text-gray-300 text-sm font-bold mb-2">Data Zakończenia:</label>
                         <input
-                            type="datetime-local"
+                            type="date"
                             id="endDate"
                             className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600 placeholder-gray-400"
                             value={endDate}

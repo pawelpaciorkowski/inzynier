@@ -89,13 +89,8 @@ export function InvoiceDetailsPage() {
                         className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition-colors"
                         onClick={() => {
                             const token = localStorage.getItem('token');
-                            const url = `/api/Invoices/${id}/pdf`;
-                            const printWindow = window.open(url, '_blank');
-                            if (printWindow) {
-                                // Dodaj token do requestu poprzez ustawienie nagłówka w nowym oknie nie jest możliwe
-                                // Więc przekierujemy z tokenem w URL lub użyjemy innego rozwiązania
-                                printWindow.location.href = url + `?token=${token}`;
-                            }
+                            const url = `http://localhost:5000/api/Invoices/${id}/pdf?token=${token}`;
+                            window.open(url, '_blank');
                         }}
                         title="Drukuj fakturę"
                     >

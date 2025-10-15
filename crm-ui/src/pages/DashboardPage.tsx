@@ -20,6 +20,7 @@ type UserDashboardData = {
     messagesCount: number;
     remindersCount: number;
     loginHistory: { date: string; ipAddress: string }[];
+    notesCount: number;
 };
 
 type SalesDashboardData = {
@@ -53,6 +54,7 @@ type SalesDashboardData = {
         completed: boolean;
         customerName: string;
     }[];
+    notesCount: number;
 };
 
 
