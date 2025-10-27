@@ -17,6 +17,13 @@ interface Customer {
     name: string;
     email: string;
     assignedGroupId?: number | null;
+    assignedGroupName?: string;
+}
+
+interface Group {
+    id: number;
+    name: string;
+    description: string | null;
 }
 
 interface GroupDetails {
@@ -113,10 +120,11 @@ export function GroupDetailsPage() {
         setLoading(true);
         try {
             // Pobieramy wszystkie dane równolegle
-            const [groupResponse, usersResponse, customersResponse] = await Promise.all([
+            const [groupResponse, usersResponse, customersResponse, groupsResponse] = await Promise.all([
                 api.get(`/Groups/${id}`),
                 api.get('/admin/users'),
-                api.get('/Customers/')
+                api.get('/Customers/'),
+                api.get('/Groups/')
             ]);
 
             // Przetwarzanie danych grupy
@@ -130,10 +138,29 @@ export function GroupDetailsPage() {
             const usersArray = Array.isArray(allUsersData) ? allUsersData : [];
             setAllUsers(usersArray);
 
+            // Przetwarzanie danych grup
+            const allGroupsData = groupsResponse.data.$values || groupsResponse.data;
+            const groupsArray = Array.isArray(allGroupsData) ? allGroupsData : [];
+
             // Przetwarzanie danych klientów
             const allCustomersData = customersResponse.data.$values || customersResponse.data;
             const customersArray = Array.isArray(allCustomersData) ? allCustomersData : [];
-            setAvailableCustomers(customersArray.filter((c: Customer) => !c.assignedGroupId));
+            // Pokazujemy wszystkich klientów (także przypisanych do innej grupy), aby umożliwić przenoszenie
+            // Filtrujemy tylko klientów już przypisanych do BIEŻĄCEJ grupy
+            const filteredCustomers = customersArray.filter((c: Customer) =>
+                c.assignedGroupId !== parseInt(id || '0')
+            );
+
+            // Dodajemy nazwy grup do klientów
+            const customersWithGroupNames = filteredCustomers.map((c: Customer) => {
+                const assignedGroup = groupsArray.find((g: Group) => g.id === c.assignedGroupId);
+                return {
+                    ...c,
+                    assignedGroupName: assignedGroup?.name || ''
+                };
+            });
+
+            setAvailableCustomers(customersWithGroupNames);
 
             setError(null);
         } catch (err) {
@@ -157,7 +184,11 @@ export function GroupDetailsPage() {
             setShowAddMemberModal(false);
             setSelectedUserId(null);
             openToast('Użytkownik dodany do grupy', 'success');
-        } catch { openToast('Błąd podczas dodawania użytkownika', 'error'); }
+        } catch (err) {
+            const error = err as { response?: { data?: { error?: string } }; message?: string };
+            const errorMessage = error?.response?.data?.error || error?.message || 'Błąd podczas dodawania użytkownika';
+            openToast(errorMessage, 'error');
+        }
     };
 
     const handleRemoveMember = async (userId: number) => {
@@ -166,19 +197,30 @@ export function GroupDetailsPage() {
             await api.delete(`/Groups/${group.id}/members/${userId}`);
             await fetchAllData();
             openToast('Użytkownik usunięty z grupy', 'success');
-        } catch { openToast('Błąd podczas usuwania użytkownika', 'error'); }
+        } catch (err) {
+            const error = err as { response?: { data?: { error?: string } }; message?: string };
+            const errorMessage = error?.response?.data?.error || error?.message || 'Błąd podczas usuwania użytkownika';
+            openToast(errorMessage, 'error');
+        }
     };
 
     // --- AKCJE KLIENTÓW ---
     const handleAddCustomer = async () => {
         if (!selectedCustomerId || !group) return;
         try {
-            await api.post(`/Groups/${group.id}/customers/${selectedCustomerId}`);
+            const response = await api.post(`/Groups/${group.id}/customers/${selectedCustomerId}`);
             await fetchAllData();
             setShowAddCustomerModal(false);
             setSelectedCustomerId(null);
-            openToast('Klient przypisany do grupy', 'success');
-        } catch { openToast('Błąd podczas przypisywania klienta', 'error'); }
+            // Wyświetlamy wiadomość zwróconą z backendu
+            const message = response.data?.message || 'Klient przypisany do grupy';
+            openToast(message, 'success');
+        } catch (err) {
+            // Wyciągamy szczegółową wiadomość błędu z odpowiedzi backendu
+            const error = err as { response?: { data?: { error?: string } }; message?: string };
+            const errorMessage = error?.response?.data?.error || error?.message || 'Błąd podczas przypisywania klienta';
+            openToast(errorMessage, 'error');
+        }
     };
 
     const handleRemoveCustomer = async (customerId: number) => {
@@ -187,7 +229,11 @@ export function GroupDetailsPage() {
             await api.delete(`/Groups/${group.id}/customers/${customerId}`);
             await fetchAllData();
             openToast('Klient usunięty z grupy', 'success');
-        } catch { openToast('Błąd podczas usuwania klienta', 'error'); }
+        } catch (err) {
+            const error = err as { response?: { data?: { error?: string } }; message?: string };
+            const errorMessage = error?.response?.data?.error || error?.message || 'Błąd podczas usuwania klienta';
+            openToast(errorMessage, 'error');
+        }
     };
 
     // --- RENDEROWANIE ---
@@ -339,8 +385,15 @@ export function GroupDetailsPage() {
                             className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white mb-4"
                         >
                             <option value="">Wybierz klienta</option>
-                            {availableCustomers?.map(customer => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
+                            {availableCustomers?.map(customer => (
+                                <option key={customer.id} value={customer.id}>
+                                    {customer.name}{customer.assignedGroupName ? ` (${customer.assignedGroupName})` : ''}
+                                </option>
+                            ))}
                         </select>
+                        <p className="text-sm text-gray-400 mb-4">
+                            Klienci przypisani do innej grupy zostaną automatycznie przeniesieni.
+                        </p>
                         <div className="flex justify-end space-x-2">
                             <button onClick={() => setShowAddCustomerModal(false)} className="px-4 py-2 bg-gray-600 text-white rounded-md">Anuluj</button>
                             <button onClick={handleAddCustomer} disabled={!selectedCustomerId} className="px-4 py-2 bg-blue-600 text-white rounded-md disabled:opacity-50">Dodaj</button>
