@@ -1463,6 +1463,7 @@ def export_customers():
         
         # Buduj zapytanie SQL
         select_fields = []
+        need_rep_join = False
         for col in columns:
             if col == 'id':
                 select_fields.append('c.Id')
@@ -1479,7 +1480,9 @@ def export_customers():
             elif col == 'nip':
                 select_fields.append('c.NIP')
             elif col == 'representative':
-                select_fields.append('c.Representative')
+              
+                select_fields.append('CASE WHEN u_rep.id IS NOT NULL THEN CONCAT(u_rep.username, " (", u_rep.email, ")") ELSE NULL END as representative')
+                need_rep_join = True
             elif col == 'createdAt':
                 select_fields.append('c.CreatedAt')
             elif col == 'assignedGroup' and include_relations:
@@ -1487,7 +1490,7 @@ def export_customers():
             elif col == 'assignedUser' and include_relations:
                 select_fields.append('u.username as AssignedUser')
             elif col == 'tags':
-                select_fields.append('(SELECT GROUP_CONCAT(t.Name SEPARATOR ', ') FROM Tags t JOIN CustomerTags ct ON t.Id = ct.CustomerId WHERE ct.CustomerId = c.Id) as tags')
+                select_fields.append('(SELECT GROUP_CONCAT(t.Name SEPARATOR \', \') FROM Tags t JOIN CustomerTags ct ON t.Id = ct.TagId WHERE ct.CustomerId = c.Id) as tags')
         
         if not select_fields:
             select_fields = ['c.Id', 'c.Name', 'c.Email', 'c.Phone', 'c.Company', 'c.Address']
@@ -1501,6 +1504,12 @@ def export_customers():
             query_sql += """
                 LEFT JOIN `Groups` g ON c.AssignedGroupId = g.Id
                 LEFT JOIN users u ON c.AssignedUserId = u.id
+            """
+        
+        # Dodaj JOIN dla representative jeśli potrzebny
+        if need_rep_join:
+            query_sql += """
+                LEFT JOIN users u_rep ON c.RepresentativeUserId = u_rep.id
             """
         
         query_sql += " ORDER BY c.Id"
@@ -1599,7 +1608,79 @@ def export_customers():
                 created_at_index = -1
 
             for row in data:
-                pdf_row = list(row)
+                # Konwertuj Row object z SQLAlchemy na listę w kolejności odpowiadającej columns
+                pdf_row = []
+                try:
+                    # Tworzymy mapowanie nazw kolumn do wartości
+                    row_dict = {}
+                    if hasattr(row, '_mapping'):
+                        # SQLAlchemy Row object z 1.4+
+                        row_dict = dict(row._mapping)
+                    elif hasattr(row, 'keys'):
+                        # SQLAlchemy Row object z keys()
+                        row_dict = {key: row[key] for key in row.keys()}
+                    elif hasattr(row, '__iter__') and not isinstance(row, str):
+                        # Tuple lub lista - używamy nazw kolumn z select_fields
+                        row_values = list(row)
+                        for i, field in enumerate(select_fields):
+                            # Wyciągnij alias z pola (np. "as representative" -> "representative")
+                            if ' as ' in field.lower():
+                                alias = field.split(' as ')[-1].strip()
+                            elif ' AS ' in field:
+                                alias = field.split(' AS ')[-1].strip()
+                            else:
+                                # Jeśli nie ma aliasu, użyj ostatniej części po kropce
+                                alias = field.split('.')[-1].strip()
+                            if i < len(row_values):
+                                row_dict[alias] = row_values[i]
+                    else:
+                        row_dict = {}
+                    
+                    # Mapuj wartości w kolejności odpowiadającej columns
+                    for col in columns:
+                        # Mapuj nazwę kolumny na alias w SQL
+                        sql_alias = col
+                        if col == 'id':
+                            sql_alias = 'Id'
+                        elif col == 'name':
+                            sql_alias = 'Name'
+                        elif col == 'email':
+                            sql_alias = 'Email'
+                        elif col == 'phone':
+                            sql_alias = 'Phone'
+                        elif col == 'company':
+                            sql_alias = 'Company'
+                        elif col == 'address':
+                            sql_alias = 'Address'
+                        elif col == 'nip':
+                            sql_alias = 'NIP'
+                        elif col == 'representative':
+                            sql_alias = 'representative'
+                        elif col == 'tags':
+                            sql_alias = 'tags'
+                        elif col == 'createdAt':
+                            sql_alias = 'CreatedAt'
+                        elif col == 'assignedGroup':
+                            sql_alias = 'AssignedGroup'
+                        elif col == 'assignedUser':
+                            sql_alias = 'AssignedUser'
+                        
+                        value = row_dict.get(sql_alias, None)
+                        # Jeśli wartość jest None lub pustym stringiem dla representative, ustaw pusty string
+                        if col == 'representative' and (value is None or value == ' ()' or value == '()'):
+                            value = ''
+                        pdf_row.append(value)
+                except (TypeError, AttributeError, IndexError, KeyError) as e:
+                    # Fallback - użyj pozycji
+                    try:
+                        row_values = list(row) if hasattr(row, '__iter__') and not isinstance(row, str) else []
+                        for i, col in enumerate(columns):
+                            if i < len(row_values):
+                                pdf_row.append(row_values[i])
+                            else:
+                                pdf_row.append(None)
+                    except Exception:
+                        pdf_row = []
                 # Format totalInvoiceValue
                 if total_invoice_value_index != -1 and len(pdf_row) > total_invoice_value_index and pdf_row[total_invoice_value_index] is not None:
                     try:
@@ -1670,7 +1751,7 @@ def export_invoices():
             elif col == 'createdBy':
                 select_fields.append('u.username as createdBy')
             elif col == 'tags':
-                select_fields.append('(SELECT GROUP_CONCAT(t.Name SEPARATOR \', \') FROM Tags t JOIN CustomerTags ct ON t.Id = ct.CustomerId WHERE ct.CustomerId = c.Id) as tags')
+                select_fields.append('(SELECT GROUP_CONCAT(t.Name SEPARATOR \', \') FROM Tags t JOIN CustomerTags ct ON t.Id = ct.TagId WHERE ct.CustomerId = c.Id) as tags')
             elif col == 'items':
                 select_fields.append('(SELECT GROUP_CONCAT(ii.Description SEPARATOR \', \') FROM InvoiceItems ii WHERE ii.InvoiceId = i.Id) as items')
         

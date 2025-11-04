@@ -9,9 +9,10 @@ customers_bp = Blueprint('customers', __name__)
 @customers_bp.route('/', methods=['GET'])
 @require_auth
 def get_customers():
-    """Pobiera listę klientów"""
+    """Pobiera listę klientów, posortowaną od najnowszych (malejąco według ID)"""
     try:
-        customers = Customer.query.all()
+        # Pobierz klientów, sortując od najnowszych (największe ID na początku)
+        customers = Customer.query.order_by(Customer.Id.desc()).all()
         return jsonify([customer.to_dict() for customer in customers]), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -30,7 +31,7 @@ def create_customer():
             Company=data.get('company'),
             Address=data.get('address'),
             NIP=data.get('nip'),
-            Representative=data.get('representative'),
+            RepresentativeUserId=data.get('representativeUserId') or data.get('representative'),  # Kompatybilność wsteczna
             AssignedGroupId=data.get('assignedGroupId'),
             AssignedUserId=data.get('assignedUserId')
         )
@@ -59,7 +60,7 @@ def get_customer(customer_id):
 @customers_bp.route('/<int:customer_id>', methods=['PUT'])
 @require_auth
 def update_customer(customer_id):
-    """Aktualizuje klienta"""
+    """Aktualizuje klienta wraz z tagami"""
     try:
         customer = Customer.query.get(customer_id)
         if not customer:
@@ -67,6 +68,7 @@ def update_customer(customer_id):
         
         data = request.get_json()
         
+        # Aktualizuj podstawowe pola klienta
         if 'name' in data:
             customer.Name = data['name']
         if 'email' in data:
@@ -79,12 +81,32 @@ def update_customer(customer_id):
             customer.Address = data['address']
         if 'nip' in data:
             customer.NIP = data['nip']
-        if 'representative' in data:
-            customer.Representative = data['representative']
+        if 'representativeUserId' in data:
+            customer.RepresentativeUserId = data['representativeUserId'] if data['representativeUserId'] else None
+        elif 'representative' in data:
+            # Kompatybilność wsteczna - jeśli otrzymamy ID jako string/int
+            rep_id = data['representative']
+            if rep_id and isinstance(rep_id, (int, str)) and str(rep_id).isdigit():
+                customer.RepresentativeUserId = int(rep_id)
+            else:
+                customer.RepresentativeUserId = None
         if 'assignedGroupId' in data:
             customer.AssignedGroupId = data['assignedGroupId']
         if 'assignedUserId' in data:
             customer.AssignedUserId = data['assignedUserId']
+        
+        # Aktualizuj tagi klienta
+        if 'tagIds' in data:
+            from app.models import Tag
+            # Usuń wszystkie istniejące powiązania z tagami
+            customer.tags.clear()
+            # Dodaj nowe tagi
+            tag_ids = data['tagIds']
+            if tag_ids:
+                for tag_id in tag_ids:
+                    tag = Tag.query.get(tag_id)
+                    if tag:
+                        customer.tags.append(tag)
         
         db.session.commit()
         

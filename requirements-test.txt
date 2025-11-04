@@ -1,0 +1,12 @@
+# Zależności testowe dla backendu CRM
+
+# pytest - główny framework testowy
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-flask==1.3.0
+
+# Faker - generowanie danych testowych
+Faker==20.1.0
+
+# freezegun - mockowanie czasu
+freezegun==1.4.0

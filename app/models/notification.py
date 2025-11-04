@@ -8,10 +8,10 @@ class Notification(db.Model):
     Message = db.Column(db.Text, nullable=False)
     IsRead = db.Column(db.Boolean, default=False)
     CreatedAt = db.Column(db.DateTime, default=datetime.utcnow)
-    UserId = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    UserId = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     
     # Relacje
-    user = db.relationship('User', backref='notifications')
+    user = db.relationship('User', backref=db.backref('notifications', cascade='all, delete-orphan'))
     
     def to_dict(self):
         return {

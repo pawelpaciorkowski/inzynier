@@ -8,9 +8,10 @@ groups_bp = Blueprint('groups', __name__)
 @groups_bp.route('/', methods=['GET'])
 @require_auth
 def get_groups():
-    """Pobiera listę grup"""
+    """Pobiera listę grup, posortowaną od najnowszych (malejąco według ID)"""
     try:
-        groups = Group.query.all()
+        # Pobierz grupy, sortując od najnowszych (największe ID na początku)
+        groups = Group.query.order_by(Group.Id.desc()).all()
         return jsonify([group.to_dict() for group in groups]), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -219,13 +220,22 @@ def add_group_customer(group_id, customer_id):
         existing_query = text("SELECT AssignedGroupId FROM Customers WHERE Id = :customer_id")
         existing_result = db.session.execute(existing_query, {'customer_id': customer_id}).fetchone()
         
-        if existing_result and existing_result[0] is not None:
-            return jsonify({'error': 'Klient już jest przypisany do innej grupy'}), 400
+        # Jeśli klient jest już w tej grupie, zwróć informację
+        if existing_result and existing_result[0] == group_id:
+            return jsonify({'message': f'Klient {customer_result[1]} już jest przypisany do grupy {group.Name}'}), 200
         
-        # Przypisz klienta do grupy
+        # Przypisz klienta do grupy (nadpisuje poprzednie przypisanie)
         update_query = text("UPDATE Customers SET AssignedGroupId = :group_id WHERE Id = :customer_id")
         db.session.execute(update_query, {'group_id': group_id, 'customer_id': customer_id})
         db.session.commit()
+        
+        # Zwróć odpowiednią wiadomość w zależności od tego, czy klient był wcześniej w innej grupie
+        if existing_result and existing_result[0] is not None:
+            # Pobierz nazwę poprzedniej grupy
+            old_group_query = text("SELECT Name FROM Groups WHERE Id = :old_group_id")
+            old_group_result = db.session.execute(old_group_query, {'old_group_id': existing_result[0]}).fetchone()
+            old_group_name = old_group_result[0] if old_group_result else 'poprzedniej grupy'
+            return jsonify({'message': f'Klient {customer_result[1]} został przeniesiony z grupy {old_group_name} do grupy {group.Name}'}), 200
         
         return jsonify({'message': f'Klient {customer_result[1]} został przypisany do grupy {group.Name}'}), 200
         

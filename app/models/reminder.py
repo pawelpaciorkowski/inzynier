@@ -7,10 +7,10 @@ class Reminder(db.Model):
     Id = db.Column(db.Integer, primary_key=True)
     Note = db.Column(db.Text, nullable=False)
     RemindAt = db.Column(db.DateTime, nullable=False)
-    UserId = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    UserId = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     
     # Relacje
-    user = db.relationship('User', backref='reminders')
+    user = db.relationship('User', backref=db.backref('reminders', cascade='all, delete-orphan'))
     
     def to_dict(self):
         return {

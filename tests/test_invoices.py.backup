@@ -1,0 +1,198 @@
+"""
+Testy dla endpointów faktur
+"""
+import json
+import pytest
+from datetime import datetime, timedelta
+
+
+class TestInvoicesEndpoints:
+    """Testy dla endpointów /api/Invoices"""
+
+    def test_get_invoices_success(self, client, auth_headers_admin):
+        """Test pobierania listy faktur"""
+        response = client.get('/api/Invoices/',
+                              headers=auth_headers_admin)
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert isinstance(data, list)
+
+    def test_get_invoices_unauthorized(self, client):
+        """Test pobierania listy faktur bez autoryzacji"""
+        response = client.get('/api/Invoices/')
+
+        assert response.status_code == 401
+
+    def test_create_invoice_success(self, client, auth_headers_admin):
+        """Test tworzenia nowej faktury"""
+        invoice_data = {
+            'customerId': 1,
+            'number': f'FV/TEST/{datetime.now().year}/001',
+            'issuedAt': datetime.now().isoformat(),
+            'dueDate': (datetime.now() + timedelta(days=14)).isoformat(),
+            'totalAmount': 1000.00,
+            'isPaid': False,
+            'items': [
+                {
+                    'description': 'Test Item',
+                    'quantity': 1,
+                    'unitPrice': 1000.00,
+                    'taxRate': 23.0
+                }
+            ]
+        }
+
+        response = client.post('/api/Invoices/',
+                               headers=auth_headers_admin,
+                               data=json.dumps(invoice_data),
+                               content_type='application/json')
+
+        assert response.status_code == 201
+        data = json.loads(response.data)
+        assert 'Number' in data or 'number' in data
+
+    def test_create_invoice_unauthorized(self, client):
+        """Test tworzenia faktury bez autoryzacji"""
+        response = client.post('/api/Invoices/',
+                               data=json.dumps({}),
+                               content_type='application/json')
+
+        assert response.status_code == 401
+
+    def test_get_invoice_by_id_success(self, client, auth_headers_admin):
+        """Test pobierania szczegółów faktury"""
+        # Najpierw utwórz fakturę
+        invoice_data = {
+            'customerId': 1,
+            'number': f'FV/TEST/{datetime.now().year}/002',
+            'issuedAt': datetime.now().isoformat(),
+            'dueDate': (datetime.now() + timedelta(days=14)).isoformat(),
+            'totalAmount': 500.00,
+            'isPaid': False,
+            'items': []
+        }
+
+        create_response = client.post('/api/Invoices/',
+                                      headers=auth_headers_admin,
+                                      data=json.dumps(invoice_data),
+                                      content_type='application/json')
+
+        invoice_id = json.loads(create_response.data)['id']
+
+        # Pobierz szczegóły
+        response = client.get(f'/api/Invoices/{invoice_id}',
+                              headers=auth_headers_admin)
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['id'] == invoice_id
+
+    def test_get_invoice_by_id_not_found(self, client, auth_headers_admin):
+        """Test pobierania nieistniejącej faktury"""
+        response = client.get('/api/Invoices/9999',
+                              headers=auth_headers_admin)
+
+        assert response.status_code == 404
+
+    def test_update_invoice_success(self, client, auth_headers_admin):
+        """Test aktualizacji faktury"""
+        # Najpierw utwórz fakturę
+        invoice_data = {
+            'customerId': 1,
+            'number': f'FV/TEST/{datetime.now().year}/003',
+            'issuedAt': datetime.now().isoformat(),
+            'dueDate': (datetime.now() + timedelta(days=14)).isoformat(),
+            'totalAmount': 500.00,
+            'isPaid': False,
+            'items': []
+        }
+
+        create_response = client.post('/api/Invoices/',
+                                      headers=auth_headers_admin,
+                                      data=json.dumps(invoice_data),
+                                      content_type='application/json')
+
+        invoice_id = json.loads(create_response.data)['id']
+
+        # Zaktualizuj fakturę
+        update_data = {
+            'isPaid': True,
+            'totalAmount': 750.00
+        }
+
+        response = client.put(f'/api/Invoices/{invoice_id}',
+                              headers=auth_headers_admin,
+                              data=json.dumps(update_data),
+                              content_type='application/json')
+
+        assert response.status_code == 200
+
+    def test_update_invoice_not_found(self, client, auth_headers_admin):
+        """Test aktualizacji nieistniejącej faktury"""
+        response = client.put('/api/Invoices/9999',
+                              headers=auth_headers_admin,
+                              data=json.dumps({'isPaid': True}),
+                              content_type='application/json')
+
+        assert response.status_code == 404
+
+    def test_delete_invoice_success(self, client, auth_headers_admin):
+        """Test usuwania faktury"""
+        # Najpierw utwórz fakturę
+        invoice_data = {
+            'customerId': 1,
+            'number': f'FV/TEST/{datetime.now().year}/004',
+            'issuedAt': datetime.now().isoformat(),
+            'dueDate': (datetime.now() + timedelta(days=14)).isoformat(),
+            'totalAmount': 300.00,
+            'isPaid': False,
+            'items': []
+        }
+
+        create_response = client.post('/api/Invoices/',
+                                      headers=auth_headers_admin,
+                                      data=json.dumps(invoice_data),
+                                      content_type='application/json')
+
+        invoice_id = json.loads(create_response.data)['id']
+
+        # Usuń fakturę
+        response = client.delete(f'/api/Invoices/{invoice_id}',
+                                 headers=auth_headers_admin)
+
+        assert response.status_code == 200
+
+    def test_delete_invoice_not_found(self, client, auth_headers_admin):
+        """Test usuwania nieistniejącej faktury"""
+        response = client.delete('/api/Invoices/9999',
+                                 headers=auth_headers_admin)
+
+        assert response.status_code == 404
+
+    def test_get_invoice_pdf(self, client, auth_headers_admin):
+        """Test generowania PDF faktury"""
+        # Najpierw utwórz fakturę
+        invoice_data = {
+            'customerId': 1,
+            'number': f'FV/TEST/{datetime.now().year}/005',
+            'issuedAt': datetime.now().isoformat(),
+            'dueDate': (datetime.now() + timedelta(days=14)).isoformat(),
+            'totalAmount': 1200.00,
+            'isPaid': False,
+            'items': []
+        }
+
+        create_response = client.post('/api/Invoices/',
+                                      headers=auth_headers_admin,
+                                      data=json.dumps(invoice_data),
+                                      content_type='application/json')
+
+        invoice_id = json.loads(create_response.data)['id']
+
+        # Pobierz PDF
+        response = client.get(f'/api/Invoices/{invoice_id}/pdf',
+                              headers=auth_headers_admin)
+
+        assert response.status_code == 200
+        assert response.content_type == 'application/pdf'

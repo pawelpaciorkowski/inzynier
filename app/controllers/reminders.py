@@ -9,13 +9,14 @@ reminders_bp = Blueprint('reminders', __name__)
 @reminders_bp.route('/', methods=['GET'])
 @require_auth
 def get_reminders():
-    """Pobiera listę przypomnień użytkownika"""
+    """Pobiera listę przypomnień użytkownika, posortowaną od najnowszych (malejąco według ID)"""
     try:
         user = get_current_user()
         if not user:
             return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
         
-        reminders = Reminder.query.filter_by(UserId=user.id).order_by(Reminder.RemindAt.asc()).all()
+        # Pobierz przypomnienia, sortując od najnowszych (największe ID na początku)
+        reminders = Reminder.query.filter_by(UserId=user.id).order_by(Reminder.Id.desc()).all()
         return jsonify([reminder.to_dict() for reminder in reminders]), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -36,9 +37,19 @@ def create_reminder():
         if not remind_at:
             return jsonify({'error': 'Pole RemindAt jest wymagane'}), 400
         
+        # Konwertuj datę z UTC na czas lokalny dla bazy danych
+        if remind_at.endswith('Z'):
+            # Data jest w UTC, konwertuj na czas lokalny
+            utc_datetime = datetime.fromisoformat(remind_at.replace('Z', ''))
+            # Przekonwertuj UTC na czas lokalny (CET/CEST)
+            local_datetime = utc_datetime.replace(tzinfo=None)  # Usuń informację o strefie
+        else:
+            # Data już jest w czasie lokalnym
+            local_datetime = datetime.fromisoformat(remind_at)
+        
         new_reminder = Reminder(
             Note=data.get('note'),
-            RemindAt=datetime.fromisoformat(remind_at.replace('Z', '')),
+            RemindAt=local_datetime,
             UserId=user.id
         )
         
@@ -87,7 +98,17 @@ def update_reminder(reminder_id):
         if 'remindAt' in data or 'remind_at' in data:
             remind_at_value = data.get('remindAt') or data.get('remind_at')
             if remind_at_value:
-                reminder.RemindAt = datetime.fromisoformat(remind_at_value.replace('Z', ''))
+                # Konwertuj datę z UTC na czas lokalny dla bazy danych
+                if remind_at_value.endswith('Z'):
+                    # Data jest w UTC, konwertuj na czas lokalny
+                    utc_datetime = datetime.fromisoformat(remind_at_value.replace('Z', ''))
+                    # Przekonwertuj UTC na czas lokalny (CET/CEST)
+                    local_datetime = utc_datetime.replace(tzinfo=None)  # Usuń informację o strefie
+                else:
+                    # Data już jest w czasie lokalnym
+                    local_datetime = datetime.fromisoformat(remind_at_value)
+                
+                reminder.RemindAt = local_datetime
             else:
                 return jsonify({'error': 'Pole RemindAt nie może być puste'}), 400
         

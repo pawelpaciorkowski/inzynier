@@ -72,6 +72,7 @@ def get_dashboard():
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/users', methods=['GET'])
+@admin_bp.route('/Users', methods=['GET'])
 @require_auth
 def get_users():
     """Pobiera listę użytkowników"""
@@ -84,13 +85,15 @@ def get_users():
         if user.role.name != 'Admin':
             return jsonify({'error': 'Brak uprawnień administratora'}), 403
         
-        users = User.query.all()
+        # Pobierz użytkowników, sortując od najnowszych (największe ID na początku)
+        users = User.query.order_by(User.id.desc()).all()
         return jsonify([user.to_dict() for user in users]), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/users', methods=['POST'])
+@admin_bp.route('/Users', methods=['POST'])
 @require_auth
 def create_user():
     """Tworzy nowego użytkownika (tylko dla administratora)"""
@@ -107,7 +110,7 @@ def create_user():
         username = data.get('username')
         email = data.get('email')
         password = data.get('password')
-        role_id = data.get('role_id', 2)  # Domyślnie User
+        role_id = data.get('role_id') or data.get('roleId', 2)  # Domyślnie User
         
         if not username or not email or not password:
             return jsonify({'error': 'Brak wymaganych danych'}), 400
@@ -137,7 +140,30 @@ def create_user():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@admin_bp.route('/users/<int:user_id>', methods=['PUT'])
+@admin_bp.route('/users/<int:user_id>', methods=['GET'])
+@admin_bp.route('/Users/<int:user_id>', methods=['GET'])
+@require_auth
+def get_user(user_id):
+    """Pobiera dane pojedynczego użytkownika"""
+    try:
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
+        
+        # Sprawdź czy użytkownik ma uprawnienia administratora
+        if user.role.name != 'Admin':
+            return jsonify({'error': 'Brak uprawnień administratora'}), 403
+        
+        target_user = User.query.get(user_id)
+        if not target_user:
+            return jsonify({'error': 'Użytkownik nie znaleziony'}), 404
+        
+        return jsonify(target_user.to_dict()), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/Users/<int:user_id>', methods=['PUT'])
 @require_auth
 def update_user(user_id):
     """Aktualizuje użytkownika"""
@@ -160,10 +186,13 @@ def update_user(user_id):
             target_user.username = data['username']
         if 'email' in data:
             target_user.email = data['email']
-        if 'role_id' in data:
-            target_user.role_id = data['role_id']
+        if 'role_id' in data or 'roleId' in data:
+            target_user.role_id = data.get('role_id') or data.get('roleId')
         
         db.session.commit()
+        
+        # Odśwież relację role po commit
+        db.session.refresh(target_user)
         
         return jsonify(target_user.to_dict()), 200
         
@@ -171,7 +200,7 @@ def update_user(user_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@admin_bp.route('/users/<int:user_id>', methods=['DELETE'])
+@admin_bp.route('/Users/<int:user_id>', methods=['DELETE'])
 @require_auth
 def delete_user(user_id):
     """Usuwa użytkownika (soft delete)"""
@@ -254,7 +283,8 @@ def get_roles():
         if user.role.name != 'Admin':
             return jsonify({'error': 'Brak uprawnień administratora'}), 403
         
-        roles = Role.query.all()
+        # Pobierz role, sortując od najnowszych (największe ID na początku)
+        roles = Role.query.order_by(Role.id.desc()).all()
         return jsonify([role.to_dict() for role in roles]), 200
         
     except Exception as e:

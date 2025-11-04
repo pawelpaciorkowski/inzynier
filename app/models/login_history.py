@@ -7,14 +7,14 @@ class LoginHistory(db.Model):
     __tablename__ = 'LoginHistory'
     
     Id = db.Column(db.Integer, primary_key=True)
-    UserId = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    LoginTime = db.Column(db.DateTime, default=lambda: pytz.utc.localize(datetime.utcnow())) # Użyj datetime.utcnow() i jawnie oznacz jako UTC
+    UserId = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    LoginTime = db.Column(db.DateTime, default=lambda: pytz.utc.localize(datetime.utcnow())) 
     IpAddress = db.Column(db.String(45))
     UserAgent = db.Column(db.Text)
     Success = db.Column(db.Boolean, default=True)
     
     # Relacje
-    user = db.relationship('User', backref='login_history')
+    user = db.relationship('User', backref=db.backref('login_history', cascade='all, delete-orphan'))
     
     def to_dict(self):
         # Parsuj informacje o urządzeniu z UserAgent
@@ -25,7 +25,6 @@ class LoginHistory(db.Model):
         operating_system = device_parts[1] if len(device_parts) > 1 else 'Unknown'
         browser = device_parts[2] if len(device_parts) > 2 else 'Unknown'
         
-        # Użyj isoformat() bez ręcznego dodawania 'Z', ponieważ datetime.now(pytz.utc) stworzy świadomy obiekt
         login_time_iso = self.LoginTime.isoformat() if self.LoginTime else None 
         
         return {

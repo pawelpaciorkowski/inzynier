@@ -7,14 +7,14 @@ class Message(db.Model):
     Id = db.Column(db.Integer, primary_key=True)
     Subject = db.Column(db.String(255), nullable=False)
     Body = db.Column(db.Text, nullable=False)
-    SenderUserId = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    RecipientUserId = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    SenderUserId = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    RecipientUserId = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     SentAt = db.Column(db.DateTime, default=datetime.utcnow)
     IsRead = db.Column(db.Boolean, default=False)
     
     # Relacje
-    sender = db.relationship('User', foreign_keys=[SenderUserId], backref='sent_messages')
-    recipient = db.relationship('User', foreign_keys=[RecipientUserId], backref='received_messages')
+    sender = db.relationship('User', foreign_keys=[SenderUserId], backref=db.backref('sent_messages', cascade='all, delete-orphan'))
+    recipient = db.relationship('User', foreign_keys=[RecipientUserId], backref=db.backref('received_messages', cascade='all, delete-orphan'))
     
     def to_dict(self):
         """Konwertuje model do słownika z nazwami użytkowników - format zgodny z C# API"""

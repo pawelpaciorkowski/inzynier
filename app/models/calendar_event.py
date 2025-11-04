@@ -10,8 +10,11 @@ class CalendarEvent(db.Model):
     Start = db.Column('StartTime', db.DateTime, nullable=False)
     End = db.Column('EndTime', db.DateTime, nullable=False)
     AllDay = db.Column(db.Boolean, default=False)
-    UserId = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    UserId = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     CreatedAt = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relacje
+    user = db.relationship('User', backref=db.backref('calendar_events', cascade='all, delete-orphan'))
     
     def to_dict(self):
         return {

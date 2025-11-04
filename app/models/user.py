@@ -18,5 +18,7 @@ class User(db.Model):
             'id': self.id,
             'username': self.username,
             'email': self.email,
-            'role': self.role.name if self.role else None
+            'role': self.role.name if self.role else None,
+            'roleId': self.role_id,
+            'role_id': self.role_id  # Dodatkowo dla kompatybilności
         }

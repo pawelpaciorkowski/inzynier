@@ -1,9 +1,11 @@
 from flask import Blueprint, request, jsonify, send_file
 from app.middleware import require_auth, get_current_user_id
 from app.database import db
-from app.models import Contract, Customer, User, Template, Setting
+from app.models import Contract, Customer, User, Template, Setting, Service
+from app.models.contract import contract_services
 from datetime import datetime
 from sqlalchemy import text
+from decimal import Decimal
 import os
 import tempfile
 from docx import Document
@@ -54,33 +56,60 @@ def create_contract():
         if not data or 'title' not in data or 'customerId' not in data:
             return jsonify({'error': 'Brak wymaganych danych'}), 400
         
+        # Oblicz NetAmount na podstawie wybranych usług
+        net_amount = Decimal('0')
+        services_data = data.get('services', [])  # Lista obiektów: [{serviceId, quantity}]
+        service_ids = data.get('serviceIds', [])  # Alternatywnie lista ID (dla kompatybilności)
+        
+        # Jeśli mamy serviceIds jako prostą listę, zamień na format services
+        if service_ids and not services_data:
+            services_data = [{'serviceId': sid, 'quantity': 1} for sid in service_ids]
+        
+        for service_item in services_data:
+            service_id = service_item.get('serviceId') if isinstance(service_item, dict) else service_item
+            quantity = service_item.get('quantity', 1) if isinstance(service_item, dict) else 1
+            
+            service = Service.query.get(service_id)
+            if service and service.Price:
+                net_amount += Decimal(str(service.Price)) * quantity
+        
+        # Jeśli podano netAmount ręcznie, użyj go (nadpisuje automatyczne obliczenie)
+        if data.get('netAmount'):
+            net_amount = Decimal(str(data.get('netAmount')))
+        
         new_contract = Contract(
             Title=data['title'],
             ContractNumber=data.get('contractNumber'),
             CustomerId=data['customerId'],
-            NetAmount=data.get('netAmount', 0),
+            NetAmount=net_amount,
             SignedAt=datetime.fromisoformat(data['signedAt'].replace('Z', '+00:00')) if data.get('signedAt') else None,
             StartDate=datetime.fromisoformat(data['startDate'].replace('Z', '+00:00')) if data.get('startDate') else None,
             EndDate=datetime.fromisoformat(data['endDate'].replace('Z', '+00:00')) if data.get('endDate') else None,
+            PaymentTermDays=data.get('paymentTermDays'),
+            ScopeOfServices=data.get('scopeOfServices'),  # Zachowaj dla kompatybilności wstecznej
             CreatedByUserId=current_user_id,
             ResponsibleGroupId=data.get('responsibleGroupId')
         )
         
         db.session.add(new_contract)
+        db.session.flush()  # Zapisz aby dostać contract.Id
+        
+        # Dodaj usługi do kontraktu
+        for service_item in services_data:
+            service_id = service_item.get('serviceId') if isinstance(service_item, dict) else service_item
+            quantity = service_item.get('quantity', 1) if isinstance(service_item, dict) else 1
+            
+            service = Service.query.get(service_id)
+            if service:
+                # Wstaw do tabeli ContractServices używając text SQL (ponieważ mamy dodatkową kolumnę Quantity)
+                db.session.execute(
+                    text("INSERT INTO ContractServices (ContractId, ServiceId, Quantity) VALUES (:contract_id, :service_id, :quantity)"),
+                    {'contract_id': new_contract.Id, 'service_id': service.Id, 'quantity': quantity}
+                )
+        
         db.session.commit()
         
-        return jsonify({
-            'id': new_contract.Id,
-            'title': new_contract.Title,
-            'contractNumber': new_contract.ContractNumber,
-            'customerId': new_contract.CustomerId,
-            'netAmount': float(new_contract.NetAmount) if new_contract.NetAmount else 0,
-            'signedAt': new_contract.SignedAt.isoformat() if new_contract.SignedAt else None,
-            'startDate': new_contract.StartDate.isoformat() if new_contract.StartDate else None,
-            'endDate': new_contract.EndDate.isoformat() if new_contract.EndDate else None,
-            'createdByUserId': new_contract.CreatedByUserId,
-            'responsibleGroupId': new_contract.ResponsibleGroupId
-        }), 201
+        return jsonify(new_contract.to_dict()), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -92,19 +121,11 @@ def get_contract(contract_id):
     try:
         contract = Contract.query.get_or_404(contract_id)
         
-        return jsonify({
-            'id': contract.Id,
-            'title': contract.Title,
-            'contractNumber': contract.ContractNumber,
-            'customerId': contract.CustomerId,
-            'customerName': contract.customer.Name if contract.customer else None,
-            'netAmount': float(contract.NetAmount) if contract.NetAmount else 0,
-            'signedAt': contract.SignedAt.isoformat() if contract.SignedAt else None,
-            'startDate': contract.StartDate.isoformat() if contract.StartDate else None,
-            'endDate': contract.EndDate.isoformat() if contract.EndDate else None,
-            'createdByUserId': contract.CreatedByUserId,
-            'responsibleGroupId': contract.ResponsibleGroupId
-        }), 200
+        # Użyj metody to_dict() z modelu i dodaj customerName
+        contract_data = contract.to_dict()
+        contract_data['customerName'] = contract.customer.Name if contract.customer else None
+        
+        return jsonify(contract_data), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -133,23 +154,55 @@ def update_contract(contract_id):
             contract.StartDate = datetime.fromisoformat(data['startDate'].replace('Z', '+00:00')) if data['startDate'] else None
         if 'endDate' in data:
             contract.EndDate = datetime.fromisoformat(data['endDate'].replace('Z', '+00:00')) if data['endDate'] else None
+        if 'paymentTermDays' in data:
+            contract.PaymentTermDays = data['paymentTermDays'] if data['paymentTermDays'] else None
+        if 'scopeOfServices' in data:
+            contract.ScopeOfServices = data['scopeOfServices'] if data['scopeOfServices'] else None
+        
+        # Aktualizuj usługi przypisane do kontraktu
+        if 'services' in data or 'serviceIds' in data:
+            # Usuń wszystkie istniejące powiązania z usługami
+            db.session.execute(
+                text("DELETE FROM ContractServices WHERE ContractId = :contract_id"),
+                {'contract_id': contract.Id}
+            )
+            
+            services_data = data.get('services', [])
+            service_ids = data.get('serviceIds', [])
+            
+            # Jeśli mamy serviceIds jako prostą listę, zamień na format services
+            if service_ids and not services_data:
+                services_data = [{'serviceId': sid, 'quantity': 1} for sid in service_ids]
+            
+            # Oblicz nową kwotę netto
+            net_amount = Decimal('0')
+            for service_item in services_data:
+                service_id = service_item.get('serviceId') if isinstance(service_item, dict) else service_item
+                quantity = service_item.get('quantity', 1) if isinstance(service_item, dict) else 1
+                
+                service = Service.query.get(service_id)
+                if service:
+                    if service.Price:
+                        net_amount += Decimal(str(service.Price)) * quantity
+                    
+                    # Dodaj usługę do kontraktu używając text SQL (ponieważ mamy dodatkową kolumnę Quantity)
+                    db.session.execute(
+                        text("INSERT INTO ContractServices (ContractId, ServiceId, Quantity) VALUES (:contract_id, :service_id, :quantity)"),
+                        {'contract_id': contract.Id, 'service_id': service.Id, 'quantity': quantity}
+                    )
+            
+            # Zaktualizuj NetAmount (chyba że podano ręcznie)
+            if data.get('netAmount'):
+                contract.NetAmount = Decimal(str(data.get('netAmount')))
+            else:
+                contract.NetAmount = net_amount
+        
         if 'responsibleGroupId' in data:
             contract.ResponsibleGroupId = data['responsibleGroupId']
         
         db.session.commit()
         
-        return jsonify({
-            'id': contract.Id,
-            'title': contract.Title,
-            'contractNumber': contract.ContractNumber,
-            'customerId': contract.CustomerId,
-            'netAmount': float(contract.NetAmount) if contract.NetAmount else 0,
-            'signedAt': contract.SignedAt.isoformat() if contract.SignedAt else None,
-            'startDate': contract.StartDate.isoformat() if contract.StartDate else None,
-            'endDate': contract.EndDate.isoformat() if contract.EndDate else None,
-            'createdByUserId': contract.CreatedByUserId,
-            'responsibleGroupId': contract.ResponsibleGroupId
-        }), 200
+        return jsonify(contract.to_dict()), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -376,9 +429,10 @@ def generate_contract_from_template(contract_id):
 @contracts_bp.route('/templates', methods=['GET'])
 @require_auth
 def get_contract_templates():
-    """Pobiera dostępne szablony umów"""
+    """Pobiera dostępne szablony umów, posortowane od najnowszych"""
     try:
-        templates = Template.query.all()
+        # Pobierz szablony, sortując od najnowszych (największe ID na początku)
+        templates = Template.query.order_by(Template.Id.desc()).all()
         
         templates_list = []
         for template in templates:

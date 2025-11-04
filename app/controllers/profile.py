@@ -91,3 +91,14 @@ def get_login_history():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@profile_bp.route('/users-list', methods=['GET'])
+@require_auth
+def get_users_list():
+    """Pobiera listę wszystkich użytkowników (dla wyboru przedstawiciela itp.)"""
+    try:
+        # Pobierz wszystkich użytkowników, sortując alfabetycznie
+        users = User.query.order_by(User.username.asc()).all()
+        return jsonify([user.to_dict() for user in users]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

@@ -1,6 +1,12 @@
 from app.database import db
 from datetime import datetime
 
+# Tabela pomocnicza dla relacji many-to-many między fakturami a tagami
+invoice_tags = db.Table('InvoiceTags',
+    db.Column('InvoiceId', db.Integer, db.ForeignKey('Invoices.Id'), primary_key=True),
+    db.Column('TagId', db.Integer, db.ForeignKey('Tags.Id'), primary_key=True)
+)
+
 class Invoice(db.Model):
     __tablename__ = 'Invoices'
     
@@ -16,6 +22,8 @@ class Invoice(db.Model):
     
     # Relacje
     customer = db.relationship('Customer', backref='invoices')
+    # Relacja many-to-many z tagami
+    tags = db.relationship('Tag', secondary=invoice_tags, backref='invoices')
     
     def to_dict(self, include_items=False):
         # Oblicz kwoty netto i podatku (23% VAT)

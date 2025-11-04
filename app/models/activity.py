@@ -7,11 +7,11 @@ class Activity(db.Model):
     Id = db.Column(db.Integer, primary_key=True)
     Note = db.Column(db.Text, nullable=False)
     CreatedAt = db.Column(db.DateTime, default=datetime.utcnow)
-    UserId = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    UserId = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     CustomerId = db.Column(db.Integer, db.ForeignKey('Customers.Id'))
     
     # Relacje
-    user = db.relationship('User', backref='activities')
+    user = db.relationship('User', backref=db.backref('activities', cascade='all, delete-orphan'))
     customer = db.relationship('Customer', backref='activities')
     
     def to_dict(self):

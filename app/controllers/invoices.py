@@ -32,30 +32,42 @@ def register_polish_fonts():
         print(f"Nie udało się zarejestrować czcionek: {e}")
         return False
 
+def fix_polish_chars(text):
+    """Naprawia polskie znaki dla PDF"""
+    if not text:
+        return text
+    return str(text).encode('utf-8').decode('utf-8')
+
 def create_invoice_pdf(invoice):
-    """Tworzy szczegółowy PDF faktury z wszystkimi danymi"""
+    """Tworzy prosty PDF faktury"""
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
     
     # Rejestruj polskie czcionki
     register_polish_fonts()
     
-    # Style
+    # Style z polskimi czcionkami
     styles = getSampleStyleSheet()
+    
+    # Sprawdź czy DejaVu jest dostępne, jeśli nie użyj Helvetica
+    if 'DejaVuSans-Bold' in pdfmetrics.getRegisteredFontNames():
+        title_font = 'DejaVuSans-Bold'
+        normal_font = 'DejaVuSans'
+    else:
+        title_font = 'Helvetica-Bold'
+        normal_font = 'Helvetica'
+    
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
-        fontSize=18,
-        textColor=colors.black,
-        alignment=1,  # Wyśrodkowanie
-        fontName='DejaVuSans-Bold' if 'DejaVuSans-Bold' in pdfmetrics.getRegisteredFontNames() else 'Helvetica-Bold'
+        fontName=title_font,
+        fontSize=16
     )
-    
     normal_style = ParagraphStyle(
         'CustomNormal',
         parent=styles['Normal'],
-        fontSize=10,
-        fontName='DejaVuSans' if 'DejaVuSans' in pdfmetrics.getRegisteredFontNames() else 'Helvetica'
+        fontName=normal_font,
+        fontSize=10
     )
     
     # Elementy PDF
@@ -65,204 +77,47 @@ def create_invoice_pdf(invoice):
     elements.append(Paragraph("FAKTURA", title_style))
     elements.append(Spacer(1, 20))
     
-    # Dane podstawowe faktury
-    invoice_data = [
-        ['Numer faktury:', invoice.Number],
-        ['Data wystawienia:', invoice.IssuedAt.strftime('%d.%m.%Y') if invoice.IssuedAt else 'Brak daty'],
-        ['Termin płatności:', invoice.DueDate.strftime('%d.%m.%Y') if invoice.DueDate else 'Brak daty'],
-        ['Status:', 'OPŁACONA' if invoice.IsPaid else 'OCZEKUJĄCA NA PŁATNOŚĆ'],
-        ['Kwota faktury:', f"{float(invoice.TotalAmount):.2f} PLN" if invoice.TotalAmount else "0.00 PLN"],
-    ]
+    # Proste dane faktury
+    elements.append(Paragraph(f"<b>Numer faktury:</b> {invoice.Number}", normal_style))
+    elements.append(Paragraph(f"<b>Data wystawienia:</b> {invoice.IssuedAt.strftime('%d.%m.%Y') if invoice.IssuedAt else 'Brak daty'}", normal_style))
+    elements.append(Paragraph(f"<b>Termin płatności:</b> {invoice.DueDate.strftime('%d.%m.%Y') if invoice.DueDate else 'Brak daty'}", normal_style))
+    elements.append(Paragraph(f"<b>Status:</b> {'OPŁACONA' if invoice.IsPaid else 'OCZEKUJĄCA NA PŁATNOŚĆ'}", normal_style))
+    elements.append(Paragraph(f"<b>Kwota faktury:</b> {float(invoice.TotalAmount):.2f} PLN" if invoice.TotalAmount else "0.00 PLN", normal_style))
     
-    # Tabela z danymi podstawowymi
-    table = Table(invoice_data, colWidths=[150, 200])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (0, -1), 'DejaVuSans-Bold' if 'DejaVuSans-Bold' in pdfmetrics.getRegisteredFontNames() else 'Helvetica-Bold'),
-        ('FONTNAME', (1, 0), (1, -1), 'DejaVuSans' if 'DejaVuSans' in pdfmetrics.getRegisteredFontNames() else 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
-    
-    elements.append(table)
     elements.append(Spacer(1, 20))
     
     # Dane klienta
     if invoice.customer:
         elements.append(Paragraph("DANE KLIENTA", title_style))
-        elements.append(Spacer(1, 10))
-        
-        customer_data = [
-            ['Nazwa:', invoice.customer.Name],
-            ['Email:', invoice.customer.Email or 'Brak'],
-            ['Telefon:', invoice.customer.Phone or 'Brak'],
-            ['Firma:', invoice.customer.Company or 'Brak'],
-            ['Adres:', invoice.customer.Address or 'Brak'],
-        ]
-        
-        customer_table = Table(customer_data, colWidths=[100, 250])
-        customer_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (0, -1), 'DejaVuSans-Bold' if 'DejaVuSans-Bold' in pdfmetrics.getRegisteredFontNames() else 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'DejaVuSans' if 'DejaVuSans' in pdfmetrics.getRegisteredFontNames() else 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
-        
-        elements.append(customer_table)
-        elements.append(Spacer(1, 20))
-
-    # Pozycje faktury (InvoiceItems)
+        elements.append(Paragraph(f"<b>Nazwa:</b> {invoice.customer.Name}", normal_style))
+        elements.append(Paragraph(f"<b>Email:</b> {invoice.customer.Email or 'Brak'}", normal_style))
+        elements.append(Paragraph(f"<b>Telefon:</b> {invoice.customer.Phone or 'Brak'}", normal_style))
+        elements.append(Paragraph(f"<b>Firma:</b> {invoice.customer.Company or 'Brak'}", normal_style))
+        elements.append(Paragraph(f"<b>Adres:</b> {invoice.customer.Address or 'Brak'}", normal_style))
+    
+    elements.append(Spacer(1, 20))
+    
+    # Pozycje faktury
+    elements.append(Paragraph("POZYCJE FAKTURY", title_style))
     if invoice.invoice_items:
-        elements.append(Paragraph("POZYCJE NA FAKTURZE", title_style))
-        elements.append(Spacer(1, 10))
-
-        # Nagłówki tabeli pozycji
-        items_headers = ['LP', 'USŁUGA', 'ILOŚĆ', 'CENA JEDN.', 'WARTOŚĆ']
-        items_data = [items_headers]
-
-        for idx, item in enumerate(invoice.invoice_items, 1):
-            items_data.append([
-                str(idx),
-                item.service.Name if item.service else 'Nieznana usługa',
-                str(item.Quantity),
-                f"{float(item.UnitPrice):.2f} PLN" if item.UnitPrice else "0.00 PLN",
-                f"{float(item.UnitPrice * item.Quantity):.2f} PLN" if item.UnitPrice and item.Quantity else "0.00 PLN"
-            ])
-
-        items_table = Table(items_data, colWidths=[30, 200, 60, 90, 90])
-        items_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (0, -1), 'CENTER'),  # LP wyśrodkowane
-            ('ALIGN', (1, 0), (1, -1), 'LEFT'),    # Usługa wyrównana do lewej
-            ('ALIGN', (2, 0), (-1, -1), 'RIGHT'),  # Liczby do prawej
-            ('FONTNAME', (0, 0), (-1, 0), 'DejaVuSans-Bold' if 'DejaVuSans-Bold' in pdfmetrics.getRegisteredFontNames() else 'Helvetica-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'DejaVuSans' if 'DejaVuSans' in pdfmetrics.getRegisteredFontNames() else 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
-
-        elements.append(items_table)
-        elements.append(Spacer(1, 20))
-
-    # Historia płatności
-    from app.models.payment import Payment
-    payments = Payment.query.filter_by(InvoiceId=invoice.Id).order_by(Payment.PaidAt.desc()).all()
-    
-    if payments:
-        elements.append(Paragraph("HISTORIA PŁATNOŚCI", title_style))
-        elements.append(Spacer(1, 10))
-        
-        # Nagłówki tabeli płatności
-        payment_headers = ['ID PŁATNOŚCI', 'DATA PŁATNOŚCI', 'KWOTA', 'STATUS']
-        payment_data = [payment_headers]
-        
-        total_paid = 0
-        for payment in payments:
-            total_paid += float(payment.Amount)
-            payment_data.append([
-                str(payment.Id),
-                payment.PaidAt.strftime('%d.%m.%Y %H:%M') if payment.PaidAt else 'Brak daty',
-                f"{float(payment.Amount):.2f} PLN",
-                'OPŁACONA'
-            ])
-        
-        payment_table = Table(payment_data, colWidths=[80, 120, 100, 100])
-        payment_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'DejaVuSans-Bold' if 'DejaVuSans-Bold' in pdfmetrics.getRegisteredFontNames() else 'Helvetica-Bold'),
-            ('FONTNAME', (0, 1), (-1, -1), 'DejaVuSans' if 'DejaVuSans' in pdfmetrics.getRegisteredFontNames() else 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
-        
-        elements.append(payment_table)
-        elements.append(Spacer(1, 10))
-        
-        # Podsumowanie płatności
-        remaining_amount = float(invoice.TotalAmount) - total_paid if invoice.TotalAmount else 0
-        
-        summary_data = [
-            ['Do zapłaty:', f"{float(invoice.TotalAmount):.2f} PLN" if invoice.TotalAmount else "0.00 PLN"],
-            ['Zapłacono:', f"{total_paid:.2f} PLN"],
-            ['Pozostało:', f"{remaining_amount:.2f} PLN"],
-        ]
-        
-        summary_table = Table(summary_data, colWidths=[100, 150])
-        summary_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (0, -1), 'DejaVuSans-Bold' if 'DejaVuSans-Bold' in pdfmetrics.getRegisteredFontNames() else 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'DejaVuSans-Bold' if 'DejaVuSans-Bold' in pdfmetrics.getRegisteredFontNames() else 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.lightblue),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
-        
-        elements.append(summary_table)
-        elements.append(Spacer(1, 20))
-    
-    # Informacje dodatkowe
-    elements.append(Paragraph("INFORMACJE DODATKOWE", title_style))
-    elements.append(Spacer(1, 10))
-    
-    additional_data = [
-        ['Data wygenerowania PDF:', datetime.now().strftime('%d.%m.%Y %H:%M')],
-        ['ID faktury w systemie:', str(invoice.Id)],
-        ['ID klienta:', str(invoice.CustomerId)],
-    ]
-    
-    if invoice.AssignedGroupId:
-        additional_data.append(['Przypisana grupa ID:', str(invoice.AssignedGroupId)])
-    
-    if invoice.CreatedByUserId:
-        additional_data.append(['Utworzona przez użytkownika ID:', str(invoice.CreatedByUserId)])
-    
-    additional_table = Table(additional_data, colWidths=[150, 200])
-    additional_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (0, -1), 'DejaVuSans-Bold' if 'DejaVuSans-Bold' in pdfmetrics.getRegisteredFontNames() else 'Helvetica-Bold'),
-        ('FONTNAME', (1, 0), (1, -1), 'DejaVuSans' if 'DejaVuSans' in pdfmetrics.getRegisteredFontNames() else 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
-    
-    elements.append(additional_table)
+        for item in invoice.invoice_items:
+            service_name = item.service.Name if item.service else 'Usługa'
+            elements.append(Paragraph(f"• {service_name} - Ilość: {item.Quantity} - Cena: {float(item.UnitPrice):.2f} PLN", normal_style))
+    else:
+        elements.append(Paragraph("Brak pozycji", normal_style))
     
     # Buduj PDF
     doc.build(elements)
-    
     buffer.seek(0)
     return buffer
 
 @invoices_bp.route('/', methods=['GET'])
 @require_auth
 def get_invoices():
-    """Pobiera listę faktur"""
+    """Pobiera listę faktur, posortowaną od najnowszych (malejąco według ID)"""
     try:
-        invoices = Invoice.query.options(joinedload(Invoice.customer)).all()
+        # Pobierz faktury z danymi klienta, sortując od najnowszych (największe ID na początku)
+        invoices = Invoice.query.options(joinedload(Invoice.customer)).order_by(Invoice.Id.desc()).all()
         return jsonify([invoice.to_dict() for invoice in invoices]), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -285,24 +140,38 @@ def create_invoice():
         total_amount = Decimal(0)
 
         for item_data in items_data:
-            service = Service.query.get(item_data['serviceId'])
-            if service:
-                quantity = item_data.get('quantity', 1)
-                # Użyj stawki podatku z usługi, jeśli dostępna, w przeciwnym razie domyślnej 0.23
-                tax_rate = service.TaxRate if service.TaxRate is not None else Decimal('0.23')
+            service_id = item_data.get('serviceId')
+            if not service_id:
+                return jsonify({'error': 'Brak serviceId w pozycji'}), 400
                 
-                unit_price = Decimal(str(service.Price))
-                net_amount = unit_price * quantity
-                tax_amount = net_amount * tax_rate
-                gross_amount = net_amount + tax_amount
+            service = Service.query.get(service_id)
+            if not service:
+                return jsonify({'error': f'Usługa o ID {service_id} nie istnieje'}), 400
+                
+            quantity = item_data.get('quantity', 1)
+            tax_rate = service.TaxRate if service.TaxRate is not None else Decimal('0.23')
+            
+            unit_price = Decimal(str(service.Price))
+            net_amount = unit_price * quantity
+            tax_amount = net_amount * tax_rate
+            gross_amount = net_amount + tax_amount
 
-                total_amount += gross_amount
+            total_amount += gross_amount
+
+        # Oblicz datę płatności (domyślnie 14 dni od wystawienia)
+        due_date = None
+        if data.get('dueDate'):
+            due_date = datetime.fromisoformat(data.get('dueDate').replace('Z', '+00:00'))
+        else:
+            # Domyślnie 14 dni od daty wystawienia
+            from datetime import timedelta
+            due_date = datetime.now() + timedelta(days=14)
 
         new_invoice = Invoice(
             Number=data.get('invoiceNumber'),
             TotalAmount=total_amount,  # Obliczona kwota
             IsPaid=data.get('isPaid', False),
-            DueDate=datetime.fromisoformat(data.get('dueDate').replace('Z', '+00:00')) if data.get('dueDate') else None,
+            DueDate=due_date,
             CustomerId=data.get('customerId'),
             IssuedAt=datetime.now(),
             AssignedGroupId=data.get('assignedGroupId'),
@@ -314,9 +183,9 @@ def create_invoice():
 
         # Dodaj pozycje faktury (InvoiceItems)
         for item_data in items_data:
-            service = Service.query.get(item_data['serviceId'])
+            service_id = item_data.get('serviceId')
+            service = Service.query.get(service_id)
             if service:
-                # Użyj stawki podatku z usługi, jeśli dostępna, w przeciwnym razie domyślnej 0.23
                 tax_rate = service.TaxRate if service.TaxRate is not None else Decimal('0.23')
                 unit_price = service.Price  # Zapisz cenę z momentu utworzenia
                 quantity = item_data.get('quantity', 1)
@@ -354,7 +223,6 @@ def get_invoice(invoice_id):
         if not invoice:
             return jsonify({'error': 'Faktura nie znaleziona'}), 404
 
-        # Zwróć fakturę Z pozycjami
         return jsonify(invoice.to_dict(include_items=True)), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -381,14 +249,14 @@ def update_invoice(invoice_id):
             invoice.DueDate = datetime.fromisoformat(data['dueDate'].replace('Z', '+00:00')) if data['dueDate'] else None
         if 'assignedGroupId' in data:
             invoice.AssignedGroupId = data['assignedGroupId']
-        if 'customerId' in data: # Umożliwia zmianę klienta dla faktury
+        if 'customerId' in data:
             invoice.CustomerId = data['customerId']
 
         # Obsługa pozycji faktury
         if 'items' in data:
             # Usuń wszystkie istniejące pozycje faktury
             InvoiceItem.query.filter_by(InvoiceId=invoice_id).delete()
-            db.session.flush() # Upewnij się, że usunięcia są wykonane przed dodaniem nowych
+            db.session.flush()
 
             new_total_amount = Decimal(0)
             # Dodaj nowe pozycje faktury i przelicz TotalAmount
@@ -396,8 +264,7 @@ def update_invoice(invoice_id):
                 service = Service.query.get(item_data['serviceId'])
                 if service:
                     quantity = item_data.get('quantity', 1)
-                    unit_price = Decimal(str(service.Price)) # Użyj aktualnej ceny usługi i skonwertuj na Decimal
-                    # Użyj stawki podatku z usługi, jeśli dostępna, w przeciwnym razie domyślnej 0.23
+                    unit_price = Decimal(str(service.Price))
                     tax_rate = service.TaxRate if service.TaxRate is not None else Decimal('0.23')
 
                     net_amount = unit_price * quantity
@@ -425,7 +292,6 @@ def update_invoice(invoice_id):
 
         db.session.commit()
         
-        # Zwróć zaktualizowaną fakturę z pozycjami
         return jsonify(invoice.to_dict(include_items=True)), 200
     except Exception as e:
         db.session.rollback()
@@ -452,8 +318,10 @@ def delete_invoice(invoice_id):
 def generate_invoice_pdf(invoice_id):
     """Generuje PDF faktury"""
     try:
+        print(f"PDF request dla faktury {invoice_id}")
         # Pobierz token z parametrów URL (potrzebne dla window.open w przeglądarce)
         token = request.args.get('token')
+        print(f"Token: {token[:20] if token else 'BRAK'}...")
         if not token:
             return jsonify({'error': 'Brak tokenu autoryzacji'}), 401
 
@@ -477,9 +345,10 @@ def generate_invoice_pdf(invoice_id):
 
         # Pobierz fakturę z danymi klienta i pozycjami
         from sqlalchemy.orm import joinedload
+        from app.models import InvoiceItem
         invoice = Invoice.query.options(
             joinedload(Invoice.customer),
-            joinedload(Invoice.invoice_items).joinedload('service')
+            joinedload(Invoice.invoice_items).joinedload(InvoiceItem.service)
         ).get(invoice_id)
         if not invoice:
             return jsonify({'error': 'Faktura nie znaleziona'}), 404

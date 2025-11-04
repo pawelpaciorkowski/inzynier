@@ -12,12 +12,12 @@ templates_bp = Blueprint('templates', __name__)
 @templates_bp.route('/', methods=['GET'])
 @require_auth
 def get_templates():
-    """Pobierz wszystkie szablony dla zalogowanego użytkownika"""
+    """Pobierz wszystkie szablony dla zalogowanego użytkownika, posortowane od najnowszych"""
     try:
         user_id = get_current_user_id()
         
-        # Pobierz wszystkie szablony (model nie ma pól Type i Category)
-        templates = Template.query.order_by(Template.Name).all()
+        # Pobierz wszystkie szablony, sortując od najnowszych (największe ID na początku)
+        templates = Template.query.order_by(Template.Id.desc()).all()
         
         return jsonify([template.to_dict() for template in templates]), 200
         

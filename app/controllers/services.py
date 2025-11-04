@@ -8,9 +8,10 @@ services_bp = Blueprint('services', __name__)
 @services_bp.route('/', methods=['GET'])
 @require_auth
 def get_services():
-    """Pobiera listę usług"""
+    """Pobiera listę usług, posortowaną od najnowszych (malejąco według ID)"""
     try:
-        services = Service.query.all()
+        # Pobierz usługi, sortując od najnowszych (największe ID na początku)
+        services = Service.query.order_by(Service.Id.desc()).all()
         return jsonify([service.to_dict() for service in services]), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500

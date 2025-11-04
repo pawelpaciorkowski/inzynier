@@ -10,7 +10,7 @@ class SystemLog(db.Model):
     Source = db.Column(db.String(255))
     Details = db.Column(db.Text)
     Timestamp = db.Column(db.DateTime, default=datetime.now)
-    UserId = db.Column(db.Integer, db.ForeignKey('users.id'))
+    UserId = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
     
     # Relacje
     user = db.relationship('User', backref='system_logs')

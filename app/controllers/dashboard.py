@@ -58,13 +58,14 @@ def get_dashboard():
         if not user:
             return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
         
-        # Pobierz statystyki użytkownika
+        # Pobierz statystyki użytkownika - liczba zadań, przypomnień, wiadomości i notatek
         stats = db.session.execute(text("""
             SELECT 
                 (SELECT COUNT(*) FROM Tasks WHERE UserId = :user_id AND completed = 0) as pending_tasks,
                 (SELECT COUNT(*) FROM Tasks WHERE UserId = :user_id AND completed = 1) as completed_tasks,
                 (SELECT COUNT(*) FROM Reminders WHERE UserId = :user_id) as reminders_count,
-                (SELECT COUNT(*) FROM Messages WHERE RecipientUserId = :user_id AND IsRead = 0) as unread_messages_count
+                (SELECT COUNT(*) FROM Messages WHERE RecipientUserId = :user_id AND IsRead = 0) as unread_messages_count,
+                (SELECT COUNT(*) FROM Notes WHERE UserId = :user_id) as notes_count
         """), {'user_id': user.id}).fetchone()
 
         # Pobierz historię logowań
@@ -87,6 +88,7 @@ def get_dashboard():
             'tasksCount': stats[0] + stats[1], # Suma pending_tasks i completed_tasks
             'messagesCount': stats[3], # Liczba nieprzeczytanych wiadomości
             'remindersCount': stats[2], # Liczba przypomnień
+            'notesCount': stats[4], # Liczba notatek użytkownika
             'loginHistory': login_history_data
         }), 200
         
