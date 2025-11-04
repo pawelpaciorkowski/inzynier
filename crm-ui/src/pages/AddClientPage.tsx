@@ -11,6 +11,12 @@ interface Tag {
     color?: string;
 }
 
+interface User {
+    id: number;
+    username: string;
+    email: string;
+}
+
 export function AddClientPage() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -18,6 +24,8 @@ export function AddClientPage() {
     const [company, setCompany] = useState('');
     const [allTags, setAllTags] = useState<Tag[]>([]);
     const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
+    const [representativeUserId, setRepresentativeUserId] = useState<number | null>(null);
     const navigate = useNavigate();
     const { openModal, openToast } = useModal();
 
@@ -31,7 +39,16 @@ export function AddClientPage() {
                 openToast('Nie udało się pobrać tagów.', 'error');
             }
         };
+        const fetchUsers = async () => {
+            try {
+                const response = await api.get('/Profile/users-list');
+                setUsers(response.data || []);
+            } catch (err) {
+                console.error("Error fetching users:", err);
+            }
+        };
         fetchTags();
+        fetchUsers();
     }, []);
 
     const handleTagToggle = (tagId: number) => {
@@ -47,6 +64,7 @@ export function AddClientPage() {
         const token = localStorage.getItem('token');
         const newClient = {
             name, email, phone, company,
+            representativeUserId: representativeUserId || null,
             tagIds: selectedTagIds // Include selected tags
         };
 
@@ -80,6 +98,22 @@ export function AddClientPage() {
                 <div>
                     <label htmlFor="company" className="block text-sm font-medium text-gray-300 mb-1">Firma</label>
                     <input id="company" type="text" value={company} onChange={e => setCompany(e.target.value)} className="w-full p-2 rounded bg-gray-700 text-white border-gray-600" />
+                </div>
+                <div>
+                    <label htmlFor="representative" className="block text-sm font-medium text-gray-300 mb-1">Przedstawiciel (pracownik firmy)</label>
+                    <select
+                        id="representative"
+                        value={representativeUserId || ''}
+                        onChange={e => setRepresentativeUserId(e.target.value ? Number(e.target.value) : null)}
+                        className="w-full p-2 rounded bg-gray-700 text-white border-gray-600"
+                    >
+                        <option value="">-- Wybierz przedstawiciela --</option>
+                        {users.map(user => (
+                            <option key={user.id} value={user.id}>
+                                {user.username} ({user.email})
+                            </option>
+                        ))}
+                    </select>
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Tagi (kliknij aby wybrać)</label>

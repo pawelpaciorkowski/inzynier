@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useModal } from '../context/ModalContext';
@@ -7,6 +7,12 @@ import api from '../services/api';
 interface Customer {
     id: number;
     name: string;
+}
+
+interface Service {
+    id: number;
+    name: string;
+    price: number;
 }
 
 interface Contract {
@@ -22,6 +28,8 @@ interface Contract {
     paymentTermDays: number | null;
     scopeOfServices: string;
     customerId: number;
+    services?: Array<{ serviceId: number; serviceName: string; price: number; quantity: number }>;
+    serviceIds?: number[];
 }
 
 export function EditContractPage() {
@@ -38,6 +46,9 @@ export function EditContractPage() {
     const [scopeOfServices, setScopeOfServices] = useState('');
     const [customerId, setCustomerId] = useState<number | string>('');
     const [customers, setCustomers] = useState<Customer[]>([]);
+    const [services, setServices] = useState<Service[]>([]);
+    const [selectedServiceIds, setSelectedServiceIds] = useState<number[]>([]);
+    const [serviceQuantities, setServiceQuantities] = useState<Record<number, number>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { openModal, openToast } = useModal();
@@ -45,21 +56,41 @@ export function EditContractPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [contractRes, customersRes] = await Promise.all([
+                const [contractRes, customersRes, servicesRes] = await Promise.all([
                     api.get<Contract>(`/Contracts/${id}`),
                     api.get<Customer[]>('/Customers/'),
+                    api.get<Service[]>('/Services/'),
                 ]);
 
-                setTitle(contractRes.data.title);
-                setContractNumber(contractRes.data.contractNumber);
-                setPlaceOfSigning(contractRes.data.placeOfSigning);
+                setTitle(contractRes.data.title || '');
+                setContractNumber(contractRes.data.contractNumber || '');
+                setPlaceOfSigning(contractRes.data.placeOfSigning || '');
                 setSignedAt(contractRes.data.signedAt ? format(new Date(contractRes.data.signedAt), 'yyyy-MM-dd') : '');
                 setStartDate(contractRes.data.startDate ? format(new Date(contractRes.data.startDate), 'yyyy-MM-dd') : '');
                 setEndDate(contractRes.data.endDate ? format(new Date(contractRes.data.endDate), 'yyyy-MM-dd') : '');
                 setNetAmount(contractRes.data.netAmount ? contractRes.data.netAmount.toString() : '');
-                setPaymentTermDays(contractRes.data.paymentTermDays ? contractRes.data.paymentTermDays.toString() : '');
-                setScopeOfServices(contractRes.data.scopeOfServices);
+                // Ustaw paymentTermDays - obsłuż null/undefined
+                setPaymentTermDays(contractRes.data.paymentTermDays != null ? contractRes.data.paymentTermDays.toString() : '');
+                // Ustaw scopeOfServices - obsłuż null/undefined
+                setScopeOfServices(contractRes.data.scopeOfServices || '');
                 setCustomerId(contractRes.data.customerId);
+
+                // Ustaw wybrane usługi z kontraktu
+                if (contractRes.data.services && Array.isArray(contractRes.data.services)) {
+                    const serviceIds: number[] = [];
+                    const quantities: Record<number, number> = {};
+                    contractRes.data.services.forEach((service: { serviceId: number; serviceName: string; price: number; quantity: number }) => {
+                        serviceIds.push(service.serviceId);
+                        quantities[service.serviceId] = service.quantity || 1;
+                    });
+                    setSelectedServiceIds(serviceIds);
+                    setServiceQuantities(quantities);
+                } else if (contractRes.data.serviceIds && Array.isArray(contractRes.data.serviceIds)) {
+                    setSelectedServiceIds(contractRes.data.serviceIds);
+                    contractRes.data.serviceIds.forEach((sid: number) => {
+                        setServiceQuantities(prev => ({ ...prev, [sid]: 1 }));
+                    });
+                }
 
                 const customerData = customersRes.data;
                 let customersData: Customer[] = [];
@@ -71,8 +102,20 @@ export function EditContractPage() {
                 }
 
                 setCustomers(customersData);
-            } catch (err: any) {
-                const errorMessage = err.response?.data?.message || 'Nie udało się pobrać danych.';
+
+                // Pobierz listę wszystkich usług
+                const servicesData = servicesRes.data;
+                let servicesList: Service[] = [];
+                if (servicesData && typeof servicesData === 'object' && '$values' in servicesData && Array.isArray(servicesData.$values)) {
+                    servicesList = servicesData.$values;
+                } else if (Array.isArray(servicesData)) {
+                    servicesList = servicesData;
+                }
+                setServices(servicesList);
+            } catch (err: unknown) {
+                const errorMessage = (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response && err.response.data && typeof err.response.data === 'object' && 'message' in err.response.data && typeof err.response.data.message === 'string')
+                    ? err.response.data.message
+                    : 'Nie udało się pobrać danych.';
                 openModal({ type: 'error', title: 'Błąd', message: errorMessage });
                 setError(errorMessage);
             } finally {
@@ -81,6 +124,47 @@ export function EditContractPage() {
         };
         fetchData();
     }, [id, openModal]);
+
+    // Oblicz automatycznie netAmount na podstawie wybranych usług
+    const calculateNetAmount = useCallback(() => {
+        let total = 0;
+        selectedServiceIds.forEach(serviceId => {
+            const service = services.find(s => s.id === serviceId);
+            const quantity = serviceQuantities[serviceId] || 1;
+            if (service && service.price) {
+                total += service.price * quantity;
+            }
+        });
+        return total.toFixed(2);
+    }, [selectedServiceIds, serviceQuantities, services]);
+
+    // Aktualizuj netAmount gdy zmienią się wybrane usługi lub ilości
+    useEffect(() => {
+        const calculatedAmount = calculateNetAmount();
+        if (selectedServiceIds.length > 0) {
+            setNetAmount(calculatedAmount);
+        }
+    }, [calculateNetAmount, selectedServiceIds]);
+
+    const handleServiceToggle = (serviceId: number) => {
+        setSelectedServiceIds(prev => {
+            if (prev.includes(serviceId)) {
+                // Usuń usługę
+                const newQuantities = { ...serviceQuantities };
+                delete newQuantities[serviceId];
+                setServiceQuantities(newQuantities);
+                return prev.filter(id => id !== serviceId);
+            } else {
+                // Dodaj usługę z domyślną ilością 1
+                setServiceQuantities(prev => ({ ...prev, [serviceId]: 1 }));
+                return [...prev, serviceId];
+            }
+        });
+    };
+
+    const handleQuantityChange = (serviceId: number, quantity: number) => {
+        setServiceQuantities(prev => ({ ...prev, [serviceId]: Math.max(1, quantity) }));
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -93,6 +177,12 @@ export function EditContractPage() {
         }
 
         try {
+            // Przygotuj listę usług z ilościami
+            const servicesData = selectedServiceIds.map(serviceId => ({
+                serviceId,
+                quantity: serviceQuantities[serviceId] || 1
+            }));
+
             await api.put(`/Contracts/${id}`, {
                 id: parseInt(id as string),
                 title,
@@ -103,7 +193,9 @@ export function EditContractPage() {
                 endDate: endDate ? new Date(endDate).toISOString() : null,
                 netAmount: netAmount ? parseFloat(netAmount) : null,
                 paymentTermDays: paymentTermDays ? parseInt(paymentTermDays) : null,
-                scopeOfServices,
+                scopeOfServices,  // Zachowaj dla kompatybilności wstecznej
+                services: servicesData,  // Wyślij listę usług z ilościami
+                serviceIds: selectedServiceIds,  // Alternatywnie dla kompatybilności
                 customerId: parseInt(customerId as string),
             });
             openToast('Kontrakt został pomyślnie zaktualizowany.', 'success');
@@ -199,7 +291,9 @@ export function EditContractPage() {
                         />
                     </div>
                     <div className="mb-4">
-                        <label htmlFor="netAmount" className="block text-gray-300 text-sm font-bold mb-2">Kwota Netto:</label>
+                        <label htmlFor="netAmount" className="block text-gray-300 text-sm font-bold mb-2">
+                            Kwota Netto {selectedServiceIds.length > 0 && <span className="text-xs text-gray-400">(obliczona automatycznie)</span>}
+                        </label>
                         <input
                             type="number"
                             id="netAmount"
@@ -207,6 +301,8 @@ export function EditContractPage() {
                             value={netAmount}
                             onChange={(e) => setNetAmount(e.target.value)}
                             step="0.01"
+                            readOnly={selectedServiceIds.length > 0}
+                            title={selectedServiceIds.length > 0 ? "Kwota obliczana automatycznie na podstawie wybranych usług" : ""}
                         />
                     </div>
                     <div className="mb-4">
@@ -220,13 +316,64 @@ export function EditContractPage() {
                         />
                     </div>
                     <div className="mb-4">
-                        <label htmlFor="scopeOfServices" className="block text-gray-300 text-sm font-bold mb-2">Szczegółowy Zakres Usług:</label>
-                        <textarea
-                            id="scopeOfServices"
-                            className="shadow appearance-none border rounded w-full py-2 px-3 text-white leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600 placeholder-gray-400 h-32"
-                            value={scopeOfServices}
-                            onChange={(e) => setScopeOfServices(e.target.value)}
-                        />
+                        <label className="block text-gray-300 text-sm font-bold mb-2">Wybierz usługi (kwota zostanie obliczona automatycznie)</label>
+                        <div className="max-h-64 overflow-y-auto border border-gray-600 rounded bg-gray-700 p-3 space-y-2">
+                            {services.length === 0 ? (
+                                <p className="text-gray-400 text-sm">Brak dostępnych usług. Dodaj usługi w sekcji "Usługi".</p>
+                            ) : (
+                                services.map(service => {
+                                    const isSelected = selectedServiceIds.includes(service.id);
+                                    const quantity = serviceQuantities[service.id] || 1;
+                                    const totalPrice = (service.price || 0) * quantity;
+
+                                    return (
+                                        <div key={service.id} className={`p-3 rounded border ${isSelected ? 'border-green-500 bg-gray-600' : 'border-gray-600 bg-gray-700'}`}>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center space-x-3 flex-1">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => handleServiceToggle(service.id)}
+                                                        className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                                                    />
+                                                    <div className="flex-1">
+                                                        <label className="text-white font-medium cursor-pointer" onClick={() => handleServiceToggle(service.id)}>
+                                                            {service.name}
+                                                        </label>
+                                                        <p className="text-gray-400 text-sm">
+                                                            Cena: {service.price ? `${service.price.toFixed(2)} PLN` : 'Brak ceny'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                {isSelected && (
+                                                    <div className="flex items-center space-x-2">
+                                                        <label className="text-gray-300 text-sm">Ilość:</label>
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            value={quantity}
+                                                            onChange={(e) => handleQuantityChange(service.id, parseInt(e.target.value) || 1)}
+                                                            className="w-16 p-1 rounded bg-gray-800 text-white text-center border border-gray-600"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        />
+                                                        <span className="text-green-400 font-semibold min-w-[80px] text-right">
+                                                            = {totalPrice.toFixed(2)} PLN
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                        {selectedServiceIds.length > 0 && (
+                            <div className="mt-2 p-2 bg-gray-700 rounded">
+                                <p className="text-gray-300 text-sm">
+                                    Suma netto: <span className="text-green-400 font-bold text-lg">{calculateNetAmount()} PLN</span>
+                                </p>
+                            </div>
+                        )}
                     </div>
                     <div className="mb-4">
                         <label htmlFor="customerId" className="block text-gray-300 text-sm font-bold mb-2">Klient:</label>

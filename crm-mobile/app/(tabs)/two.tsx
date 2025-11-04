@@ -8,7 +8,8 @@ interface UserProfile {
     id: number; // Unikalny identyfikator użytkownika.
     username: string; // Nazwa użytkownika.
     email: string; // Adres email użytkownika.
-    roleName: string; // Nazwa roli przypisanej do użytkownika.
+    role: string | null; // Nazwa roli przypisanej do użytkownika (z backendu).
+    roleName?: string; // Alias dla kompatybilności wstecznej.
 }
 
 /**
@@ -44,7 +45,12 @@ export default function TabTwoScreen() {
                 const response = await api.get('/Profile');
                 if (!response.data) throw new Error('Nie udało się pobrać danych profilu.');
                 const data = response.data;
-                setUserProfile(data);
+                // Mapowanie roli - backend zwraca 'role', ale używamy również 'roleName' dla kompatybilności
+                const profileData: UserProfile = {
+                    ...data,
+                    roleName: data.role || null, // Ustawiamy roleName na podstawie role z backendu
+                };
+                setUserProfile(profileData);
             } catch (err: any) {
                 setError(err.message);
             } finally {
@@ -120,7 +126,7 @@ export default function TabTwoScreen() {
                 <Text style={styles.cardTitle}>Dane Profilu</Text>
                 <Text style={styles.infoText}>Nazwa użytkownika: {userProfile?.username}</Text>
                 <Text style={styles.infoText}>Email: {userProfile?.email}</Text>
-                <Text style={styles.infoText}>Rola: {userProfile?.roleName}</Text>
+                <Text style={styles.infoText}>Rola: {userProfile?.role || userProfile?.roleName || 'Brak'}</Text>
             </View>
 
             {/* Karta z formularzem zmiany hasła */}

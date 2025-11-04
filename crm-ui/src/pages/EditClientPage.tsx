@@ -10,12 +10,19 @@ interface Tag {
     color?: string;
 }
 
+interface User {
+    id: number;
+    username: string;
+    email: string;
+}
+
 interface CustomerFormData {
     name: string;
     email: string;
     phone?: string;
     company?: string;
     assignedGroupId?: number;
+    representativeUserId?: number | null;
     tagIds?: number[]; // Added tagIds to the form data
 }
 
@@ -23,6 +30,7 @@ export function EditClientPage() {
     const [formData, setFormData] = useState<Partial<CustomerFormData>>({});
     const [allTags, setAllTags] = useState<Tag[]>([]);
     const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -49,6 +57,14 @@ export function EditClientPage() {
                 // Ensure tagsData is always an array
                 setAllTags(Array.isArray(tagsData) ? tagsData : []);
 
+                // Fetch all users for representative selection
+                try {
+                    const usersResponse = await api.get('/Profile/users-list');
+                    setUsers(usersResponse.data || []);
+                } catch (err) {
+                    console.error("Error fetching users:", err);
+                }
+
                 // Set form data
                 setFormData({
                     name: clientData.name,
@@ -56,6 +72,7 @@ export function EditClientPage() {
                     phone: clientData.phone,
                     company: clientData.company,
                     assignedGroupId: clientData.assignedGroupId,
+                    representativeUserId: clientData.representativeUserId || null,
                 });
 
                 // Set selected tags
@@ -138,6 +155,22 @@ export function EditClientPage() {
                 <div>
                     <label htmlFor="company" className="block text-sm font-medium text-gray-300 mb-1">Firma</label>
                     <input id="company" name="company" type="text" value={formData.company || ''} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 text-white border-gray-600" />
+                </div>
+                <div>
+                    <label htmlFor="representative" className="block text-sm font-medium text-gray-300 mb-1">Przedstawiciel (pracownik firmy)</label>
+                    <select
+                        id="representative"
+                        value={formData.representativeUserId || ''}
+                        onChange={e => setFormData(prev => ({ ...prev, representativeUserId: e.target.value ? Number(e.target.value) : null }))}
+                        className="w-full p-2 rounded bg-gray-700 text-white border-gray-600"
+                    >
+                        <option value="">-- Wybierz przedstawiciela --</option>
+                        {users.map(user => (
+                            <option key={user.id} value={user.id}>
+                                {user.username} ({user.email})
+                            </option>
+                        ))}
+                    </select>
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Tagi (kliknij aby wybrać)</label>

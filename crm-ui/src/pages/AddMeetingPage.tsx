@@ -75,12 +75,11 @@ export function AddMeetingPage() {
         }
 
         try {
-            const adjustedScheduledAt = new Date(scheduledAt);
-            adjustedScheduledAt.setMinutes(adjustedScheduledAt.getMinutes() - adjustedScheduledAt.getTimezoneOffset());
+            const formattedDate = `${scheduledAt}:00`;
 
             await api.post('/Meetings', {
                 topic,
-                scheduledAt: adjustedScheduledAt.toISOString(),
+                scheduledAt: formattedDate,
                 customerId: parseInt(customerId as string),
             });
             openToast('Spotkanie zostało pomyślnie dodane.', 'success');

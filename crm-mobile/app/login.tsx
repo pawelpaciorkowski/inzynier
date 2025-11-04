@@ -11,7 +11,7 @@ export default function LoginScreen() {
     // Stan przechowujący nazwę użytkownika wprowadzoną przez użytkownika.
     const [username, setUsername] = useState('admin');
     // Stan przechowujący hasło wprowadzone przez użytkownika.
-    const [password, setPassword] = useState('Diviruse007!@#$');
+    const [password, setPassword] = useState('Diviruse007@');
     // Pobranie funkcji `login` z kontekstu autentykacji.
     const { login } = useAuth();
 

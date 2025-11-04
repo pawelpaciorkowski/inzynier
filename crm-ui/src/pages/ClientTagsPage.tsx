@@ -39,7 +39,7 @@ export function ClientTagsPage() {
     const [editName, setEditName] = useState('');
     const [editColor, setEditColor] = useState('');
     const [editDescription, setEditDescription] = useState('');
-    const { openToast } = useModal();
+    const { openToast, openModal } = useModal();
 
     const fetchTags = async () => {
         try {
@@ -87,15 +87,21 @@ export function ClientTagsPage() {
     };
 
     const handleDeleteTag = async (id: number) => {
-        if (!confirm("Czy na pewno chcesz usunąć ten tag? Spowoduje to usunięcie wszystkich powiązań.")) return;
-
-        try {
-            await api.delete(`/Tags/${id}`);
-            fetchTags();
-            openToast('Tag został usunięty pomyślnie', 'success');
-        } catch {
-            openToast('Wystąpił błąd podczas usuwania tagu', 'error');
-        }
+        // Otwórz modal potwierdzenia zamiast natywnego confirm
+        openModal({
+            type: 'confirm',
+            title: 'Potwierdź usunięcie',
+            message: 'Czy na pewno chcesz usunąć ten tag? Spowoduje to usunięcie wszystkich powiązań.',
+            onConfirm: async () => {
+                try {
+                    await api.delete(`/Tags/${id}`);
+                    fetchTags();
+                    openToast('Tag został usunięty pomyślnie', 'success');
+                } catch {
+                    openToast('Wystąpił błąd podczas usuwania tagu', 'error');
+                }
+            }
+        });
     };
 
 

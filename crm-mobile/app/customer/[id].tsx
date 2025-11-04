@@ -4,6 +4,7 @@ import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import api from '../../services/api';
+import { Picker } from '@react-native-picker/picker';
 
 // Definicja interfejsu dla szczegółowych danych klienta.
 interface CustomerDetails {
@@ -14,7 +15,8 @@ interface CustomerDetails {
     company?: string; // Nazwa firmy (opcjonalna).
     address?: string; // Adres (opcjonalny).
     nip?: string; // Numer NIP (opcjonalny).
-    representative?: string; // Przedstawiciel (opcjonalny).
+    representative?: any; // Obiekt przedstawiciela (użytkownik) lub null.
+    representativeUserId?: number | null; // ID przedstawiciela (użytkownika).
     createdAt: string; // Data utworzenia rekordu.
     assignedGroupId?: number; // ID przypisanej grupy (opcjonalne).
     assignedUserId?: number; // ID przypisanego użytkownika (opcjonalne).
@@ -59,6 +61,9 @@ export default function CustomerDetailScreen() {
     const [isEditing, setIsEditing] = useState(false);
     // Stan przechowujący dane formularza edycji.
     const [editForm, setEditForm] = useState<Partial<CustomerDetails>>({});
+    // Lista użytkowników do wyboru przedstawiciela.
+    const [users, setUsers] = useState<Array<{ id: number; username: string; email: string }>>([]);
+    const [loadingUsers, setLoadingUsers] = useState(false);
 
     // Efekt do pobierania szczegółów klienta z API.
     useEffect(() => {
@@ -72,7 +77,11 @@ export default function CustomerDetailScreen() {
                 if (!response.data) throw new Error('Nie udało się pobrać danych klienta.');
                 const data = response.data;
                 setCustomer(data);
-                setEditForm(data); // Inicjalizacja formularza edycji danymi klienta.
+                // Inicjalizacja formularza edycji - używamy representativeUserId z danych
+                setEditForm({
+                    ...data,
+                    representativeUserId: data.representativeUserId || null
+                });
             } catch (err: any) {
                 console.error("Błąd podczas pobierania klienta:", err);
                 setError(err.message || "Błąd podczas pobierania danych");
@@ -83,16 +92,43 @@ export default function CustomerDetailScreen() {
         fetchCustomerDetails();
     }, [id, token]);
 
+    // Pobierz listę użytkowników przy załadowaniu komponentu
+    useEffect(() => {
+        const fetchUsers = async () => {
+            if (!token) return;
+            setLoadingUsers(true);
+            try {
+                const response = await api.get('/Profile/users-list');
+                setUsers(response.data || []);
+            } catch (err: any) {
+                console.error("Błąd podczas pobierania użytkowników:", err);
+            } finally {
+                setLoadingUsers(false);
+            }
+        };
+        fetchUsers();
+    }, [token]);
+
     // Funkcja do zapisywania zmian w danych klienta.
     const handleSave = async () => {
         if (!customer || !token) return;
 
         try {
-            const response = await api.put(`/Customers/${customer.id}`, editForm);
+            // Przygotuj dane do wysłania - upewnij się że wysyłamy representativeUserId zamiast representative
+            const dataToSend = {
+                ...editForm,
+                representativeUserId: editForm.representativeUserId || null,
+            };
+            // Usuń stare pole representative jeśli istnieje
+            delete dataToSend.representative;
+            const response = await api.put(`/Customers/${customer.id}`, dataToSend);
             if (response.status === 200) { // Backend zwraca status 200
+                // Aktualizuj lokalny stan klienta
                 setCustomer({ ...customer, ...editForm });
                 setIsEditing(false); // Wyłączenie trybu edycji.
                 Alert.alert("Sukces", "Dane klienta zostały zaktualizowane");
+                // Lista klientów zostanie automatycznie odświeżona gdy wrócimy na ekran listy
+                // dzięki useFocusEffect w ekranie customers.tsx
             }
         } catch (err: any) {
             console.error("Błąd podczas aktualizacji:", err);
@@ -239,14 +275,24 @@ export default function CustomerDetailScreen() {
                             </View>
 
                             <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>Przedstawiciel</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    value={editForm.representative || ''}
-                                    onChangeText={(text) => setEditForm({ ...editForm, representative: text })}
-                                    placeholder="Imię i nazwisko przedstawiciela"
-                                    placeholderTextColor="#6b7280"
-                                />
+                                <Text style={styles.inputLabel}>Przedstawiciel (pracownik firmy)</Text>
+                                {loadingUsers ? (
+                                    <ActivityIndicator size="small" color="#10b981" style={{ padding: 12 }} />
+                                ) : (
+                                    <View style={styles.pickerContainer}>
+                                        <Picker
+                                            selectedValue={editForm.representativeUserId ?? null}
+                                            onValueChange={(itemValue) => setEditForm({ ...editForm, representativeUserId: itemValue || null })}
+                                            style={styles.picker}
+                                            dropdownIconColor="#fff"
+                                        >
+                                            <Picker.Item label="-- Wybierz przedstawiciela --" value={null} />
+                                            {users.map(user => (
+                                                <Picker.Item key={user.id} label={`${user.username} (${user.email})`} value={user.id} />
+                                            ))}
+                                        </Picker>
+                                    </View>
+                                )}
                             </View>
                         </View>
                     ) : (
@@ -258,7 +304,7 @@ export default function CustomerDetailScreen() {
                             <InfoRow label="Firma" value={customer.company} />
                             <InfoRow label="NIP" value={customer.nip} />
                             <InfoRow label="Adres" value={customer.address} />
-                            <InfoRow label="Przedstawiciel" value={customer.representative} />
+                            <InfoRow label="Przedstawiciel" value={customer.representative ? `${customer.representative.username || ''} (${customer.representative.email || ''})` : 'Brak'} />
                             <InfoRow label="Data utworzenia" value={new Date(customer.createdAt).toLocaleDateString('pl-PL')} />
                         </>
                     )}
@@ -352,6 +398,17 @@ const styles = StyleSheet.create({
     textArea: {
         height: 80,
         textAlignVertical: 'top',
+    },
+    pickerContainer: {
+        backgroundColor: '#374151',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#4b5563',
+        overflow: 'hidden',
+    },
+    picker: {
+        color: '#fff',
+        height: 50,
     },
     deleteButton: {
         flexDirection: 'row',

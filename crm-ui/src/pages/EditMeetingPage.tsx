@@ -55,8 +55,10 @@ export function EditMeetingPage() {
                 const customersData = '$values' in customersRes.data ? customersRes.data.$values : customersRes.data;
                 setCustomers(customersData);
 
-            } catch (err: any) {
-                const errorMessage = err.response?.data?.message || 'Nie udało się pobrać danych.';
+            } catch (err: unknown) {
+                const errorMessage = (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response && err.response.data && typeof err.response.data === 'object' && 'message' in err.response.data && typeof err.response.data.message === 'string')
+                    ? err.response.data.message
+                    : 'Nie udało się pobrać danych.';
                 setError(errorMessage);
                 openModal({ type: 'error', title: 'Błąd', message: errorMessage });
             } finally {
@@ -64,8 +66,8 @@ export function EditMeetingPage() {
             }
         };
         fetchData();
-    }, [id, openModal]); // Added openModal to dependency array
-
+    }, [id, openModal]);
+    
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -77,19 +79,18 @@ export function EditMeetingPage() {
         }
 
         try {
-            const adjustedScheduledAt = new Date(scheduledAt);
-            adjustedScheduledAt.setMinutes(adjustedScheduledAt.getMinutes() - adjustedScheduledAt.getTimezoneOffset());
+            const formattedDate = `${scheduledAt}:00`;
 
             await api.put(`/Meetings/${id}`, {
                 id: parseInt(id as string),
                 topic,
-                scheduledAt: adjustedScheduledAt.toISOString(),
+                scheduledAt: formattedDate,
                 customerId: parseInt(customerId),
             });
             openToast('Spotkanie zostało pomyślnie zaktualizowane.', 'success');
             navigate('/spotkania');
         } catch {
-            // Error is handled by the Axios interceptor or the modal, so we can leave this empty.
+            // axios albo modal obsłuży błąd
         } finally {
             setLoading(false);
         }

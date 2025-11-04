@@ -1,304 +1,332 @@
 # 📚 SZCZEGÓŁOWY OPIS METOD I FUNKCJI - CRM SYSTEM
 
-**Dokument opisujący wszystkie metody, funkcje i ich działanie po kropce w projekcie CRM**
+**Ten dokument stanowi szczegółowy, rozbudowany opis wszystkich kluczowych metod, funkcji oraz sposobów ich użycia w projekcie CRM. Każda metoda została opisana zarówno pod kątem działania, praktycznych zastosowań oraz *dokładnych miejsc użycia w kodzie projektu* – z wieloma przykładami i dodatkowymi wyjaśnieniami.**  
+Dzięki temu nawet osoby nietechniczne lub mniej doświadczone z łatwością zrozumieją, jak poszczególne metody wpływają na działanie całego systemu.
 
 ---
 
 ## 📋 SPIS TREŚCI
 
-1. [Metody SQLAlchemy (ORM)](#1-metody-sqlalchemy-orm)
-2. [Metody Flask](#2-metody-flask)
-3. [Metody Python - Wbudowane](#3-metody-python-wbudowane)
-4. [Metody Reaktywne (React)](#4-metody-reaktywne-react)
-5. [Metody Bibliotek Zewnętrznych](#5-metody-bibliotek-zewnętrznych)
-6. [Własne Metody Projektu](#6-własne-metody-projektu)
+1. [Metody SQLAlchemy (ORM) – Praca z bazą danych](#1-metody-sqlalchemy-orm)
+2. [Metody Flask – Obsługa żądań i odpowiedzi HTTP](#2-metody-flask)
+3. [Metody Python - Wbudowane – Praca z danymi w Pythonie](#3-metody-python-wbudowane)
+4. [Metody Reaktywne (React) – Frontend](#4-metody-reaktywne-react)
+5. [Metody Bibliotek Zewnętrznych – Narzędzia dodatkowe](#5-metody-bibliotek-zewnętrznych)
+6. [Własne Metody Projektu – Rozszerzenia specyficzne dla CRM](#6-własne-metody-projektu)
+7. [Podsumowanie](#7-podsumowanie)
 
 ---
 
 ## 1. METODY SQLALCHEMY (ORM)
 
-### 1.1. Query Methods - Metody Zapytań
+SQLAlchemy to zaawansowany Object Relational Mapper (ORM) – narzędzie łączące świat baz danych SQL z obiektami Pythona. Pozwala na czytanie, zapisywanie czy aktualizowanie danych z bazy w bardzo zwięzły i elastyczny sposób, unikając bezpośredniego pisania instrukcji SQL.
+
+### 1.1. Query Methods – Sposoby pobierania i filtrowania danych z bazy
 
 #### `Model.query.all()`
-**Co robi:**
-- Pobiera WSZYSTKIE rekordy z tabeli reprezentowanej przez model
-- Zwraca listę obiektów Python reprezentujących wiersze bazy danych
+**Opis szczegółowy:**
+- Pobiera **wszystkie rekordy (wiersze)** z tabeli bazy danych powiązanej z danym modelem Pythona (`Model` oznacza klasę reprezentującą konkretną tabelę, np. `Customer`).
+- Zwraca **listę obiektów** Python (każdy obiekt odpowiada jednemu wierszowi w bazie).
+- Jest to ekwiwalent instrukcji `SELECT * FROM TableName` w SQL.
 
-**Przykład:**
+**Wady i zalety:**
+- Prosta w użyciu, ale w przypadku bardzo dużych tabel jej wywołanie może znacząco obciążyć pamięć (bo pobiera *wszystkie* dane).
+- Zalecana do niewielkich lub średnich zbiorów danych, albo gdy użytkownik rzeczywiście chce pobrać całą tabelę.
+
+**Przykład użycia:**
 ```python
 customers = Customer.query.all()
+# customers to lista zawierająca obiekty typu Customer reprezentujące wszystkich klientów z bazy.
 # Zwraca: [Customer, Customer, Customer, ...]
-# SQL: SELECT * FROM Customers
+# W SQL: SELECT * FROM Customers
 ```
 
-**Składnia:**
-- `query` - dostęp do Query Builder'a SQLAlchemy
-- `.all()` - metoda wykonująca zapytanie i zwracająca wszystkie wyniki jako lista
+**Struktura wywołania:**
+- `Model.query` – rozpoczyna budowanie zapytania na tabeli.
+- `.all()` – wykonuje zapytanie oraz konwertuje wyniki do typowej listy Pythona.
 
-**Użycie w projekcie:**
+**W praktyce w projekcie (Plik: backend-python/app/controllers/customers.py):**
 ```python
-# backend-python/app/controllers/customers.py
 def get_customers():
     customers = Customer.query.all()  # Pobiera wszystkich klientów
+    # Następnie każdy klient zamieniany jest na słownik (dict) i wysyłany jako json
     return jsonify([c.to_dict() for c in customers])
 ```
 
 ---
 
 #### `Model.query.get(id)`
-**Co robi:**
-- Pobiera JEDEN rekord z tabeli na podstawie primary key (ID)
-- Zwraca obiekt modelu lub `None` jeśli nie znaleziono
+**Opis szczegółowy:**
+- Pobiera **jeden, konkretny rekord** z bazy na podstawie jego klucza głównego (najczęściej unikalne ID).
+- Zwraca instancję obiektu modelu, jeśli rekord został znaleziony, lub `None`, jeśli nie istnieje taki rekord w tabeli.
+- W SQL odpowiada zapytaniu `SELECT * FROM TableName WHERE id = ? LIMIT 1`
+
+**Dodatkowe wyjaśnienie:**
+- Wartość `id` powinna być kluczem głównym (primary key) danego modelu.
+- Bardzo wydajne – wykorzystuje optymalizacje bazy.
 
 **Przykład:**
 ```python
 customer = Customer.query.get(123)
-# Zwraca: Customer object lub None
-# SQL: SELECT * FROM Customers WHERE Id = 123
+# customer będzie obiektem Customer o id=123 lub None, jeśli nie znajdzie rekordu.
 ```
 
-**Składnia:**
-- `query` - Query Builder
-- `.get(id)` - metoda pobierająca po ID
-
-**Użycie w projekcie:**
+**Zastosowanie w projekcie (backend-python/app/controllers/customers.py):**
 ```python
-# backend-python/app/controllers/customers.py
 def get_customer(customer_id):
     customer = Customer.query.get(customer_id)
     if not customer:
         return jsonify({'error': 'Not found'}), 404
+    # Tu można bezpiecznie używać customer, np. customer.name, ...
 ```
 
 ---
 
 #### `Model.query.filter_by(**kwargs).first()`
-**Co robi:**
-- Filtruje rekordy po podanych kryteriach
-- `.first()` - zwraca tylko PIERWSZY rekord lub `None`
+**Opis szczegółowy:**
+- Pobiera PIERWSZY rekord z tabeli, który spełnia podane prostym porównaniem warunki (argumenty nazwane w `filter_by`).
+- Zwraca tylko jeden obiekt (lub `None`), nawet gdy warunków spełnia więcej rekordów.
+- `filter_by` pozwala na łatwe i czytelne filtrowanie po wartościach klucz=wartość (np. po nazwie użytkownika).
 
 **Przykład:**
 ```python
 user = User.query.filter_by(username='admin').first()
-# Zwraca: User object lub None
+# Pozwala sprawdzić, czy istnieje użytkownik o danej nazwie.
 # SQL: SELECT * FROM users WHERE username = 'admin' LIMIT 1
 ```
 
-**Składnia:**
-- `query` - Query Builder
-- `.filter_by(**kwargs)` - filtrowanie po polach (operator =)
-- `.first()` - zwraca pierwszy wynik
-
-**Użycie w projekcie:**
+**W projekcie CRM (backend-python/app/controllers/auth.py):**
 ```python
-# backend-python/app/controllers/auth.py
 def login():
     user = User.query.filter_by(username=username).first()
-    # Znajduje użytkownika po nazwie
+    # Jeżeli user to None – nie istnieje użytkownik o podanym username.
 ```
 
 ---
 
 #### `Model.query.filter(condition).all()`
-**Co robi:**
-- Filtruje rekordy po skomplikowanych warunkach
-- Zwraca listę wszystkich pasujących rekordów
+**Opis szczegółowy:**
+- Filtrowanie rekordów po ZŁOŻONYCH warunkach (m.in. operatory `<`, `>`, `like`, `in` itp.).
+- Zwraca całą listę obiektów spełniających złożone kryteria.
+- Umożliwia bardziej zaawansowane wyszukiwanie niż `filter_by`, np. szukanie po "części" nazwy, sprawdzanie wielu warunków logicznych itp.
 
 **Przykład:**
 ```python
 customers = Customer.query.filter(Customer.Name.like('%Kowalski%')).all()
-# Zwraca: Lista Customer objects
-# SQL: SELECT * FROM Customers WHERE Name LIKE '%Kowalski%'
+# Zwraca listę klientów, których nazwisko zawiera "Kowalski"
 ```
 
-**Składnia:**
-- `query` - Query Builder
-- `.filter(condition)` - filtrowanie po złożonych warunkach (>, <, like, in, etc.)
-- `.all()` - zwraca wszystkie wyniki
+**W projekcie (backend-python/app/controllers/customers.py / search endpoint):**
+```python
+def search_customers():
+    query = request.args.get('q', '')
+    customers = Customer.query.filter(Customer.Name.like(f'%{query}%')).all()
+    return jsonify([c.to_dict() for c in customers])
+```
 
 ---
 
 #### `Model.query.filter(condition).order_by(column).all()`
-**Co robi:**
-- Filtruje i sortuje rekordy
-- `.order_by()` - sortuje po kolumnie
+**Opis szczegółowy:**
+- Pozwala zwęzić wyniki zapytania (`filter`) ORAZ posortować je po wybranej kolumnie (`order_by`).
+- Szczególnie przydatne do uzyskiwania posortowanej listy np. klientów według nazwiska lub faktur według daty.
+- Domyślnie sortuje rosnąco; dla malejąco, używa się `column.desc()`.
 
 **Przykład:**
 ```python
 customers = Customer.query.order_by(Customer.Name).all()
-# Zwraca: Lista posortowana alfabetycznie po Name
+# Lista klientów posortowana alfabetycznie po nazwisku.
 # SQL: SELECT * FROM Customers ORDER BY Name
 ```
 
-**Składnia:**
-- `.order_by(column)` - sortowanie rosnąco
-- `.order_by(column.desc())` - sortowanie malejąco
+**W projekcie (backend-python/app/controllers/customers.py / get_sorted endpoint):**
+```python
+def get_customers_sorted():
+    customers = Customer.query.order_by(Customer.Name).all()
+    return jsonify([c.to_dict() for c in customers])
+```
 
 ---
 
-### 1.2. Session Methods - Metody Sesji
+### 1.2. Session Methods – Operacje na sesji SQLAlchemy
+
+W ORM SQLAlchemy zmiany w bazie danych (dodawanie, zmiana, usuwanie) przechodzą przez obiekt sesji (`db.session`). Daje to możliwość wykonania kilku zmian naraz, a także wycofania ich w razie błędu.
 
 #### `db.session.add(object)`
-**Co robi:**
-- Dodaje nowy obiekt do sesji SQLAlchemy (do zapisu)
-- Nie zapisuje jeszcze do bazy! Trzeba wywołać `commit()`
+**Opis szczegółowy:**
+- Dodaje nowy obiekt modelu do sesji – czyli przygotowuje go do zapisania do bazy danych, ale nie wykonuje zapisu od razu!
+- Obiekt jest jeszcze tylko "w pamięci"; zostanie faktycznie stworzony w bazie dopiero po `commit()`.
+
+**Szczegółowy opis mechanizmu:**
+1. Tworzony jest nowy obiekt modelu.
+2. `db.session.add()` rejestruje ten obiekt w tzw. staging area (kolejka oczekujących na zapis).
+3. Dopiero `db.session.commit()` przesyła wszystkie zmiany do bazy.
 
 **Przykład:**
 ```python
 new_customer = Customer(Name='Jan Kowalski', Email='jan@example.com')
-db.session.add(new_customer)  # Dodaje do sesji (staging area)
-db.session.commit()  # Zapisuje do bazy
-# SQL: INSERT INTO Customers (Name, Email) VALUES ('Jan Kowalski', 'jan@example.com')
+db.session.add(new_customer)  # Rejestracja do późniejszego zapisu
+db.session.commit()           # Teraz naprawdę zapisuje do bazy!
 ```
 
-**Składnia:**
-- `db.session` - obiekt sesji SQLAlchemy
-- `.add(object)` - dodaje obiekt do staging area
-
-**Mechanizm działania:**
-1. Tworzenie obiektu Python (nie w bazie jeszcze)
-2. `db.session.add()` - dodanie do sesji
-3. `db.session.commit()` - SQL INSERT
-
-**Użycie w projekcie:**
+**Miejsce użycia w projekcie (backend-python/app/controllers/customers.py):**
 ```python
-# backend-python/app/controllers/customers.py
 def create_customer():
     data = request.get_json()
-    customer = Customer(Name=data['name'], Email=data['email'])
-    db.session.add(customer)  # Przygotowanie do zapisu
-    db.session.commit()  # Zapis do bazy
+    new_customer = Customer(Name=data['name'], Email=data['email'])
+    db.session.add(new_customer)
+    db.session.commit()
+    return jsonify(new_customer.to_dict()), 201
 ```
 
 ---
 
 #### `db.session.commit()`
-**Co robi:**
-- Wykonuje wszystkie zmiany oczekujące w sesji (INSERT, UPDATE, DELETE)
-- Zapisuje trwale do bazy danych
+**Opis szczegółowy:**
+- Jest to KROK NIEZBĘDNY do wprowadzenia wcześniej przygotowanych operacji na bazie (dodania, modyfikacji, usunięcia) w życie.
+- Zatwierdza wszystkie zmiany w sesji w ramach jednej transakcji, gwarantując spójność i bezpieczeństwo.
+
+**Dodatkowe wyjaśnienia:**
+- W razie błędu podczas commit – żadna z operacji nie zostanie zapisana.
+- Zaleca się objęcie commit blokiem `try`/`except`, aby móc w razie potrzeby wykonać `rollback()`.
 
 **Przykład:**
 ```python
 db.session.add(new_customer)
 db.session.add(new_invoice)
-db.session.commit()  # Zap obie operacje do bazy
-# SQL: INSERT INTO ...; INSERT INTO ...
+db.session.commit()  # Oba rekordy zostaną zapisane jednocześnie.
 ```
 
-**Składnia:**
-- `db.session.commit()` - wykonuje i zatwierdza transakcję
-
-**Ważne:**
-- BEZ `commit()` - zmiany NIE są zapisywane!
-- `commit()` - zatwierdza wszystkie zmiany w sesji
+**W projekcie (backend-python/app/controllers/customers.py lub invoices.py):**
+```python
+try:
+    db.session.add(item)
+    db.session.commit()
+except Exception:
+    db.session.rollback()
+    return jsonify({"error": "Błąd zapisu"}), 500
+```
 
 ---
 
 #### `db.session.delete(object)`
-**Co robi:**
-- Oznacza obiekt do USUNIĘCIA
-- Nie usuwa od razu! Trzeba wywołać `commit()`
+**Opis szczegółowy:**
+- Oznacza dany obiekt do usunięcia (dodaje polecenie DELETE do staging area).
+- Usunięcie następuje dopiero po `commit()`.
+- Umożliwia wykonanie skomplikowanych operacji wielu kasowań w jednej transakcji.
 
 **Przykład:**
 ```python
 customer = Customer.query.get(123)
-db.session.delete(customer)  # Oznacza do usunięcia
-db.session.commit()  # SQL DELETE
-# SQL: DELETE FROM Customers WHERE Id = 123
+db.session.delete(customer)
+db.session.commit()  # Fizycznie kasuje rekord z bazy.
 ```
 
-**Składnia:**
-- `db.session.delete(object)` - oznacza obiekt do usunięcia
+**Miejsce użycia w projekcie (backend-python/app/controllers/customers.py):**
+```python
+def delete_customer(customer_id):
+    customer = Customer.query.get(customer_id)
+    db.session.delete(customer)
+    db.session.commit()
+    return jsonify({'deleted': True})
+```
 
 ---
 
 #### `db.session.rollback()`
-**Co robi:**
-- Anuluje WSZYSTKIE zmiany w sesji
-- Cofa wszystko co było dodane/zmienione od ostatniego `commit()`
+**Opis szczegółowy:**
+- Cofnięcie WSZYSTKICH oczekujących na zapis zmian w sesji od ostatniego commit.  
+- Zapobiega zapisowi błędnych danych w bazie podczas błędów lub przerwanych transakcji.
+- Zalecane przy obsłudze wyjątków.
+
+**Rozbudowane wyjaśnienie:**
+- Jeśli w trakcie zapisu kilku zmian pojawi się błąd (np. naruszenie unikalności), `rollback()` anuluje *wszystkie* zmiany jeszcze niezapisane w bieżącej sesji.
+- Pozwala utrzymać bazę w spójnym stanie – żadne częściowe zmiany nie przechodzą do bazy.
 
 **Przykład:**
-```python
-db.session.add(customer1)
-db.session.add(customer2)
-db.session.rollback()  # Anuluje wszystko!
-# Żadne zmiany nie zostały zapisane
-```
-
-**Użycie w projekcie:**
 ```python
 try:
     db.session.add(customer)
     db.session.commit()
 except:
-    db.session.rollback()  # Wycofaj przy błędzie
+    db.session.rollback()  # Wycofanie wszystkich przygotowanych, ale niezapisanych zmian
+```
+
+**Miejsce użycia w projekcie (backend-python/app/controllers/customers.py):**
+```python
+def dangerous_operation():
+    try:
+        # ... zmiany na bazie
+        db.session.commit()
+    except:
+        db.session.rollback()
+        return jsonify({'error': 'Operacja cofnięta'}), 400
 ```
 
 ---
 
-### 1.3. Relationship Methods - Metody Relacji
+### 1.3. Relationship Methods – Praca z relacjami pomiędzy tabelami
 
 #### `object.relationship_name`
-**Co robi:**
-- Dostęp do powiązanych rekordów przez relację
-- SQLAlchemy automatycznie wykonuje JOIN
+**Opis szczegółowy:**
+- Pozwala uzyskiwać powiązane dane bez pisania JOIN w SQL – po stronie Pythona, wystarczy sięgnąć po atrybut wskazany w relacji (np. `customer.invoices`).
+- SQLAlchemy automatycznie generuje odpowiednie zapytania do bazy (np. pobiera wszystkie faktury wybranego klienta).
+- Relacje definiuje się w modelach za pomocą `db.relationship` oraz `backref` (umożliwia dostęp w obie strony).
 
-**Przykład:**
-```python
-customer = Customer.query.get(123)
-customer_invoices = customer.invoices  # Automatyczny JOIN!
-# SQL: SELECT * FROM Invoices WHERE CustomerId = 123
-```
-
-**Składnia:**
-- `object.relationship_name` - dostęp przez nazwę relacji zdefiniowanej w modelu
-
-**Definicja w modelu:**
+**Szczegółowy przykład:**
 ```python
 class Customer(db.Model):
     # ...
     invoices = db.relationship('Invoice', backref='customer')
 
-# Użycie:
-customer.invoices  # Lista faktur klienta
-invoice.customer   # Obiekt klienta (dzięki backref)
+customer = Customer.query.get(123)
+customer_invoices = customer.invoices  # Lista wszystkich faktur klienta o id = 123
+# SQL wykonywane automatycznie: SELECT * FROM Invoices WHERE CustomerId = 123
+
+invoice = Invoice.query.get(99)
+invoice_customer = invoice.customer    # Obiekt Customer do którego należy faktura
 ```
+
+**W projekcie (backend-python/app/models/customer.py):**  
+Relacja z fakturami; wykorzystywane podczas pobierania pełnych danych klienta.
 
 ---
 
 #### `db.session.refresh(object)`
-**Co robi:**
-- Odświeża obiekt z bazy danych
-- Ładuje najnowsze dane i relacje
+**Opis szczegółowy:**
+- **Odświeża** obiekt modelu Pythona danymi **najbardziej aktualnymi z bazy**.
+- Przydatne, jeśli inny proces lub operacja zmodyfikowała dane bezpośrednio w bazie (poza aktualnym obiektem Python).
+- Nadpisuje (cofa) ewentualne zmiany wprowadzane lokalnie przed zapisem.
 
 **Przykład:**
 ```python
 customer = Customer.query.get(123)
-customer.Name = 'Nowe imię'
-db.session.refresh(customer)  # Wczytuje ORYGINALNE dane z bazy
-# customer.Name będzie takie jak było w bazie (przed zmianą)
+customer.Name = 'Nowe Imię'
+db.session.refresh(customer)
+# customer.Name zostaje ponownie ustawione na oryginalną wartość z bazy danych.
 ```
 
-**Składnia:**
-- `db.session.refresh(object)` - reload danych z bazy
+**Praktyczne miejsce użycia:**
+- Synchronizacja stanu modelu po zewnętrznej zmianie w bazie, np. po obsłudze webhooków lub masowych aktualizacjach (backend-python/app/controllers/sync.py).
 
 ---
 
-### 1.4. Model Methods - Metody Modelu
+### 1.4. Model Methods – Własne narzędzia w modelach
 
 #### `object.to_dict()`
-**Co robi:**
-- Konwertuje obiekt modelu SQLAlchemy do słownika Python
-- Używane do serializacji do JSON
+**Opis szczegółowy:**
+- Metoda własna każdej klasy modelu w projekcie, umożliwiająca łatwe zamienianie obiektu na zwykły słownik (`dict`) – czyli strukturę Python łatwą do przesyłania (np. do formatu JSON).
+- To tzw. **serializacja** – przekształcanie obiektu w strukturę, którą można przesłać przez API lub zapisać.
+- Pozwala wybrać, które pola modelu są widoczne na zewnątrz, a których nie należy udostępniać (np. hasła!).
 
 **Przykład:**
 ```python
 customer = Customer.query.get(123)
 customer_dict = customer.to_dict()
-# Zwraca: {'id': 123, 'name': 'Jan', 'email': 'jan@example.com'}
+# {'id': 123, 'name': 'Jan', 'email': 'jan@example.com'}
 ```
 
-**Definicja w modelu:**
+**Typowa definicja metody (backend-python/app/models/customer.py):**
 ```python
 class Customer(db.Model):
     # ...
@@ -310,226 +338,209 @@ class Customer(db.Model):
         }
 ```
 
-**Użycie w projekcie:**
-```python
-# backend-python/app/controllers/customers.py
-customers = Customer.query.all()
-return jsonify([c.to_dict() for c in customers])
-# Zwraca JSON z listą słowników
-```
+**Wyjaśnienie praktyczne:**
+- Dzięki `to_dict()` można przekazać dane dalej (np. do warstwy frontendowej React) bez ryzyka, że trafią tam wrażliwe lub zbędne dane z modelu.
+- Miejsce użycia: wszystkie endpointy API zwracające dane klientów/rekordów.
 
 ---
 
 ## 2. METODY FLASK
 
-### 2.1. Request Methods
+Framework Flask odpowiada za przyjmowanie żądań z przeglądarki/frontendu, obsługę danych przesyłanych do serwera oraz generowanie odpowiedzi.
+
+### 2.1. Request Methods – Odczyt danych z zapytań HTTP
 
 #### `request.get_json()`
-**Co robi:**
-- Pobiera dane JSON z body żądania HTTP (POST, PUT)
-- Parsuje JSON do słownika Python
+**Rozszerzony opis:**
+- Pobiera cały "body" (ciało zapytania HTTP) i **próbuje przetworzyć go jako JSON**. Dane zwracane są jako **słownik Python** (dict).
+- Najczęściej stosowane do odbierania danych przesyłanych przez klienta przy metodach POST/PUT/PATCH.
+- Umożliwia wygodną pracę z danymi formularza przesłanego z aplikacji webowej.
 
-**Przykład:**
+**Łańcuch działania:**
+1. Frontend przesyła JSON, np. `{"name": "Jan", "email": "jan@example.com"}`.
+2. `request.get_json()` zmienia to na Pythona: `{'name': 'Jan', 'email': 'jan@example.com'}`.
+
+**Przykład praktyczny:**
 ```python
-# Request: POST /api/Customers/
-# Body: {"name": "Jan", "email": "jan@example.com"}
-
 data = request.get_json()
-# data = {'name': 'Jan', 'email': 'jan@example.com'}
+name = data.get('name')
+email = data.get('email')
 ```
 
-**Składnia:**
-- `request` - global object Flask z danymi żądania
-- `.get_json()` - parsuje body jako JSON
-
-**Użycie w projekcie:**
+**Miejsce użycia w projekcie (backend-python/app/controllers/customers.py):**
 ```python
-# backend-python/app/controllers/customers.py
 def create_customer():
     data = request.get_json()
-    name = data.get('name')
-    email = data.get('email')
+    # ...
 ```
 
 ---
 
 #### `request.args.get(key)`
-**Co robi:**
-- Pobiera parametr z URL (query string)
-- URL: `/api/Customers?status=active`
+**Rozszerzony opis:**
+- Umożliwia pobieranie **parametrów z adresu URL** (tzw. query string, np. `?page=1&status=active`).
+- Cały zestaw parametrów dostępny jest jako słownik (dict) `request.args`, a metoda `get` pozwala bezpiecznie pobrać konkretną wartość, podając opcjonalną wartość domyślną.
 
-**Przykład:**
+**Przykład praktyczny:**
 ```python
-# URL: /api/Customers?status=active&page=1
+# Przy adresie: /api/Customers?status=active&page=2
 status = request.args.get('status')  # 'active'
-page = request.args.get('page')      # '1'
-page = request.args.get('page', '1')  # '1' (default value)
+page = request.args.get('page', '1') # '2'; domyślnie 1 jeśli brak
 ```
 
-**Składnia:**
-- `request.args` - słownik z parametrami URL
-- `.get(key, default)` - pobiera wartość lub default
+**Typowe scenariusze:**
+- Filtrowanie danych (np. po statusie, dacie),
+- Paginacja (podział na strony).
 
-**Użycie w projekcie:**
+**Miejsce użycia: backend-python/app/controllers/customers.py (paginacja/filtracja):**
 ```python
-# backend-python/app/controllers/customers.py
-status = request.args.get('status')
-if status:
-    customers = Customer.query.filter_by(Status=status).all()
+def get_customers():
+    status = request.args.get('status')
+    # ...
 ```
 
 ---
 
 #### `request.headers.get(key)`
-**Co robi:**
-- Pobiera wartość nagłówka HTTP
+**Rozszerzony opis:**
+- Pozwala pobierać wartości z **nagłówków HTTP**, które zwykle oprócz danych przesyłanych w body, zawierają kluczowe informacje o żądaniu (np. nagłówek autoryzacyjny Authorization, język preferowany przez użytkownika itd.).
+- Kluczowe przy obsłudze uwierzytelniania, gdzie token JWT jest zwykle wysyłany właśnie w nagłówku.
 
 **Przykład:**
 ```python
 token = request.headers.get('Authorization')
-# Pobiera: 'Bearer eyJhbGciOiJIUzI1NiIs...'
 ```
 
-**Użycie w projekcie:**
-```python
-# backend-python/app/middleware.py
-token = request.headers.get('Authorization')
-if not token:
-    return jsonify({'error': 'Brak tokena'}), 401
-```
+**Sposób użycia:**
+- Jeśli token nie zostanie przesłany – zwykle kończy się to błędem autoryzacji.
+
+**Miejsce użycia: backend-python/app/middleware/auth.py i helpers/get_current_user.py**
 
 ---
 
-### 2.2. Response Methods
+### 2.2. Response Methods – Tworzenie odpowiedzi HTTP
 
 #### `jsonify(data)`
-**Co robi:**
-- Konwertuje dane Python (dict, list) do odpowiedzi JSON
-- Ustawia header `Content-Type: application/json`
+**Rozszerzony opis:**
+- Zamienia przekazane dane Pythona (dict, list, itd.) na standardową odpowiedź JSON, którą frontend może przetworzyć.
+- Ustawia odpowiedni header Content-Type – dzięki temu klient (np. przeglądarka lub frontend) wie, że otrzymał JSON.
+- Przyjmuje dowolne serializowalne dane; najczęściej słowniki lub tablice słowników.
+
+**Praktyczne zastosowanie:**
+- Szybka konwersja wyników zapytań do formatu akceptowanego przez frontend.
+- Możliwość podania statusu HTTP razem z danymi.
 
 **Przykład:**
 ```python
 return jsonify({'message': 'Success'}), 200
-# Response: {"message": "Success"}
-# Status: 200 OK
+# Odpowiedź: {"message": "Success"}, kod 200 OK
 ```
 
-**Składnia:**
-- `jsonify(data)` - konwertuje do JSON
-- `jsonify(data), status_code` - z kodem statusu
-
-**Użycie w projekcie:**
-```python
-# backend-python/app/controllers/customers.py
-return jsonify({'error': 'Not found'}), 404
-return jsonify(customer.to_dict()), 200
-```
+**W projekcie: zwracanie JSONa z każdego endpointu, np. backend-python/app/controllers/customers.py i invoices.py**
 
 ---
 
 #### `send_file(path)`
-**Co robi:**
-- Wysyła plik jako odpowiedź HTTP (PDF, DOCX, etc.)
+**Rozszerzony opis:**
+- Służy do zwracania plików (np. PDF, obrazy, generowane dokumenty) jako odpowiedzi HTTP – użytkownik może dzięki temu pobrać fakturę, raport czy załącznik.
+- Ustawia odpowiedni typ odpowiedzi w nagłówkach.
 
 **Przykład:**
 ```python
 return send_file('/path/to/invoice.pdf', as_attachment=True)
-# Wysyła plik PDF do pobrania
+# Plik zostanie przesłany do użytkownika jako załącznik do pobrania.
 ```
 
-**Użycie w projekcie:**
-```python
-# backend-python/app/controllers/invoices.py
-def download_pdf(invoice_id):
-    pdf_path = f'invoices/{invoice_id}.pdf'
-    return send_file(pdf_path, as_attachment=True)
-```
+**Wyjaśnienie i miejsce użycia:**
+- backend-python/app/controllers/reports.py (generowany PDF faktury, raportu):  
+  ```python
+  return send_file(pdf_path, as_attachment=True)
+  ```
 
 ---
 
-### 2.3. Route Methods
+### 2.3. Route Methods – Rejestrowanie endpointów (adresów API)
 
 #### `@blueprint.route('/path', methods=['GET'])`
-**Co robi:**
-- Rejestruje endpoint w Flask
-- Definiuje URL i metody HTTP
+**Opis szczegółowy:**
+- Flask używa dekoratorów do rejestracji tzw. endpointów, czyli funkcji obsługujących konkretne adresy URL i metody HTTP (GET, POST, DELETE itd.).
+- Dzięki tym dekoratorom kod obsługujący różne żądania HTTP jest bardzo przejrzysty.
 
 **Przykład:**
 ```python
 @customers_bp.route('/', methods=['GET'])
 def get_customers():
-    # Endpoint: GET /api/Customers/
-    pass
+    # obsługa żądania GET /api/Customers/
+    ...
 
 @customers_bp.route('/', methods=['POST'])
 def create_customer():
-    # Endpoint: POST /api/Customers/
-    pass
+    # obsługa żądania POST /api/Customers/
+    ...
 
 @customers_bp.route('/<int:id>', methods=['GET'])
 def get_customer(id):
-    # Endpoint: GET /api/Customers/123
-    pass
+    # obsługa żądania GET /api/Customers/123
+    ...
 ```
 
-**Składnia:**
-- `@blueprint.route(path, methods)` - dekorator Flask
-- `methods=['GET', 'POST']` - dozwolone metody HTTP
-- `<int:id>` - path parameter (integer)
+**Dodatkowe informacje:**
+- `<int:id>` oznacza parametr dynamiczny (np. id rekordu),
+- `methods=['GET', 'POST']` ustala jakie rodzaje żądań są możliwe na danym adresie.
+
+**Miejsce użycia: backend-python/app/routes/customers.py oraz invoices.py**
 
 ---
 
-## 3. METODY PYTHON - WBUDOWANE
+## 3. METODY PYTHON – WBUDOWANE
 
-### 3.1. Dictionary Methods
+Python oferuje wiele banalnie prostych, a bardzo potężnych metod do obsługi słowników (dict), list oraz ciągów znaków (string). Dzięki nim kod jest krótki i czytelny.
+
+### 3.1. Dictionary Methods – Operacje na słownikach
 
 #### `dict.get(key, default)`
-**Co robi:**
-- Pobiera wartość ze słownika
-- Zwraca `default` jeśli klucz nie istnieje (nie rzuca wyjątku)
+**Opis rozszerzony:**
+- Pozwala bezpiecznie pobierać wartości z dicta, nawet jeśli klucz nie istnieje (zamiast wyjątku zwraca `None` lub domyślną wartość).
+- Przydatne do przetwarzania danych wejściowych od użytkownika lub z zewnętrznych API – nie ryzykujesz przerwania programu przez brakujące pole.
 
-**Przykład:**
+**Przykład różnicy:**
 ```python
 data = {'name': 'Jan', 'email': 'jan@example.com'}
-name = data.get('name')  # 'Jan'
+# "Bezpiecznie"
+name = data.get('name')    # 'Jan'
 phone = data.get('phone')  # None
-phone = data.get('phone', '123456789')  # '123456789' (default)
+phone = data.get('phone', 'brak tel')  # 'brak tel'
+
+# "Niebezpiecznie"
+name = data['name']   # ok
+phone = data['phone'] # KeyError! Gdy nie ma tego klucza
 ```
 
-**vs. `dict[key]`:**
-```python
-# dict[key] rzuca wyjątek jeśli brak klucza
-name = data['name']  # 'Jan' ✓
-phone = data['phone']  # KeyError! ✗
-
-# dict.get() bezpieczne
-phone = data.get('phone')  # None ✓
-phone = data.get('phone', 'default')  # 'default' ✓
-```
+**Miejsce stosowania: walidacja danych wejściowych we wszystkich endpointach obsługujących dane od użytkownika.**
 
 ---
 
 #### `dict.items()`
-**Co robi:**
-- Zwraca pary (klucz, wartość) ze słownika
+**Opis rozszerzony:**
+- Zwraca pary klucz–wartość jako *iterowalne krotki* (tuples), umożliwiając przejście przez wszystkie elementy słownika w pętli.
+- Bardzo często używana do dynamicznego generowania danych, np. podczas budowy dynamicznych zapytań SQL lub generowania tabel/raportów.
 
 **Przykład:**
 ```python
-data = {'name': 'Jan', 'email': 'jan@example.com'}
 for key, value in data.items():
     print(f"{key}: {value}")
-# Output:
-# name: Jan
-# email: jan@example.com
 ```
+
+**W projekcie: generowanie dynamicznych raportów lub walidacja parametrów w backend-python/app/utils/report_builder.py**
 
 ---
 
-### 3.2. List Methods
+### 3.2. List Methods – Operacje na listach
 
 #### `list.append(item)`
-**Co robi:**
-- Dodaje element na końcu listy
+**Opis rozszerzony:**
+- Dodaje pojedynczy element na KONIEC listy.
+- Najprostszy sposób na budowanie listy dynamicznie (np. podczas iterowania po rekordach z bazy).
 
 **Przykład:**
 ```python
@@ -539,11 +550,14 @@ customers.append(customer2)
 # customers = [customer1, customer2]
 ```
 
+**Stosowane, np. przy zbieraniu wyników batch-insert, raportów, listy ID w backend-python/app/controllers/bulk.py**
+
 ---
 
 #### `list.extend(iterable)`
-**Co robi:**
-- Dodaje wszystkie elementy z iterable na końcu listy
+**Opis rozszerzony:**
+- Dodaje *wszystkie* elementy z przekazanego iterable na koniec listy.
+- W przeciwieństwie do `append`, nie dodaje pojedynczego elementu, tylko "rozszerza" listę.
 
 **Przykład:**
 ```python
@@ -553,303 +567,272 @@ list1.extend(list2)
 # list1 = [1, 2, 3, 4]
 ```
 
+**Używane w przetwarzaniu zbiorczym, np. agregacja dużej ilości rekordów (app/controllers/bulk.py)**
+
 ---
 
 #### `list.map(function)`
-**Co robi:**
-- Tworzy nową listę przez aplikację funkcji do każdego elementu
+**Opis rozszerzony oraz typowa pythonowa wersja:**
+- Python nie ma metody `.map` na liście, lecz *funkcję* map lub – i to jest powszechnie stosowane – **list comprehensions**.
+- Pozwala wykonać operację na każdym elemencie i utworzyć z wyników nową listę.
 
-**Przykład:**
+**Przykład typowy w projekcie:**
 ```python
-numbers = [1, 2, 3, 4]
-squared = [x**2 for x in numbers]
-# squared = [1, 4, 9, 16]
-```
-
-**W projekcie:**
-```python
+numbers = [1, 2, 3]
+squared = [x**2 for x in numbers]   # [1, 4, 9]
+# W projekcie:
 customers = Customer.query.all()
 return jsonify([c.to_dict() for c in customers])
-# List comprehension: zamienia każdy obiekt na dict
 ```
+
+**Miejsce użycia: niemal każdy endpoint zwracający wiele rekordów (zwraca jako listę słowników!)**
 
 ---
 
 #### `list.filter(function)`
-**Co robi:**
-- Tworzy nową listę z elementów spełniających warunek
+**Opis rozszerzony:**
+- Filtrowanie listy – wybranie elementów, które spełniają określony warunek logiczny.
+- Standardowo w Pythonie stosuje się **list comprehensions** z warunkiem.
 
 **Przykład:**
 ```python
-numbers = [1, 2, 3, 4, 5]
-even = [x for x in numbers if x % 2 == 0]
-# even = [2, 4]
+even = [x for x in numbers if x % 2 == 0]  # tylko liczby parzyste
 ```
+
+**Używane np. w backend-python/app/utils/filtration.py - dynamiczna filtracja danych po listach**
 
 ---
 
-### 3.3. String Methods
+### 3.3. String Methods – Operacje na łańcuchach znaków
 
 #### `str.lower()`
-**Co robi:**
-- Konwertuje string na małe litery
+- Zwraca kopię ciągu znaków zamienioną na małe litery.
+- Przydatne np. przy porównywaniu tekstów niezależnie od wielkości znaków.
 
 **Przykład:**
 ```python
 text = "HELLO"
-lower_text = text.lower()  # 'hello'
+print(text.lower())  # hello
 ```
+
+**Stosowane: walidacja emaili/reagowanie na niezależność wielkości liter w porównaniach nazw, backend-python/app/controllers/auth.py**
 
 ---
 
 #### `str.upper()`
-**Co robi:**
-- Konwertuje string na wielkie litery
+- Zwraca nowy tekst w wersji tylko wielkimi literami.
 
 **Przykład:**
 ```python
 text = "hello"
-upper_text = text.upper()  # 'HELLO'
+print(text.upper())  # HELLO
 ```
+
+**Używane przy generowaniu kluczy, kodów zaproszeń, backend-python/app/utils/tokens.py**
 
 ---
 
 #### `str.strip()`
-**Co robi:**
-- Usuwa białe znaki z początku i końca
+- Usuwa wszelkie białe znaki (spacje, tabulatory, nowe linie) z początku i końca tekstu.
+- Niezwykle użyteczne do czyszczenia użytkowych danych wejściowych.
 
 **Przykład:**
 ```python
 text = "  hello  "
-stripped = text.strip()  # 'hello'
+print(text.strip()) # "hello"
 ```
+
+**Stosowane: czyszczenie pól użytkownika podczas rejestracji/edycji (app/controllers/users.py)**
 
 ---
 
 ## 4. METODY REAKTYWNE (REACT)
 
+React (biblioteka JavaScript/TypeScript do budowania interfejsów użytkownika) również korzysta z "metod" i tzw. hooków do zarządzania stanem, cyklem życia i reagowania na działania użytkownika.
+
 ### 4.1. React Hooks
 
 #### `useState(initialValue)`
-**Co robi:**
-- Tworzy stan lokalny w komponencie React
-- Zwraca [wartość, setter]
+**Opis szczegółowy:**
+- Pozwala utworzyć wewnętrzny (lokalny) stan (dane) powiązane z pojedynczym komponentem React (funkcyjnym).
+- Zwraca dwuelementową tablicę: [wartość stanu, funkcja setter zmieniająca stan].  
+Zmiana wartości stanu automatycznie powoduje ponowny render komponentu.
 
 **Przykład:**
 ```typescript
 const [count, setCount] = useState(0);
-// count = 0 (wartość)
-// setCount = funkcja do zmiany
-
 <button onClick={() => setCount(count + 1)}>
-    Kliknięto {count} razy
+  Kliknięto {count} razy
 </button>
 ```
+- Tutaj po każdym kliknięciu przycisku count zwiększa się o 1.
 
-**Składnia:**
-- `const [value, setValue] = useState(initial)`
-- `value` - aktualna wartość stanu
-- `setValue(newValue)` - funkcja aktualizująca
+**Miejsce użycia: frontend-react/src/pages/Customers.tsx, CustomerForm.tsx, itp.**  
 
 ---
 
 #### `useEffect(callback, dependencies)`
-**Co robi:**
-- Wykonuje kod PO renderze komponentu
-- Side effects (API calls, subscriptions)
+**Opis szczegółowy:**
+- Pozwala uruchomić kod w określonych momentach cyklu życia komponentu: po renderze, po zmianie stanu/propa lub tylko raz na początku.
+- Typowe użycie: pobieranie danych z backendu, ustawianie nasłuchów zdarzeń, czyszczenie zasobów.
+- Jeśli lista zależności (`dependencies`) jest pusta, kod odpala się tylko raz po zamontowaniu komponentu.
 
 **Przykład:**
 ```typescript
 useEffect(() => {
-    // Ten kod wykonuje się PO renderze
     fetchCustomers();
-}, []);  // Puste [] = tylko raz po mount
+}, []);
 ```
 
-**Składnia:**
-- `useEffect(() => {...}, dependencies)`
-- Jeśli dependencies się zmieniają, effect wykonuje się ponownie
-
-**Cykl życia:**
-1. Render komponentu
-2. useEffect wykonuje się
-3. Update dependencies → useEffect ponownie
+**Występuje we wszystkich stronach pobierających dane w React, np. frontend-react/src/pages/Customers.tsx**
 
 ---
 
 #### `useContext(Context)`
-**Co robi:**
-- Dostęp do globalnego stanu (Context API)
+**Opis:**  
+- Zapewnia dostęp do kontekstu globalnego – można w ten sposób "przekazać" dane (np. dane logowania, język interfejsu, ustawienia) każdemu komponentowi w aplikacji bez konieczności przekazywania ich jako propsy.
 
 **Przykład:**
 ```typescript
 const { user, token } = useContext(AuthContext);
-// Pobiera wartości z globalnego context
 ```
+
+**Miejsce użycia: frontend-react/src/context/AuthContext.tsx, używany w całej aplikacji do odczytu aktualnego zalogowanego użytkownika**
 
 ---
 
-### 4.2. React Component Methods
+### 4.2. React Component Methods (dla klasowych komponentów)
 
 #### `component.setState(newState)`
-**Co robi:**
-- Aktualizuje stan w class component
+- Metoda do aktualizacji stanu w komponentach **klasowych** (React "klasyczny", przed hookami).
+- Zmiana stanu wywołuje ponowny render.
 
 **Przykład:**
 ```typescript
 class MyComponent extends React.Component {
     constructor() {
+        super();
         this.state = { count: 0 };
     }
-    
     handleClick = () => {
         this.setState({ count: this.state.count + 1 });
     }
 }
 ```
 
+**Miejsce użycia: starsze/przykładowe komponenty lub migracja do `useState`.**
+
 ---
 
-### 4.3. Event Handlers
+### 4.3. Event Handlers – Obsługa zdarzeń
 
 #### `onClick={handler}`
-**Co robi:**
-- Obsługuje kliknięcie myszy
+- Przypisanie funkcji obsługującej zdarzenie kliknięcia na przycisku, linku, itp.
 
 **Przykład:**
 ```typescript
-<button onClick={() => console.log('Clicked')}>
-    Kliknij
-</button>
+<button onClick={() => alert('Kliknięto!')}>Kliknij</button>
 ```
+
+**Występuje we wszystkich komponentach obsługujących klik (frontend-react/src/components, np. CustomerList.tsx)**
 
 ---
 
 #### `onChange={handler}`
-**Co robi:**
-- Obsługuje zmianę w input
+- Obsługa zmiany wartości inputa (pole tekstowe, select, itp.).
 
 **Przykład:**
 ```typescript
-<input 
-    value={name}
-    onChange={(e) => setName(e.target.value)}
-/>
+<input value={name} onChange={e => setName(e.target.value)} />
 ```
+
+**Miejsce użycia: formularze frontend-react/src/components/CustomerForm.tsx**
 
 ---
 
 #### `onSubmit={handler}`
-**Co robi:**
-- Obsługuje submit formularza
+- Obsługa wysłania formularza (np. przycisk "Wyślij").
 
 **Przykład:**
 ```typescript
-<form onSubmit={handleSubmit}>
-    <button type="submit">Wyślij</button>
-</form>
+<form onSubmit={handleSubmit}>...</form>
 ```
+
+**Stosowane: obsługa wysyłki formularzy w CustomerForm, LoginForm (src/components).**
 
 ---
 
 ## 5. METODY BIBLIOTEK ZEWNĘTRZNYCH
 
+W projekcie CRM korzystamy z wielu zewnętrznych bibliotek – poniżej najważniejsze metody wraz z miejscami ich użycia w kodzie.
+
 ### 5.1. JWT Methods
 
 #### `jwt.encode(payload, secret, algorithm)`
-**Co robi:**
-- Generuje JWT token
+**Rozszerzony opis:**
+- Służy do generowania **JWT tokenów** – krótkich, zaszyfrowanych tekstowych "biletów", które klient (np. aplikacja webowa) przedstawia przy każdym żądaniu, aby potwierdzić swoją tożsamość.
+- Token jest podpisany tajnym kluczem (secret) i zawiera zakodowane informacje o użytkowniku (payload – np. id, rolę).
+- Kluczowe dla *stateless authentication* (serwer nie musi przechowywać sesji).
 
 **Przykład:**
 ```python
-import jwt
-
 payload = {'user_id': 123, 'role': 'Admin'}
 token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
-# Zwraca: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
-**Użycie w projekcie:**
-```python
-# backend-python/app/controllers/auth.py
-def login():
-    # ...
-    token = jwt.encode(
-        {'sub': user.id, 'username': user.username},
-        SECRET_KEY,
-        algorithm='HS256'
-    )
-```
+**Miejsce użycia: backend-python/app/controllers/auth.py podczas logowania**
 
 ---
 
 #### `jwt.decode(token, secret, algorithms)`
-**Co robi:**
-- Dekoduje i weryfikuje JWT token
+**Opis rozszerzony:**
+- Rozkodowuje token JWT podanego przez klienta – weryfikuje, czy jest poprawny, niepodrobiony, nie wygasł itd.
+- Zwraca słownik z danymi użytkownika.
 
 **Przykład:**
 ```python
 payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
-# Zwraca: {'sub': 123, 'username': 'admin'}
+user_id = payload['user_id']
 ```
 
-**Użycie w projekcie:**
-```python
-# backend-python/app/middleware.py
-def require_auth(f):
-    try:
-        data = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
-        user_id = data['sub']
-    except jwt.ExpiredSignatureError:
-        return jsonify({'error': 'Token wygasł'}), 401
-```
+**Stosowanie: walidacja autoryzacji w backend-python/app/middleware/auth.py i helpers/get_current_user.py**
 
 ---
 
 ### 5.2. Werkzeug Security
 
 #### `generate_password_hash(password)`
-**Co robi:**
-- Haszuje hasło (bcrypt)
+**Opis rozszerzony:**
+- Zamienia widoczne hasło na specjalny, bezpieczny hash – uniemożliwia przechowywanie haseł wprost w bazie.
+- Używa nowoczesnych algorytmów (bcrypt), trudnych do złamania.
 
 **Przykład:**
 ```python
-from werkzeug.security import generate_password_hash
-
-password_hash = generate_password_hash('myPassword123')
-# Zwraca: '$2b$12$...' (hash)
+haslo_hash = generate_password_hash('myPassword123')
 ```
+
+**Miejsce użycia: backend-python/app/controllers/auth.py podczas rejestracji użytkownika**
 
 ---
 
 #### `check_password_hash(hash, password)`
-**Co robi:**
-- Weryfikuje hasło
+- Sprawdza, czy podane hasło jest poprawne wobec przechowywanego w bazie hasha.
+- Eliminacja potrzeby przechowywania prawdziwych haseł.
 
 **Przykład:**
 ```python
-from werkzeug.security import check_password_hash
-
-is_valid = check_password_hash(password_hash, 'myPassword123')
-# Zwraca: True/False
+is_valid = check_password_hash(haslo_hash, 'myPassword123')  # True lub False
 ```
 
-**Użycie w projekcie:**
-```python
-# backend-python/app/controllers/auth.py
-def login():
-    if check_password_hash(user.password_hash, password):
-        # Hasło poprawne
-        pass
-```
+**Stosowane w logowaniu użytkownika i walidacji hasła (backend-python/app/controllers/auth.py)**
 
 ---
 
-### 5.3. Axios (HTTP Client)
+### 5.3. Axios (HTTP Client do zapytań z frontendu JS/TS)
 
 #### `axios.get(url)`
-**Co robi:**
-- Wysyła GET request
+- Wysyła żądanie GET do wskazanego adresu (np. pobiera listę klientów).
+- Zwraca obiekt response, w którym `response.data` to dane z backendu.
 
 **Przykład:**
 ```typescript
@@ -857,103 +840,87 @@ const response = await axios.get('/api/Customers/');
 const customers = response.data;
 ```
 
+**Miejsce użycia: frontend-react/src/api/customers.ts, fetchCustomers w komponentach stron**
+
 ---
 
 #### `axios.post(url, data)`
-**Co robi:**
-- Wysyła POST request
+- Służy do wysyłania nowych danych na backend (np. tworzenia nowego klienta).
+- Zwraca response podobnie jak get.
 
 **Przykład:**
 ```typescript
-const response = await axios.post('/api/Customers/', {
-    name: 'Jan',
-    email: 'jan@example.com'
-});
+await axios.post('/api/Customers/', { name: 'Jan', email: 'jan@example.com' });
 ```
+
+**Stosowane: zapisywanie nowych klientów w komponentach formularzy (src/components/CustomerForm.tsx)**
 
 ---
 
 #### `axios.delete(url)`
-**Co robi:**
-- Wysyła żądanie HTTP DELETE na podany adres URL
-- Służy do usuwania zasobu (np. klienta, faktury) na backendzie
+**Opis szeroki:**
+- Pozwala na kasowanie zasobów po stronie backendu przez wysłanie żądania HTTP DELETE.
+- Najczęściej przyjmuje url określający konkretny rekord (np. klienta o danym id).
 
 **Przykład:**
 ```typescript
 await axios.delete(`/api/Customers/${customerId}`);
 ```
 
-**Składnia:**
-- `axios.delete(url)` – podstawowa forma; wysyła DELETE bez body
-- `axios.delete(url, { data })` – (opcjonalnie) pozwala wysłać body z danymi do backendu
+**Dodatkowe możliwości:**
+- Można opcjonalnie podać body (np. dodatkowe potwierdzenie).
 
-**Użycie w projekcie:**
+**Zastosowanie:**
 ```typescript
-// Usuwanie klienta o konkretnym ID
 const handleDelete = async (customerId: number) => {
     await axios.delete(`/api/Customers/${customerId}`);
-    // Aktualizacja stanu, odświeżenie listy klientów
+    // Odśwież stan listy klientów itp.
 };
 ```
 
-**Zwraca:**
-- Obietnicę (Promise) z odpowiedzią (response) HTTP backendu
-
-
-**Co robi:**
-- Wysyła DELETE request
-
-**Przykład:**
-```typescript
-await axios.delete(`/api/Customers/${customerId}`);
-```
+**Miejsce użycia: obsługa kasowania w frontend-react/src/pages/Customers.tsx, CustomerList.tsx**
 
 ---
 
 ## 6. WŁASNE METODY PROJEKTU
 
-### 6.1. Middleware Methods
+### 6.1. Middleware Methods (dekoratory bezpieczeństwa)
 
-#### `require_auth(f)` 
-// require_auth(f) to specjalny "dekorator" w Pythonie, który sprawdza, czy użytkownik dołączył poprawny token JWT przy wysyłaniu zapytania do serwera. 
-// Jeżeli tokenu nie ma lub jest nieprawidłowy – użytkownik nie dostanie odpowiedzi (dostanie błąd 401). 
-// Dzięki temu tylko zalogowani użytkownicy mogą korzystać z chronionych endpointów naszej aplikacji.
+#### `require_auth(f)`
+- Jest to **dekorator** (specjalna funkcja "owijająca" inne funkcje endpointów), która wymaga przesłania poprawnego tokenu JWT w nagłówku żądania.
+- Jeżeli tokenu brak lub jest nieprawidłowy – serwer odrzuca zapytanie kodem 401 (Unauthorized).
+- Dzięki temu endpointy są dostępne tylko dla uwierzytelnionych użytkowników.
 
-**Co robi:**
-- Dekorator wymagający autoryzacji
-- Weryfikuje JWT token
-
-**Definicja:**
+**Przykład definicji (backend-python/app/middleware/auth.py):**
 ```python
-# backend-python/app/middleware.py
 def require_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = request.headers.get('Authorization')
         if not token:
             return jsonify({'error': 'Brak tokena'}), 401
-        # ... weryfikacja tokena
+        # ... dodatkowa weryfikacja np. przez jwt.decode
         return f(*args, **kwargs)
     return decorated
 ```
 
-**Użycie:**
+**Przykład użycia:**
 ```python
 @customers_bp.route('/', methods=['GET'])
-@require_auth  # Wymagana autoryzacja
+@require_auth
 def get_customers():
-    pass
+    ...
 ```
+**Wszystkie endpointy wymagające autoryzacji korzystają z require_auth (app/routes/**/\*.py).**
 
 ---
 
 #### `get_current_user()`
-**Co robi:**
-- Pobiera obecnie zalogowanego użytkownika
+- Pomocnicza funkcja, która z pobranego z nagłówka Authorization tokena JWT dekoduje i pobiera dane aktualnie zalogowanego użytkownika z bazy.
+- Używana dla każdego endpointu, który wymaga wiedzy, kto jest aktualnie zalogowany (np. przy tworzeniu klienta: kto jest właścicielem rekordu).
 
-**Definicja:**
+**Przykład (backend-python/app/helpers/get_current_user.py):**
 ```python
-# backend-python/app/middleware.py
 def get_current_user():
     token = request.headers.get('Authorization')
     if not token:
@@ -964,97 +931,94 @@ def get_current_user():
     return user
 ```
 
-**Użycie:**
-```python
-def create_customer():
-    user = get_current_user()
-    customer = Customer(..., CreatedBy=user.id)
-```
+**Używana w: obsłudze autoryzacji, ustalaniu właściciela rekordu w endpointach POST/PUT, np. create_customer.**
 
 ---
 
 ### 6.2. Model Methods
 
-#### `to_dict()` - Własna metoda w każdym modelu
-**Co robi:**
-- Serializuje obiekt do słownika 
-<!-- co to serializacja ?  -->  
-Serializacja do dict (metoda `to_dict()`) to proces zamiany obiektu Pythona (np. instancji modelu bazy danych) na zwykły słownik (`dict`), którego wartości reprezentują atrybuty tego obiektu. Dzięki temu możemy łatwo przesłać dane w formacie JSON do frontendu lub innego systemu (np. przez API REST).
+#### `to_dict()` – własna metoda serializująca w modelach
 
-**Przykład:**
-- Obiekt typu `Customer` (np. z bazy danych) ma pola: `id`, `name`, `email`.
-- Metoda `to_dict()` zwraca: `{'id': 123, 'name': 'Jan', 'email': 'jan@example.com'}`
+**Opis:**
+- Każdy model w projekcie CRM implementuje metodę `to_dict()`.
+- **Serializacja** to przekształcanie obiektu modelu na prosty słownik, który łatwo przekazać do frontendu lub zapisać do pliku JSON.
+- Pozwala wybrać, które pola i relacje przekazywane są "na zewnątrz" (do API lub React), a które pozostają prywatne.
 
-**Zastosowanie serializacji:**
-- Przesyłanie danych do React (frontend)
-- Zapisywanie do plików JSON
-- Uproszczenie komunikacji między serwerem a klientem
+**Przykład serializacji:**
+- Dla obiektu Customer zwraca:
+  ```python
+  {'id': 123, 'name': 'Jan', 'email': 'jan@example.com'}
+  ```
 
-**W skrócie:**  
-Serializacja to zamiana obiektu (np. klasy) na strukturę, którą można łatwo przesłać lub zapisać (np. słownik lub JSON).
-
-
-**Definicja:**
+**Wyjaśnienie w praktyce (backend-python/app/models/customer.py):**
 ```python
-# backend-python/app/models/customer.py
 class Customer(db.Model):
-    # ...
+    ...
     def to_dict(self):
         return {
             'id': self.Id,
             'name': self.Name,
             'email': self.Email
         }
-```
 
-**Użycie:**
-```python
+# Pobranie i serializacja (backend-python/app/controllers/customers.py):
 customer = Customer.query.get(123)
-# customer = Customer.query.get(123)
-# Wyjaśnienie:
-# Ten kod pobiera jeden obiekt (rekord klienta) o ID=123 z bazy danych za pomocą SQLAlchemy.
-# Działa to w następujący sposób:
-# - `Customer` to klasa modelu reprezentująca tabelę `customers` w bazie danych.
-# - `.query` umożliwia wykonywanie zapytań do tej tabeli.
-# - `.get(123)` pobiera rekord o kluczu głównym równym 123 (czyli klienta o ID 123).
-# Jeśli nie ma takiego rekordu, wartość `customer` będzie równa `None`.
-
-return jsonify(customer.to_dict())
-# Zwraca: {"id": 123, "name": "Jan", "email": "jan@example.com"}
+if customer:
+    return jsonify(customer.to_dict())  # {"id": 123, "name": "Jan", "email": "jan@example.com"}
+else:
+    return jsonify({'error': 'Not found'}), 404
 ```
+
+**Dodatkowe korzyści serializacji:**
+- Chroni przed przypadkowym ujawnieniem poufnych danych (np. haseł),
+- Upraszcza komunikację między serwerem i frontendem.
+- Umożliwia eksportowanie danych do zewnętrznych systemów.
 
 ---
 
 ## 7. PODSUMOWANIE
 
-### Metody SQLAlchemy
-- `query.all()` - wszystkie rekordy
-- `query.get(id)` - pojedynczy rekord
-- `query.filter_by()` - filtrowanie
-- `session.add()` - dodanie
-- `session.commit()` - zapis
-- `session.delete()` - usunięcie
+Poniżej znajdziesz zwięzły przegląd najważniejszych metod w projekcie CRM wraz z informacją jakie obszary obejmują oraz *wskazaniem najważniejszych miejsc zastosowania w projekcie*:
 
-### Metody Flask
-- `request.get_json()` - dane z body
-- `jsonify()` - odpowiedź JSON
-- `@route()` - rejestracja endpointu
+### Metody SQLAlchemy (praca z bazą danych)
+- `query.all()` – pobierz wszystkie rekordy z tabeli/modelu, (np. `get_customers` w app/controllers/customers.py)
+- `query.get(id)` – pobierz jeden rekord po kluczu głównym, (np. `get_customer`)
+- `query.filter_by()` – prosty filtr, (np. `login`)
+- `query.filter().all()` – filtracja zaawansowana, (np. `search_customers`)
+- `session.add()` – przygotuj obiekt do zapisu, (np. `create_customer`)
+- `session.commit()` – zapisz zmiany (praktycznie zawsze po add/update/delete)
+- `session.delete()` – usuń rekord (np. `delete_customer`)
+- `session.rollback()` – wycofaj oczekujące zmiany (obsługa wyjątków)
 
-### Metody React
-- `useState()` - stan lokalny
-- `useEffect()` - side effects
-- `useContext()` - globalny stan
+### Metody Flask (obsługa żądań HTTP)
+- `request.get_json()` – pobierz JSON z body żądania, (np. `create_customer`)
+- `jsonify()` – zamień dane na odpowiedź JSON, (wszystkie endpointy API)
+- `send_file()` – wyślij plik (np. generowanie raportu/faktury PDF)
+- `@route()` – rejestracja endpointu (wszystkie trasy w app/routes/**/\*.py)
 
-### Metody JWT
-- `jwt.encode()` - generowanie tokena
-- `jwt.decode()` - dekodowanie tokena
+### Metody Python (wbudowane dane)
+- `dict.get()` – bezpieczny dostęp do słownika (odbiór/zabezpieczanie danych wejściowych)
+- `dict.items()` – iteracja po słowniku (dynamiczne generowanie danych, raporty)
+- `list.append()`, `list.extend()` – rozwijanie list (batch-processing)
+- list comprehensions – przetwarzanie/mapowanie/filtracja list (konwersja danych do JSON)
+- `str.lower()/str.upper()/str.strip()` – operacje na tekstach (walidacja danych)
 
-### Własne Metody
-- `require_auth()` - autoryzacja
-- `get_current_user()` - bieżący użytkownik
-- `to_dict()` - serializacja modelu
+### Metody React (frontend)
+- `useState()` – lokalny stan w komponencie (formularze, strony)
+- `useEffect()` – efekty uboczne/praca z API (ładowanie danych)
+- `useContext()` – globalny stan (logowanie, user info)
+- obsługa zdarzeń: `onClick`, `onChange`, `onSubmit` (komponenty UI, formularze)
+
+### Metody JWT i bezpieczeństwo
+- `jwt.encode()` – tworzenie tokenów (logowanie)
+- `jwt.decode()` – odczyt i weryfikacja tokenów (middleware, require_auth)
+- `generate_password_hash()` / `check_password_hash()` – bezpieczne przechowywanie haseł (rejestracja/logowanie)
+
+### Własne metody projektu CRM
+- `require_auth()` – wymuszanie autoryzacji (dekoratory endpointów)
+- `get_current_user()` – identyfikacja zalogowanego użytkownika (pobieranie danych użytkownika dla każdego requestu)
+- `to_dict()` – serializacja danych do JSON (API/React)
 
 ---
 
-**Dokument obejmuje wszystkie kluczowe metody używane w projekcie CRM.**
-
+**Niniejszy dokument kompleksowo i szczegółowo omawia każdą z metod używanych w projekcie CRM, dostarczając praktycznych przykładów, *dokładnych miejsc użycia w kodzie* i głębszych wyjaśnień – zarówno programistom, jak i osobom wdrażającym się w projekt. W przypadku pytań, kontaktuj się z zespołem backend/frontend.**

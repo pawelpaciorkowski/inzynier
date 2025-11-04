@@ -1,7 +1,7 @@
 // Plik: crm-mobile/app/(tabs)/customers.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, Text, View, TouchableOpacity, Pressable } from 'react-native';
-import { Link, Stack, useRouter } from 'expo-router';
+import { Link, Stack, useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import api from '../../services/api';
@@ -15,7 +15,8 @@ interface Customer {
     company?: string; // Nazwa firmy (opcjonalna).
     address?: string; // Adres (opcjonalny).
     nip?: string; // Numer NIP (opcjonalny).
-    representative?: string; // Przedstawiciel handlowy (opcjonalny).
+    representative?: { id: number; username: string; email: string } | null; // Przedstawiciel (pracownik firmy) - obiekt użytkownika.
+    representativeUserId?: number | null; // ID przedstawiciela (użytkownika).
     createdAt: string; // Data utworzenia rekordu klienta.
     assignedGroupId?: number; // ID grupy, do której klient jest przypisany (opcjonalne).
     assignedUserId?: number; // ID użytkownika, do którego klient jest przypisany (opcjonalne).
@@ -44,6 +45,12 @@ export default function CustomersScreen() {
     const [error, setError] = useState<string | null>(null);
     // Stan przechowujący aktualną frazę wyszukiwania wprowadzoną przez użytkownika.
     const [searchQuery, setSearchQuery] = useState('');
+    // Ref do śledzenia czy to pierwsze załadowanie
+    const isInitialLoad = useRef(true);
+    // Ref do przechowywania informacji czy mamy już załadowane dane
+    const hasDataLoaded = useRef(false);
+    // Ref do śledzenia czy już odświeżyliśmy przy obecnym focus (zapobiega pętli)
+    const hasRefreshedOnThisFocus = useRef(false);
 
     // Funkcja do pobierania listy klientów z API, opakowana w useCallback dla optymalizacji.
     const fetchCustomers = useCallback(async () => {
@@ -117,6 +124,12 @@ export default function CustomersScreen() {
                 // Ustawienie pełnej listy klientów i listy filtrowanej.
                 setAllCustomers(validCustomers);
                 setFilteredCustomers(validCustomers);
+                // Oznacz że pierwsze załadowanie się zakończyło
+                if (isInitialLoad.current) {
+                    isInitialLoad.current = false;
+                }
+                // Oznacz że mamy już załadowane dane
+                hasDataLoaded.current = true;
             } else {
                 // Obsługa błędu nieprawidłowego formatu danych.
                 console.error("Nieprawidłowy format danych:", data);
@@ -134,18 +147,44 @@ export default function CustomersScreen() {
         }
     }, [token, refreshing]); // Zależności hooka useCallback.
 
-    // Efekt uruchamiający pobieranie klientów przy starcie komponentu.
+    // Efekt uruchamiający pobieranie klientów tylko przy pierwszym załadowaniu komponentu.
     useEffect(() => {
-        fetchCustomers();
+        if (isInitialLoad.current) {
+            fetchCustomers();
+        }
     }, [fetchCustomers]);
 
-    // Funkcja wywoływana przy odświeżaniu listy (pull-to-refresh).
+    // Odświeżanie listy po powrocie z ekranu edycji (bez pokazywania spinnera)
+    useFocusEffect(
+        useCallback(() => {
+            let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+           
+            if (!isInitialLoad.current && token && hasDataLoaded.current && !hasRefreshedOnThisFocus.current) {
+                hasRefreshedOnThisFocus.current = true; // Oznacz że już odświeżyliśmy
+
+             
+                timeoutId = setTimeout(() => {
+                    setRefreshing(true); // Ustaw refreshing, aby nie pokazywać 
+                    fetchCustomers();
+                }, 300);
+            }
+
+            
+            return () => {
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+                hasRefreshedOnThisFocus.current = false; 
+            };
+        }, [token]) 
+    );
+
     const onRefresh = useCallback(() => {
         setSearchQuery(''); // Czyści pole wyszukiwania.
         setRefreshing(true); // Uruchamia stan odświeżania.
     }, []);
 
-    // Efekt filtrujący klientów na podstawie frazy wyszukiwania.
     useEffect(() => {
         if (searchQuery.trim() === '') {
             setFilteredCustomers(allCustomers); // Jeśli wyszukiwarka jest pusta, pokaż wszystkich.
@@ -157,9 +196,8 @@ export default function CustomersScreen() {
             );
             setFilteredCustomers(filtered);
         }
-    }, [searchQuery, allCustomers]); // Zależności hooka useEffect.
+    }, [searchQuery, allCustomers]); 
 
-    // Widok wyświetlany podczas ładowania danych.
     if (loading) {
         return (
             <View style={[styles.container, styles.centered]}>
@@ -168,7 +206,6 @@ export default function CustomersScreen() {
         );
     }
 
-    // Widok wyświetlany w przypadku błędu.
     if (error) {
         return (
             <View style={[styles.container, styles.centered]}>

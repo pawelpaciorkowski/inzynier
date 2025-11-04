@@ -16,7 +16,8 @@ interface Client {
     company?: string;
     address?: string;
     nip?: string;
-    representative?: string;
+    representative?: { id: number; username: string; email: string; role?: string } | null;
+    representativeUserId?: number | null;
     createdAt?: string;
     customerTags?: Array<{
         tagId: number;
@@ -60,7 +61,7 @@ export default function ClientsPage() {
 
             // Sprawdź czy to błąd autoryzacji
             if (error && typeof error === 'object' && 'response' in error) {
-                const axiosErr = error as any;
+                const axiosErr = error as { response?: { status?: number } };
                 const status = axiosErr.response?.status;
 
                 if (status === 401) {
@@ -68,7 +69,7 @@ export default function ClientsPage() {
                         type: 'error',
                         title: 'Błąd autoryzacji',
                         message: 'Sesja wygasła. Zaloguj się ponownie.',
-                        onClose: () => {
+                        onConfirm: () => {
                             localStorage.removeItem('token');
                             window.location.href = '/login';
                         }
@@ -115,7 +116,8 @@ export default function ClientsPage() {
             (client.phone ?? '').toLowerCase().includes(q) ||
             (client.address ?? '').toLowerCase().includes(q) ||
             (client.nip ?? '').toLowerCase().includes(q) ||
-            (client.representative ?? '').toLowerCase().includes(q)
+            (client.representative?.username ?? '').toLowerCase().includes(q) ||
+            (client.representative?.email ?? '').toLowerCase().includes(q)
         );
     });
 
@@ -161,7 +163,7 @@ export default function ClientsPage() {
                             {client.company && <p className="text-gray-400">Firma: {client.company}</p>}
                             {client.address && <p className="text-gray-400">Adres: {client.address}</p>}
                             {client.nip && <p className="text-gray-400">NIP: {client.nip}</p>}
-                            {client.representative && <p className="text-gray-400">Przedstawiciel: {client.representative}</p>}
+                            {client.representative && <p className="text-gray-400">Przedstawiciel: {client.representative.username} ({client.representative.email})</p>}
                             {client.createdAt && <p className="text-gray-400 text-xs">Dodano: {new Date(client.createdAt.endsWith('Z') ? client.createdAt : client.createdAt + 'Z').toLocaleString('pl-PL')}</p>}
 
                             {/* Wyświetlanie tagów */}

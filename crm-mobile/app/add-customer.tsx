@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { useRouter, Stack } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Picker } from '@react-native-picker/picker';
 
 export default function AddCustomerScreen() {
     const { token } = useAuth();
@@ -15,8 +16,27 @@ export default function AddCustomerScreen() {
     const [company, setCompany] = useState('');
     const [address, setAddress] = useState('');
     const [nip, setNip] = useState('');
-    const [representative, setRepresentative] = useState('');
+    const [representativeUserId, setRepresentativeUserId] = useState<number | null>(null);
+    const [users, setUsers] = useState<Array<{ id: number; username: string; email: string }>>([]);
     const [loading, setLoading] = useState(false);
+    const [loadingUsers, setLoadingUsers] = useState(false);
+
+    // Pobierz listę użytkowników przy załadowaniu komponentu
+    useEffect(() => {
+        const fetchUsers = async () => {
+            if (!token) return;
+            setLoadingUsers(true);
+            try {
+                const response = await api.get('/Profile/users-list');
+                setUsers(response.data || []);
+            } catch (err: any) {
+                console.error("Błąd podczas pobierania użytkowników:", err);
+            } finally {
+                setLoadingUsers(false);
+            }
+        };
+        fetchUsers();
+    }, [token]);
 
     const handleAddCustomer = async () => {
         if (!name.trim() || !email.trim()) {
@@ -40,7 +60,7 @@ export default function AddCustomerScreen() {
                 company: company.trim() || null,
                 address: address.trim() || null,
                 nip: nip.trim() || null,
-                representative: representative.trim() || null,
+                representativeUserId: representativeUserId || null,
             });
 
             if (response.status === 201) {
@@ -139,14 +159,24 @@ export default function AddCustomerScreen() {
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Przedstawiciel</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={representative}
-                            onChangeText={setRepresentative}
-                            placeholder="Imię i nazwisko przedstawiciela"
-                            placeholderTextColor="#6b7280"
-                        />
+                        <Text style={styles.inputLabel}>Przedstawiciel (pracownik firmy)</Text>
+                        {loadingUsers ? (
+                            <ActivityIndicator size="small" color="#10b981" style={{ padding: 12 }} />
+                        ) : (
+                            <View style={styles.pickerContainer}>
+                                <Picker
+                                    selectedValue={representativeUserId}
+                                    onValueChange={(itemValue) => setRepresentativeUserId(itemValue || null)}
+                                    style={styles.picker}
+                                    dropdownIconColor="#fff"
+                                >
+                                    <Picker.Item label="-- Wybierz przedstawiciela --" value={null} />
+                                    {users.map(user => (
+                                        <Picker.Item key={user.id} label={`${user.username} (${user.email})`} value={user.id} />
+                                    ))}
+                                </Picker>
+                            </View>
+                        )}
                     </View>
 
                     <TouchableOpacity
@@ -219,5 +249,16 @@ const styles = StyleSheet.create({
         marginLeft: 10,
         fontWeight: 'bold',
         fontSize: 16,
+    },
+    pickerContainer: {
+        backgroundColor: '#374151',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#4b5563',
+        overflow: 'hidden',
+    },
+    picker: {
+        color: '#fff',
+        height: 50,
     },
 });

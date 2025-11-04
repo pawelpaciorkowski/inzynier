@@ -1083,7 +1083,7 @@ def download_invoice(invoice_id):
 
     # Wysyłam bufor jako plik download
     return send_file(
-        pdf_buffer,
+        pdf_buffer,N
         mimetype='application/pdf',
         as_attachment=True,
         download_name=f'faktura-{invoice.Number}.pdf'

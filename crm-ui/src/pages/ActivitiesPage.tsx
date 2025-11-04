@@ -4,12 +4,12 @@ import { ListBulletIcon } from '@heroicons/react/24/outline';
 
 interface Activity {
     id: number;
-    note: string;  // Backend zwraca 'note' zamiast 'title'
-    createdAt: string;  // Backend zwraca 'createdAt' zamiast 'activityDate'
+    note: string;  
+    createdAt: string;  
     customerId?: number;
     customerName?: string;
     userId: number;
-    userName?: string;  // Backend zwraca 'userName'
+    userName?: string;  
 }
 
 export function ActivitiesPage() {
