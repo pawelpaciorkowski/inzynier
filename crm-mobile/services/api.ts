@@ -24,7 +24,7 @@ const getToken = async (): Promise<string | null> => {
 
 const api = axios.create({
     baseURL: API_URL,
-    timeout: 10000, // 10 sekund timeout
+    timeout: 10000, 
     headers: {
         'Content-Type': 'application/json',
     },
@@ -51,12 +51,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        // Logowanie błędów autoryzacji
         if (error.response?.status === 401) {
             console.error('❌ 401 Unauthorized dla:', error.config?.url);
         }
 
-        // Logowanie błędów sieciowych
         if (error.message === 'Network Error') {
             console.error('❌ Network Error - sprawdź połączenie z API:', API_URL);
         }

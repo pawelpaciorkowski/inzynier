@@ -23,51 +23,35 @@ interface UpdateTaskDto {
  * @returns {JSX.Element} - Zwraca formularz do edycji zadania.
  */
 export default function EditTaskScreen() {
-    // Pobiera token uwierzytelniający z kontekstu
     const { token } = useAuth();
-    // Inicjalizuje hook do nawigacji
     const router = useRouter();
-    // Pobiera parametry lokalne, w tym ID zadania
     const { taskId } = useLocalSearchParams<{ taskId: string }>();
 
-    // Stan przechowujący tytuł zadania
     const [title, setTitle] = useState('');
-    // Stan przechowujący opis zadania
     const [description, setDescription] = useState('');
-    // Stan przechowujący termin wykonania zadania
     const [dueDate, setDueDate] = useState('');
-    // Stan przechowujący status ukończenia zadania
     const [completed, setCompleted] = useState(false);
-    // Stan przechowujący ID wybranego klienta
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
 
-    // Stan przechowujący listę wszystkich klientów
     const [customers, setCustomers] = useState<Customer[]>([]);
-    // Stan wskazujący, czy trwa ładowanie danych
     const [loading, setLoading] = useState(true);
 
-    // Efekt pobierający dane zadania i listę klientów po zamontowaniu komponentu
     useEffect(() => {
-        // Asynchroniczna funkcja do pobierania danych
         const fetchData = async () => {
-            // Przerywa, jeśli brakuje tokena lub ID zadania
             if (!token || !taskId) {
                 setLoading(false);
                 return;
             }
             setLoading(true);
             try {
-                // Równoległe zapytania o listę klientów i dane konkretnego zadania
                 const [customersRes, taskRes] = await Promise.all([
                     api.get(`/Customers`),
                     api.get(`/user/tasks/${taskId}`)
                 ]);
 
-                // Przetwarza odpowiedź z listą klientów
                 const customerData = customersRes.data;
                 setCustomers(customerData?.$values || (Array.isArray(customerData) ? customerData : []));
 
-                // Przetwarza odpowiedź z danymi zadania i ustawia stany formularza
                 const taskData = taskRes.data;
                 setTitle(taskData.title);
                 setDescription(taskData.description || '');
@@ -76,20 +60,15 @@ export default function EditTaskScreen() {
                 setDueDate(taskData.dueDate ? new Date(taskData.dueDate).toISOString().split('T')[0] : '');
 
             } catch (err) {
-                // Wyświetla alert w przypadku błędu
                 Alert.alert("Błąd", "Nie udało się pobrać danych zadania.");
             } finally {
-                // Kończy stan ładowania
                 setLoading(false);
             }
         };
-        // Wywołuje funkcję pobierającą dane
         fetchData();
-    }, [token, taskId]); // Efekt uruchamia się ponownie, gdy zmieni się token lub ID zadania
+    }, [token, taskId]);
 
-    // Funkcja obsługująca aktualizację zadania
     const handleUpdateTask = async () => {
-        // Walidacja - sprawdza, czy tytuł i klient są wybrane
         if (!title.trim() || !selectedCustomerId) {
             Alert.alert("Błąd walidacji", "Tytuł i klient są wymagane.");
             return;

@@ -8,10 +8,10 @@ import { useAuth } from '../context/AuthContext';
 
 // Definiuje strukturę obiektu przypomnienia
 interface Reminder {
-    id: number; // Unikalny identyfikator przypomnienia
-    note: string; // Treść przypomnienia
-    user_id: number; // ID użytkownika, do którego należy przypomnienie
-    remind_at: string; // Data i czas przypomnienia
+    id: number;
+    note: string;
+    user_id: number;
+    remind_at: string;
 }
 
 /**
@@ -20,28 +20,17 @@ interface Reminder {
  * @returns {JSX.Element} - Zwraca widok strony z przypomnieniami.
  */
 export default function RemindersPage() {
-    // Stan przechowujący listę przypomnień
     const [reminders, setReminders] = useState<Reminder[]>([]);
-    // Stan wskazujący, czy trwa ładowanie przypomnień
     const [loading, setLoading] = useState(true);
-    // Stan przechowujący ewentualny błąd
     const [error, setError] = useState<string | null>(null);
-    // Stan kontrolujący widoczność modala do dodawania przypomnień
     const [modalVisible, setModalVisible] = useState(false);
-    // Stan przechowujący treść nowego przypomnienia
     const [newNote, setNewNote] = useState('');
-    // Stan przechowujący wybraną datę dla nowego przypomnienia
     const [selectedDate, setSelectedDate] = useState(new Date());
-    // Stan przechowujący wprowadzoną datę w formacie tekstowym
     const [dateInput, setDateInput] = useState('');
-    // Stan przechowujący wprowadzony czas w formacie tekstowym
     const [timeInput, setTimeInput] = useState('');
-    // Stan wskazujący, czy trwa zapisywanie nowego przypomnienia
     const [saving, setSaving] = useState(false);
-    // Pobranie tokena z kontekstu autentykacji
     const { token } = useAuth();
 
-    // Funkcja do pobierania przypomnień z API
     const fetchReminders = useCallback(async () => {
         if (!token) return;
 
@@ -59,12 +48,10 @@ export default function RemindersPage() {
         }
     }, [token]);
 
-    // Efekt uruchamiający pobieranie przypomnień po zamontowaniu komponentu
     useEffect(() => {
         fetchReminders();
     }, [fetchReminders]);
 
-    // Funkcja obsługująca dodawanie nowego przypomnienia
     const handleAddReminder = async () => {
         if (!newNote.trim()) {
             Alert.alert('Błąd', 'Wpisz treść przypomnienia');
@@ -86,11 +73,11 @@ export default function RemindersPage() {
         }
 
         const reminderDate = new Date(
-            parseInt(dateParts[2]), // rok
-            parseInt(dateParts[1]) - 1, // miesiąc (0-indexed)
-            parseInt(dateParts[0]), // dzień
-            parseInt(timeParts[0]), // godzina
-            parseInt(timeParts[1]) // minuta
+            parseInt(dateParts[2]),
+            parseInt(dateParts[1]) - 1,
+            parseInt(dateParts[0]),
+            parseInt(timeParts[0]),
+            parseInt(timeParts[1])
         );
 
         if (isNaN(reminderDate.getTime())) {

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, ActivityIndicator, ScrollView, Text, Alert, Platform, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams, Stack } from 'expo-router';
+import { useLocalSearchParams, Stack, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -17,6 +17,15 @@ interface InvoiceItemDetails {
     grossAmount: number; // Kwota brutto.
 }
 
+// Definicja interfejsu dla płatności.
+interface Payment {
+    id: number; // Unikalny identyfikator płatności.
+    invoiceId: number; // ID faktury.
+    amount: number; // Kwota płatności.
+    paidAt: string; // Data płatności.
+    paymentDate?: string; // Alias dla paidAt.
+}
+
 // Definicja interfejsu dla szczegółowych danych faktury.
 interface InvoiceDetails {
     id: number; // Unikalny identyfikator faktury.
@@ -29,6 +38,9 @@ interface InvoiceDetails {
     dueDate: string; // Termin płatności.
     isPaid: boolean; // Status płatności.
     items: InvoiceItemDetails[]; // Lista pozycji na fakturze.
+    paidAmount?: number; // Suma zapłaconych kwot.
+    remainingAmount?: number; // Pozostała kwota do zapłaty.
+    payments?: Payment[]; // Lista płatności.
 }
 
 /**
@@ -64,31 +76,58 @@ export default function InvoiceDetailScreen() {
     const [isDownloading, setIsDownloading] = useState(false);
     // Stan przechowujący ewentualny błąd.
     const [error, setError] = useState<string | null>(null);
+    // Ref do śledzenia czy dane zostały już załadowane.
+    const hasDataLoaded = useRef(false);
+    // Ref do śledzenia czy już odświeżyliśmy dane na tym focusie.
+    const hasRefreshedOnThisFocus = useRef(false);
 
-    // Efekt do pobierania szczegółów faktury z API.
-    useEffect(() => {
-        const fetchInvoiceDetails = async () => {
-            if (!id || !token) { setLoading(false); return; }
-            setLoading(true);
-            try {
-                const response = await api.get(`/Invoices/${id}`);
-                if (!response.data) throw new Error(`Nie udało się pobrać danych faktury (status: ${response.status})`);
-                const data = response.data;
-                console.log("Dane faktury z backendu:", data);
-                console.log("totalAmount:", data.totalAmount);
-                console.log("netAmount:", data.netAmount);
-                console.log("taxAmount:", data.taxAmount);
-                console.log("Items:", data.items);
-                setInvoice(data);
-            } catch (err: any) {
-                console.error("Błąd podczas pobierania faktury:", err);
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchInvoiceDetails();
+    // Funkcja do pobierania szczegółów faktury z API.
+    const fetchInvoiceDetails = useCallback(async () => {
+        if (!id || !token) { setLoading(false); return; }
+        setLoading(true);
+        try {
+            const response = await api.get(`/Invoices/${id}`);
+            if (!response.data) throw new Error(`Nie udało się pobrać danych faktury (status: ${response.status})`);
+            const data = response.data;
+            console.log("Dane faktury z backendu:", data);
+            console.log("totalAmount:", data.totalAmount);
+            console.log("paidAmount:", data.paidAmount);
+            console.log("remainingAmount:", data.remainingAmount);
+            console.log("payments:", data.payments);
+            setInvoice(data);
+            hasDataLoaded.current = true;
+        } catch (err: any) {
+            console.error("Błąd podczas pobierania faktury:", err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
     }, [id, token]);
+
+    // Efekt do pobierania szczegółów faktury przy pierwszym załadowaniu.
+    useEffect(() => {
+        if (!hasDataLoaded.current) {
+            fetchInvoiceDetails();
+        }
+    }, [fetchInvoiceDetails]);
+
+    // Efekt do automatycznego odświeżania danych po powrocie na ekran.
+    useFocusEffect(
+        useCallback(() => {
+            // Reset flagi przy każdym focusie
+            hasRefreshedOnThisFocus.current = false;
+
+            // Odśwież dane tylko jeśli faktura została już wcześniej załadowana i jeszcze nie odświeżyliśmy na tym focusie
+            if (hasDataLoaded.current && !hasRefreshedOnThisFocus.current) {
+                const timeoutId = setTimeout(() => {
+                    fetchInvoiceDetails();
+                    hasRefreshedOnThisFocus.current = true;
+                }, 300);
+
+                return () => clearTimeout(timeoutId);
+            }
+        }, [fetchInvoiceDetails])
+    );
 
     // Funkcja do obsługi pobierania faktury w formacie PDF.
     const handleDownloadPdf = async () => {
@@ -161,7 +200,39 @@ export default function InvoiceDetailScreen() {
                     <InfoRow label="Podatek VAT" value={invoice.taxAmount !== undefined && invoice.taxAmount !== null ? `${invoice.taxAmount.toFixed(2)} PLN` : 'N/A'} />
                     <Text style={styles.totalAmountLabel}>Do zapłaty (brutto)</Text>
                     <Text style={styles.totalAmountValue}>{invoice.totalAmount !== undefined && invoice.totalAmount !== null ? `${invoice.totalAmount.toFixed(2)} PLN` : 'N/A'}</Text>
+                    {invoice.paidAmount !== undefined && invoice.paidAmount !== null && invoice.paidAmount > 0 && (
+                        <>
+                            <InfoRow label="Zapłacono" value={`${invoice.paidAmount.toFixed(2)} PLN`} />
+                            <Text style={styles.remainingAmountLabel}>Pozostało</Text>
+                            <Text style={[styles.remainingAmountValue, invoice.remainingAmount && invoice.remainingAmount > 0 ? styles.remainingAmountValuePositive : styles.remainingAmountValueNegative]}>
+                                {invoice.remainingAmount !== undefined && invoice.remainingAmount !== null ? `${invoice.remainingAmount.toFixed(2)} PLN` : 'N/A'}
+                            </Text>
+                        </>
+                    )}
                 </View>
+
+                {/* Karta z historią płatności. */}
+                {invoice.payments && invoice.payments.length > 0 && (
+                    <View style={styles.card}>
+                        <Text style={styles.cardTitle}>Historia płatności</Text>
+                        {invoice.payments.map((payment) => (
+                            <View key={payment.id} style={styles.paymentItem}>
+                                <View style={styles.paymentRow}>
+                                    <Text style={styles.paymentDate}>
+                                        {new Date(payment.paidAt || payment.paymentDate || '').toLocaleDateString('pl-PL', {
+                                            year: 'numeric',
+                                            month: '2-digit',
+                                            day: '2-digit',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </Text>
+                                    <Text style={styles.paymentAmount}>{payment.amount.toFixed(2)} PLN</Text>
+                                </View>
+                            </View>
+                        ))}
+                    </View>
+                )}
 
                 {/* Przycisk do pobierania PDF. */}
                 <TouchableOpacity style={[styles.downloadButton, isDownloading && styles.disabledButton]} onPress={handleDownloadPdf} disabled={isDownloading}>
@@ -186,6 +257,14 @@ const styles = StyleSheet.create({
     itemDetails: { fontSize: 12, color: '#9ca3af', marginTop: 4 },
     totalAmountLabel: { fontSize: 16, color: '#9ca3af', textAlign: 'center', marginTop: 10 },
     totalAmountValue: { fontSize: 28, color: '#3b82f6', fontWeight: 'bold', textAlign: 'center', marginTop: 5 },
+    remainingAmountLabel: { fontSize: 16, color: '#9ca3af', textAlign: 'center', marginTop: 15 },
+    remainingAmountValue: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginTop: 5 },
+    remainingAmountValuePositive: { color: '#ef4444' }, // Czerwony dla pozostałej kwoty
+    remainingAmountValueNegative: { color: '#10b981' }, // Zielony jeśli wszystko zapłacone
+    paymentItem: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#374151' },
+    paymentRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    paymentDate: { fontSize: 14, color: '#9ca3af' },
+    paymentAmount: { fontSize: 16, color: '#10b981', fontWeight: 'bold' },
     downloadButton: { flexDirection: 'row', backgroundColor: '#10b981', padding: 15, margin: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
     downloadButtonText: { color: '#fff', marginLeft: 10, fontWeight: 'bold', fontSize: 16 },
     disabledButton: { backgroundColor: '#555' },

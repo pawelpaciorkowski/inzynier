@@ -8,24 +8,24 @@ import { Picker } from '@react-native-picker/picker';
 
 // Definicja interfejsu dla szczegółowych danych klienta.
 interface CustomerDetails {
-    id: number; // Unikalny identyfikator klienta.
-    name: string; // Imię i nazwisko lub nazwa firmy.
-    email: string; // Adres email.
-    phone?: string; // Numer telefonu (opcjonalny).
-    company?: string; // Nazwa firmy (opcjonalna).
-    address?: string; // Adres (opcjonalny).
-    nip?: string; // Numer NIP (opcjonalny).
-    representative?: any; // Obiekt przedstawiciela (użytkownik) lub null.
-    representativeUserId?: number | null; // ID przedstawiciela (użytkownika).
-    createdAt: string; // Data utworzenia rekordu.
-    assignedGroupId?: number; // ID przypisanej grupy (opcjonalne).
-    assignedUserId?: number; // ID przypisanego użytkownika (opcjonalne).
+    id: number;
+    name: string;
+    email: string;
+    phone?: string;
+    company?: string;
+    address?: string;
+    nip?: string;
+    representative?: any;
+    representativeUserId?: number | null;
+    createdAt: string;
+    assignedGroupId?: number;
+    assignedUserId?: number;
 }
 
 /**
  * Komponent pomocniczy do wyświetlania wiersza z informacją (etykieta i wartość).
- * @param {{ label: string, value: string | number | null | undefined }} props - Właściwości komponentu.
- * @returns {JSX.Element | null} - Zwraca widok wiersza lub null, jeśli wartość jest pusta.
+ * @param {{ label: string, value: string | number | null | undefined }} props 
+ * @returns {JSX.Element | null} 
  */
 const InfoRow = ({ label, value }: { label: string, value: string | number | null | undefined }) => {
     if (value === null || value === undefined || value === "") return null;
@@ -40,32 +40,21 @@ const InfoRow = ({ label, value }: { label: string, value: string | number | nul
 };
 
 /**
- * Komponent ekranu szczegółów klienta.
  * Wyświetla dane klienta, umożliwia ich edycję i usuwanie.
  * @returns {JSX.Element} - Zwraca widok szczegółów klienta.
  */
 export default function CustomerDetailScreen() {
-    // Pobranie ID klienta z parametrów URL.
     const { id } = useLocalSearchParams<{ id: string }>();
-    // Pobranie tokena z kontekstu autentykacji.
     const { token } = useAuth();
-    // Inicjalizacja hooka do nawigacji.
     const router = useRouter();
-    // Stan przechowujący dane klienta.
     const [customer, setCustomer] = useState<CustomerDetails | null>(null);
-    // Stan wskazujący, czy trwa ładowanie danych.
     const [loading, setLoading] = useState(true);
-    // Stan przechowujący ewentualny błąd.
     const [error, setError] = useState<string | null>(null);
-    // Stan kontrolujący tryb edycji.
     const [isEditing, setIsEditing] = useState(false);
-    // Stan przechowujący dane formularza edycji.
     const [editForm, setEditForm] = useState<Partial<CustomerDetails>>({});
-    // Lista użytkowników do wyboru przedstawiciela.
     const [users, setUsers] = useState<Array<{ id: number; username: string; email: string }>>([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
 
-    // Efekt do pobierania szczegółów klienta z API.
     useEffect(() => {
         const fetchCustomerDetails = async () => {
             if (!id || !token) {
@@ -77,7 +66,6 @@ export default function CustomerDetailScreen() {
                 if (!response.data) throw new Error('Nie udało się pobrać danych klienta.');
                 const data = response.data;
                 setCustomer(data);
-                // Inicjalizacja formularza edycji - używamy representativeUserId z danych
                 setEditForm({
                     ...data,
                     representativeUserId: data.representativeUserId || null
@@ -114,21 +102,17 @@ export default function CustomerDetailScreen() {
         if (!customer || !token) return;
 
         try {
-            // Przygotuj dane do wysłania - upewnij się że wysyłamy representativeUserId zamiast representative
             const dataToSend = {
                 ...editForm,
                 representativeUserId: editForm.representativeUserId || null,
             };
-            // Usuń stare pole representative jeśli istnieje
             delete dataToSend.representative;
             const response = await api.put(`/Customers/${customer.id}`, dataToSend);
-            if (response.status === 200) { // Backend zwraca status 200
-                // Aktualizuj lokalny stan klienta
+            if (response.status === 200) {
                 setCustomer({ ...customer, ...editForm });
-                setIsEditing(false); // Wyłączenie trybu edycji.
+                setIsEditing(false);
                 Alert.alert("Sukces", "Dane klienta zostały zaktualizowane");
-                // Lista klientów zostanie automatycznie odświeżona gdy wrócimy na ekran listy
-                // dzięki useFocusEffect w ekranie customers.tsx
+
             }
         } catch (err: any) {
             console.error("Błąd podczas aktualizacji:", err);
@@ -179,7 +163,6 @@ export default function CustomerDetailScreen() {
     // Główny widok komponentu.
     return (
         <>
-            {/* Konfiguracja nagłówka ekranu. */}
             <Stack.Screen
                 options={{
                     title: customer.name,

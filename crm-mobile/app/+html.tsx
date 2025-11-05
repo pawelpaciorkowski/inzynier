@@ -17,15 +17,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
 
-        {/* 
-          Wyłącza przewijanie body na stronie internetowej. To sprawia, że komponenty ScrollView działają podobnie jak na platformach natywnych. 
-          Jednak przewijanie body jest często przydatne w przypadku mobilnych stron internetowych. Jeśli chcesz je włączyć, usuń tę linię.
-        */}
+
         <ScrollViewStyleReset />
 
-        {/* Używanie surowych stylów CSS jako obejście, aby zapewnić, że kolor tła nigdy nie migocze w trybie ciemnym. */}
+
         <style dangerouslySetInnerHTML={{ __html: responsiveBackground }} />
-        {/* Dodaj tutaj wszelkie dodatkowe elementy <head>, które mają być globalnie dostępne w wersji webowej... */}
       </head>
       <body>{children}</body>
     </html>

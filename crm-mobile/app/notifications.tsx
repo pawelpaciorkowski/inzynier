@@ -8,21 +8,21 @@ import { useCallback, useEffect, useState } from 'react';
 
 // Definiuje strukturę obiektu powiadomienia
 interface Notification {
-    id: number; // Unikalny identyfikator powiadomienia
-    message: string; // Treść powiadomienia
-    createdAt: string; // Data utworzenia
-    isRead: boolean; // Status przeczytania
-    messageId?: number; // Opcjonalne ID powiązanej wiadomości
+    id: number;
+    message: string;
+    createdAt: string;
+    isRead: boolean;
+    messageId?: number;
 }
 
 // Definiuje strukturę obiektu szczegółów wiadomości
 interface MessageDetails {
-    id: number; // ID wiadomości
-    subject: string; // Temat wiadomości
-    body: string; // Treść wiadomości
-    sentAt: string; // Data wysłania
-    senderUsername: string; // Nazwa nadawcy
-    recipientUsername: string; // Nazwa odbiorcy
+    id: number;
+    subject: string;
+    body: string;
+    sentAt: string;
+    senderUsername: string;
+    recipientUsername: string;
 }
 
 /**
@@ -31,21 +31,17 @@ interface MessageDetails {
  * @returns {JSX.Element} - Zwraca widok strony z powiadomieniami.
  */
 export default function NotificationsPage() {
-    // Stan przechowujący listę powiadomień
+
     const [notifications, setNotifications] = useState<Notification[]>([]);
-    // Stan wskazujący, czy trwa ładowanie powiadomień
+
     const [loading, setLoading] = useState(true);
-    // Stan przechowujący ewentualny błąd
+
     const [error, setError] = useState<string | null>(null);
-    // Stan kontrolujący widoczność modala
+
     const [modalVisible, setModalVisible] = useState(false);
-    // Stan przechowujący wybrane powiadomienie
     const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
-    // Stan przechowujący szczegóły wiadomości
     const [messageDetails, setMessageDetails] = useState<MessageDetails | null>(null);
-    // Stan wskazujący, czy trwa ładowanie szczegółów wiadomości
     const [loadingDetails, setLoadingDetails] = useState(false);
-    // Pobranie tokena z kontekstu autentykacji
     const { token } = useAuth();
 
     // Funkcja do pobierania powiadomień z API

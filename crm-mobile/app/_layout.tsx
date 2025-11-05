@@ -19,19 +19,16 @@ const InitialLayout = () => {
   const segments = useSegments();
   const router = useRouter();
 
-  // Hook przypomnień - aktywny tylko gdy użytkownik jest zalogowany
   useReminders();
 
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === 'login'; // Sprawdzamy, czy jesteśmy na ekranie logowania
+    const inAuthGroup = segments[0] === 'login';
 
     if (isAuthenticated && inAuthGroup) {
-      // Jeśli zalogowany i na ekranie logowania, przekieruj do (tabs)
       router.replace('/(tabs)');
     } else if (!isAuthenticated && !inAuthGroup) {
-      // Jeśli niezalogowany i nie na ekranie logowania, przekieruj do login
       router.replace('/login');
     }
   }, [isAuthenticated, isLoading, segments]);

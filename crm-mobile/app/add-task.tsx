@@ -22,166 +22,116 @@ export default function AddTaskScreen() {
     // Inicjalizuje hook do nawigacji
     const router = useRouter();
 
-    // Stan przechowujący tytuł zadania
     const [title, setTitle] = useState('');
-    // Stan przechowujący opis zadania
     const [description, setDescription] = useState('');
-    // Stan przechowujący ID wybranego klienta
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
-    // Stan przechowujący nazwę wybranego klienta
     const [selectedCustomerName, setSelectedCustomerName] = useState<string>('');
-    // Stan przechowujący listę wszystkich klientów
     const [customers, setCustomers] = useState<Customer[]>([]);
-    // Stan przechowujący przefiltrowaną listę klientów
     const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
-    // Stan wskazujący, czy trwa proces dodawania zadania
     const [loading, setLoading] = useState(false);
-    // Stan wskazujący, czy trwa ładowanie listy klientów
     const [customersLoading, setCustomersLoading] = useState(true);
-    // Stan kontrolujący widoczność modala wyboru klienta
     const [showCustomerModal, setShowCustomerModal] = useState(false);
-    // Stan przechowujący frazę wyszukiwania klientów
     const [customerSearchQuery, setCustomerSearchQuery] = useState('');
 
-    // Efekt pobierający listę klientów po zamontowaniu komponentu
     useEffect(() => {
-        // Asynchroniczna funkcja do pobierania klientów
         const fetchCustomers = async () => {
             try {
-                // Wykonuje zapytanie GET do API w celu pobrania klientów
                 const res = await api.get(`/Customers`);
-                // Pobiera dane z odpowiedzi
                 const data = res.data;
-                // Inicjalizuje pustą tablicę na dane klientów
                 let customersData: Customer[] = [];
-                // Sprawdza format danych i przypisuje do tablicy
                 if (data && Array.isArray((data as any).$values)) {
                     customersData = (data as any).$values;
                 } else if (Array.isArray(data)) {
                     customersData = data;
                 }
 
-                // Filtruje klientów, aby upewnić się, że mają wymagane pola
                 const validCustomers = customersData.filter(customer => {
-                    // Sprawdza, czy obiekt klienta jest poprawny
                     if (!customer || typeof customer !== 'object') {
                         console.warn("Nieprawidłowy klient:", customer);
                         return false;
                     }
-                    // Sprawdza, czy klient ma ID
                     if (!customer.id && customer.id !== 0) {
                         console.warn("Klient bez ID:", customer);
                         return false;
                     }
-                    // Sprawdza, czy klient ma nazwę
                     if (!customer.name) {
                         console.warn("Klient bez nazwy:", customer);
                         return false;
                     }
-                    // Zwraca true, jeśli klient jest poprawny
                     return true;
                 });
 
-                // Ustawia pobranych i zweryfikowanych klientów w stanie
                 setCustomers(validCustomers);
-                // Ustawia przefiltrowanych klientów (początkowo wszyscy)
                 setFilteredCustomers(validCustomers);
             } catch (err) {
-                // Loguje błąd w konsoli
                 console.error("Błąd podczas pobierania klientów:", err);
-                // Wyświetla alert o błędzie
                 Alert.alert("Błąd", "Nie udało się pobrać listy klientów.");
             } finally {
-                // Kończy stan ładowania klientów
                 setCustomersLoading(false);
             }
         };
-        // Wywołuje funkcję pobierającą klientów
         fetchCustomers();
-    }, [token]); // Efekt uruchamia się ponownie, gdy zmieni się token
+    }, [token]);
 
-    // Efekt filtrujący klientów na podstawie frazy wyszukiwania
     useEffect(() => {
-        // Jeśli fraza wyszukiwania jest pusta, pokazuje wszystkich klientów
         if (customerSearchQuery.trim() === '') {
             setFilteredCustomers(customers);
         } else {
-            // Konwertuje frazę na małe litery
             const lowercasedQuery = customerSearchQuery.toLowerCase();
-            // Filtruje klientów, których nazwa zawiera frazę wyszukiwania
             const filtered = customers.filter(customer =>
                 customer && customer.name && customer.name.toLowerCase().includes(lowercasedQuery)
             );
-            // Ustawia przefiltrowaną listę w stanie
             setFilteredCustomers(filtered);
         }
-    }, [customerSearchQuery, customers]); // Efekt uruchamia się przy zmianie frazy lub listy klientów
+    }, [customerSearchQuery, customers]);
 
-    // Funkcja obsługująca dodawanie nowego zadania
     const handleAddTask = async () => {
-        // Sprawdza, czy tytuł zadania nie jest pusty
         if (!title.trim()) {
             Alert.alert("Błąd walidacji", "Tytuł zadania jest wymagany.");
             return;
         }
 
-        // Sprawdza, czy wybrano klienta
         if (!selectedCustomerId) {
             Alert.alert("Błąd walidacji", "Wybierz klienta dla zadania.");
             return;
         }
 
-        // Ustawia stan ładowania na true
         setLoading(true);
         try {
-            // Wykonuje zapytanie POST do API w celu dodania zadania
             const response = await api.post(`/user/tasks`, {
                 title: title.trim(),
                 description: description.trim() || null,
                 customerId: selectedCustomerId,
             });
 
-            // Jeśli zadanie zostało pomyślnie dodane (status 201)
             if (response.status === 201) {
-                // Wyświetla alert o sukcesie i wraca do poprzedniego ekranu
                 Alert.alert("Sukces", "Zadanie zostało pomyślnie dodane.", [
                     { text: "OK", onPress: () => router.back() }
                 ]);
             }
         } catch (err: any) {
-            // Loguje błąd w konsoli
             console.error("Błąd podczas dodawania zadania:", err);
-            // Wyświetla alert o błędzie
             const errorMessage = err.response?.data?.message || err.message || "Nieznany błąd";
             Alert.alert("Błąd", `Nie udało się dodać zadania: ${errorMessage}`);
         } finally {
-            // Kończy stan ładowania
             setLoading(false);
         }
     };
 
     // Funkcja do wyboru klienta z listy
     const selectCustomer = (customer: Customer) => {
-        // Sprawdza, czy obiekt klienta jest poprawny
         if (!customer || !customer.id || !customer.name) {
             console.warn("Próba wyboru nieprawidłowego klienta:", customer);
             return;
         }
-        // Ustawia ID wybranego klienta
         setSelectedCustomerId(customer.id);
-        // Ustawia nazwę wybranego klienta
         setSelectedCustomerName(customer.name);
-        // Zamyka modal wyboru klienta
         setShowCustomerModal(false);
-        // Czyści frazę wyszukiwania
         setCustomerSearchQuery('');
     };
 
-    // Funkcja do czyszczenia wybranego klienta
     const clearSelectedCustomer = () => {
-        // Resetuje ID wybranego klienta
         setSelectedCustomerId(null);
-        // Resetuje nazwę wybranego klienta
         setSelectedCustomerName('');
     };
 
