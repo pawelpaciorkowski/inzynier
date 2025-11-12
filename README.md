@@ -1,11 +1,5 @@
 # 📊 Zintegrowany System CRM – Projekt Inżynierski
 
-[![Status](https://img.shields.io/badge/Status-Production%20Ready-green)](https://github.com/pawelpaciorkowski/inzynier)
-[![Backend](https://img.shields.io/badge/Backend-Python%20Flask-blue)](https://flask.palletsprojects.com/)
-[![Frontend](https://img.shields.io/badge/Frontend-React%20+%20TypeScript-61dafb)](https://reactjs.org/)
-[![Mobile](https://img.shields.io/badge/Mobile-React%20Native-61dafb)](https://reactnative.dev/)
-[![Database](https://img.shields.io/badge/Database-MariaDB-003545)](https://mariadb.org/)
-
 > **Autor:** Paweł Paciorkowski  
 > **Kierunek:** Informatyka, IV rok  
 > **Specjalność:** Programista aplikacji biznesowych
@@ -36,7 +30,6 @@ System został zaprojektowany z myślą o spełnieniu rygorystycznych wymagań a
 | **Mobilna** | React Native 0.79.5, Expo 53.0.20, Expo Router, expo-secure-store |
 | **Generowanie Plików** | **ReportLab** (PDF), **python-docx** (szablony .docx) |
 | **Autoryzacja** | JWT, bcrypt |
-| **Konteneryzacja** | Docker, Docker Compose |
 
 ---
 
@@ -73,42 +66,12 @@ inzynier/
 ├── crm-ui/         # Webowy frontend (Vite + React + TypeScript)
 ├── crm-mobile/     # Mobilna aplikacja (Expo + React Native)
 ├── .gitignore
-├── docker-compose.yml
-├── DOCUMENTATION_INDEX.md  # Spis treści dokumentacji
 └── README.md
 ```
 
 ---
 
-## 🐳 Uruchamianie Środowiska (Zalecane: Docker Compose)
-
-Projekt został w pełni skonfigurowany do uruchomienia w środowisku kontenerowym, co jest najprostszym i najszybszym sposobem na start.
-
-### Wymagania
-- Zainstalowany **Docker** i **Docker Compose**.
-
-### Uruchomienie
-W głównym katalogu projektu (tam, gdzie znajduje się plik `docker-compose.yml`) uruchom komendy:
-
-```bash
-# Zbuduj obrazy dla wszystkich serwisów
-docker compose build
-
-# Uruchom wszystkie kontenery w tle
-docker compose up -d
-```
-Po chwili wszystkie serwisy będą dostępne pod następującymi adresami:
-
--   **Aplikacja Webowa (Frontend):** [http://localhost:5173](http://localhost:5173)
--   **API (Backend):** [http://localhost:5167](http://localhost:5167)
--   **Swagger (Dokumentacja API):** [http://localhost:5167/swagger](http://localhost:5167/swagger)
--   **Baza Danych (MariaDB):** Dostępna na porcie `3306` dla `localhost`
-
----
-
-## 💻 Uruchamianie manualne (bez Dockera)
-
-Jeśli nie chcesz używać Dockera, możesz uruchomić każdą część aplikacji osobno.
+## 💻 Uruchamianie aplikacji
 
 ### 1. Backend
 ```bash
@@ -124,7 +87,7 @@ venv\Scripts\activate     # Windows
 # Zainstaluj zależności
 pip install -r requirements.txt
 
-# Uruchom API (będzie działać na http://localhost:8100)
+# Uruchom API (będzie działać na http://localhost:5000)
 python app.py
 ```
 
@@ -148,10 +111,10 @@ cd crm-mobile
 # Zainstaluj zależności
 npm install
 
-# Uruchom aplikację (będzie działać na http://localhost:8081)
+# Uruchom aplikację
 npx expo start
 ```
-> **Uwaga:** Przy uruchomieniu manualnym upewnij się, że masz lokalnie działającą instancję bazy danych MySQL/MariaDB i zaktualizowałeś konfigurację połączenia w backendzie.
+> **Uwaga:** Upewnij się, że masz lokalnie działającą instancję bazy danych MySQL/MariaDB i zaktualizowałeś konfigurację połączenia w backendzie.
 
 ---
 
@@ -161,16 +124,7 @@ Projekt jest **ukończony i gotowy do obrony**. Wszystkie kluczowe moduły zosta
 
 ## 📚 Dokumentacja
 
-Kompletna dokumentacja projektu znajduje się w pliku **[DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)**.
-
-### Główne dokumenty:
-- 📄 **[Prezentacja_Projekt_CRM.md](Prezentacja_Projekt_CRM.md)** - Główna prezentacja projektu
-- 📄 **[JAK_BUDOWAŁEM_APLIKACJĘ_KROK_PO_KROKU.md](JAK_BUDOWAŁEM_APLIKACJĘ_KROK_PO_KROKU.md)** - Proces budowy krok po kroku
-- 📄 **[backend-python/README.md](backend-python/README.md)** - Dokumentacja backendu
-
-## 🎓 Przygotowanie do obrony
-
-Wszystkie niezbędne dokumenty i instrukcje znajdziesz w **[DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)**.
+Szczegółowa dokumentacja backendu znajduje się w pliku **[backend-python/README.md](backend-python/README.md)**.
 
 ## 📊 Metryki projektu
 
