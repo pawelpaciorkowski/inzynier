@@ -33,18 +33,17 @@ export default function UsersPage() {
             setUsers(data);
             setFilteredUsers(data);
         } catch (err) {
-            console.error('❌ Błąd ładowania użytkowników:', err);
+            console.error('Błąd ładowania użytkowników:', err);
             openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się załadować użytkowników.' });
         } finally {
             setLoading(false);
         }
-    }, []); // Usunięto openModal z zależności
+    }, []);
 
     useEffect(() => {
         fetchUsers();
-    }, []); // Usunięto fetchUsers z zależności
+    }, []);
 
-    // Filtrowanie użytkowników na podstawie wyszukiwania
     useEffect(() => {
         const filtered = users.filter(user =>
             user.username.toLowerCase().includes(search.toLowerCase()) ||
@@ -71,7 +70,7 @@ export default function UsersPage() {
                     openToast('Użytkownik usunięty.', 'success');
                     fetchUsers();
                 } catch (err) {
-                    console.error('❌ Błąd usuwania użytkownika:', err);
+                    console.error('Błąd usuwania użytkownika:', err);
                     openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się usunąć użytkownika.' });
                 }
             },

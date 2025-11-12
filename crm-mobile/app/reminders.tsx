@@ -108,7 +108,6 @@ export default function RemindersPage() {
         }
     };
 
-    // Funkcja obsługująca usuwanie przypomnienia
     const handleDeleteReminder = (id: number, note: string) => {
         Alert.alert(
             'Potwierdź usunięcie',
@@ -133,17 +132,14 @@ export default function RemindersPage() {
         );
     };
 
-    // Ustawienie domyślnych wartości dla nowego przypomnienia
     useEffect(() => {
         if (modalVisible) {
             const now = new Date();
-            // Ustaw datę na dziś (bez dodawania dnia)
             setDateInput(format(now, 'dd.MM.yyyy'));
             setTimeInput(format(now, 'HH:mm'));
         }
     }, [modalVisible]);
 
-    // Widok ładowania
     if (loading) {
         return (
             <View style={styles.centered}>
@@ -153,7 +149,6 @@ export default function RemindersPage() {
         );
     }
 
-    // Widok błędu
     if (error) {
         return (
             <View style={styles.centered}>
@@ -163,7 +158,6 @@ export default function RemindersPage() {
         );
     }
 
-    // Główny widok komponentu
     return (
         <View style={styles.container}>
             <View style={styles.header}>

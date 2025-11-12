@@ -104,7 +104,7 @@ export function LogsPage() {
     return (
         <div className="p-6 text-white">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold">Systemowe Logi</h1>
+                <h1 className="text-3xl font-bold">📄 Systemowe Logi</h1>
                 {user?.role === 'Admin' && (
                     <button
                         onClick={handleExportLogs}
@@ -140,11 +140,11 @@ export function LogsPage() {
                 <table className="min-w-full divide-y divide-gray-700">
                     <thead className="bg-gray-700">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Timestamp</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Level</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Source</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Message</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Exception</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Data i godzina</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Poziom</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Źródło</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Wiadomość</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Szczegóły</th>
                         </tr>
                     </thead>
                     <tbody className="bg-gray-800 divide-y divide-gray-700">
@@ -159,7 +159,7 @@ export function LogsPage() {
                                             log.level === 'Warning' ? 'bg-yellow-100 text-yellow-800' :
                                                 'bg-green-100 text-green-800'
                                             }`}>
-                                            {log.level}
+                                            {log.level === 'Error' ? 'Błąd' : log.level === 'Warning' ? 'Ostrzeżenie' : log.level === 'Information' ? 'Informacja' : log.level}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{log.source}</td>

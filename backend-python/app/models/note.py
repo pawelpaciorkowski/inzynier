@@ -10,7 +10,6 @@ class Note(db.Model):
     CustomerId = db.Column(db.Integer, db.ForeignKey('Customers.Id'), nullable=False)
     UserId = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     
-    # Relacje
     customer = db.relationship('Customer', backref='notes')
     user = db.relationship('User', backref=db.backref('notes', cascade='all, delete-orphan'))
     

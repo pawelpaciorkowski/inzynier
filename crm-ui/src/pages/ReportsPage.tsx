@@ -192,7 +192,7 @@ export function ReportsPage() {
         try {
             // Wybierz odpowiedni endpoint dashboard w zależności od roli użytkownika
             const dashboardEndpoint = user?.role === 'Admin' ? '/admin/dashboard' : '/dashboard/user';
-            
+
             const [dashboardRes, groupsRes, tagsRes] = await Promise.all([
                 api.get(dashboardEndpoint),
                 api.get('/Groups/'),
@@ -342,7 +342,7 @@ export function ReportsPage() {
 
     return (
         <div className="p-6">
-            <h1 className="text-3xl font-bold text-white mb-8">Raporty i Analizy</h1>
+            <h1 className="text-3xl font-bold text-white mb-8">📊 Raporty i Analizy</h1>
 
             {/* --- SEKCJA GŁÓWNEGO DASHBOARDU --- */}
             <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">

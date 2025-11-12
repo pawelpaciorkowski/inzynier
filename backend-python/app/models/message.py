@@ -12,7 +12,6 @@ class Message(db.Model):
     SentAt = db.Column(db.DateTime, default=datetime.utcnow)
     IsRead = db.Column(db.Boolean, default=False)
     
-    # Relacje
     sender = db.relationship('User', foreign_keys=[SenderUserId], backref=db.backref('sent_messages', cascade='all, delete-orphan'))
     recipient = db.relationship('User', foreign_keys=[RecipientUserId], backref=db.backref('received_messages', cascade='all, delete-orphan'))
     

@@ -12,7 +12,6 @@ class SystemLog(db.Model):
     Timestamp = db.Column(db.DateTime, default=datetime.now)
     UserId = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
     
-    # Relacje
     user = db.relationship('User', backref='system_logs')
     
     def to_dict(self):

@@ -61,7 +61,7 @@ export function LoginHistoryPage() {
 
     return (
         <div className="p-6">
-            <h1 className="text-3xl font-bold text-white mb-6">Historia logowań</h1>
+            <h1 className="text-3xl font-bold text-white mb-6">⏰ Historia logowań</h1>
 
             {/* Statystyki */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -97,7 +97,7 @@ export function LoginHistoryPage() {
                                     Data i godzina
                                 </th>
                                 <th className="px-5 py-3 border-b-2 border-gray-600 text-left text-xs font-semibold uppercase tracking-wider">
-                                    Status
+                                    Status logowania
                                 </th>
                                 <th className="px-5 py-3 border-b-2 border-gray-600 text-left text-xs font-semibold uppercase tracking-wider">
                                     Adres IP
@@ -139,7 +139,7 @@ export function LoginHistoryPage() {
                                         <div className="flex items-center space-x-2">
                                             <span className="text-gray-300">{entry.ipAddress}</span>
                                             {entry.ipAddress === '::1' && (
-                                                <span className="text-xs text-gray-500">(localhost)</span>
+                                                <span className="text-xs text-gray-500">(lokalne)</span>
                                             )}
                                         </div>
                                     </td>
@@ -173,7 +173,7 @@ export function LoginHistoryPage() {
                                     </td>
                                     <td className="px-5 py-4 border-b border-gray-600 text-sm">
                                         <div className="flex items-center space-x-2">
-                                            <span className="text-gray-300">{entry.deviceType || 'Desktop'}</span>
+                                            <span className="text-gray-300">{entry.deviceType === 'Desktop' ? 'Komputer' : entry.deviceType === 'Mobile' ? 'Telefon' : entry.deviceType === 'Tablet' ? 'Tablet' : entry.deviceType || 'Komputer'}</span>
                                             {entry.deviceType && (
                                                 <span className="text-xs text-gray-500">
                                                     {entry.deviceType === 'Desktop' && '💻'}

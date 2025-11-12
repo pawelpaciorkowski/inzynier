@@ -22,7 +22,6 @@ class Customer(db.Model):
     AssignedGroupId = db.Column(db.Integer)
     AssignedUserId = db.Column(db.Integer)
     
-    # Relacje
     representative_user = db.relationship('User', foreign_keys=[RepresentativeUserId], backref='represented_customers')
     
     # Relacja many-to-many z tagami

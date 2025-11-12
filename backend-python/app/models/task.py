@@ -19,7 +19,6 @@ class Task(db.Model):
     CustomerId = db.Column(db.Integer, db.ForeignKey('Customers.Id'))
     AssignedGroupId = db.Column(db.Integer)
     
-    # Relacje
     user = db.relationship('User', backref=db.backref('tasks', cascade='all, delete-orphan'))
     customer = db.relationship('Customer', backref='tasks')
     # Relacja many-to-many z tagami

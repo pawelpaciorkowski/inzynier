@@ -59,7 +59,6 @@ export function MeetingsPage() {
             onConfirm: async () => {
                 try {
                     await api.delete(`/Meetings/${id}`);
-                    // Odśwież listę po usunięciu
                     setMeetings(prevMeetings => prevMeetings.filter(meeting => meeting.id !== id));
                     openToast('Spotkanie zostało pomyślnie usunięte.', 'success');
                 } catch (err) {

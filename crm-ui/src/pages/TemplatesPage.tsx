@@ -1,5 +1,3 @@
-// Plik: crm-ui/src/pages/TemplatesPage.tsx
-
 import { useEffect, useState, useCallback, useRef } from 'react';
 import api from '../services/api';
 import { useModal } from '../context/ModalContext';

@@ -8,6 +8,7 @@ import {
     FunnelIcon,
     TableCellsIcon,
     ChartBarIcon,
+    ArrowDownTrayIcon,
     UsersIcon,
     DocumentTextIcon,
     CurrencyDollarIcon,
@@ -113,7 +114,7 @@ const COLUMN_LABELS = {
     duration: 'Czas trwania',
     location: 'Lokalizacja',
     participants: 'Uczestnicy',
-    status: 'Status',
+    status: 'Status płatności',
     content: 'Treść',
     updatedAt: 'Data aktualizacji'
 };
@@ -184,10 +185,9 @@ export function ExportsPage() {
                 headers: {
                     'Accept': '*/*',
                 },
-                timeout: 30000, // 30 sekund timeout
+                timeout: 30000,
             });
 
-            // Sprawdź czy odpowiedź jest poprawna
             if (response.status !== 200) {
                 throw new Error(`Błąd serwera: ${response.status}`);
             }
@@ -196,7 +196,6 @@ export function ExportsPage() {
                 type: response.headers['content-type'] || 'application/octet-stream'
             });
 
-            // Metoda 1: Standardowe pobieranie
             try {
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
@@ -211,19 +210,13 @@ export function ExportsPage() {
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
             } catch (downloadError) {
-                console.warn('Standardowe pobieranie nie działa, próbuję alternatywnej metody:', downloadError);
-
-                // Metoda 2: Otwórz w nowej karcie
                 const url = window.URL.createObjectURL(blob);
                 window.open(url, '_blank');
-
-                // Wyczyść URL po 5 sekundach
                 setTimeout(() => window.URL.revokeObjectURL(url), 5000);
             }
 
             openToast(`Dane ${config.type} zostały wyeksportowane w formacie ${config.format.toUpperCase()}.`, 'success');
 
-            // Dodaj informację o możliwych problemach z rozszerzeniami
             if (config.format === 'pdf') {
                 setTimeout(() => {
                     openModal({
@@ -235,9 +228,6 @@ export function ExportsPage() {
             }
         } catch (error: any) {
             console.error('Błąd eksportu:', error);
-            console.error('Status:', error.response?.status);
-            console.error('Headers:', error.response?.headers);
-            console.error('Data:', error.response?.data);
 
             let errorMessage = 'Nie udało się wyeksportować danych.';
             if (error.response?.status === 403) {
@@ -282,7 +272,6 @@ export function ExportsPage() {
 
     const TypeIcon = getTypeIcon(config.type);
 
-    // Sprawdź czy użytkownik ma uprawnienia do eksportu
     const hasExportPermission = user && ['Admin', 'Manager', 'User'].includes(user.role);
 
     if (dataLoading) {
@@ -415,7 +404,7 @@ export function ExportsPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                                    Tag
+                                    Tagi
                                 </label>
                                 <select
                                     value={config.tagId || ''}

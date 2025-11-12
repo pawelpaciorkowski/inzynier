@@ -74,7 +74,6 @@ export default function DashboardPage() {
             try {
                 const endpoint = isAdmin ? '/admin/dashboard' : '/dashboard';
                 const response = await api.get(endpoint);
-                console.log("Dashboard data:", response.data);
                 setDashboardData(response.data);
             } catch (error) {
                 console.error("Błąd pobierania danych dashboardu:", error);

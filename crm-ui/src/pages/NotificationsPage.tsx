@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
 import { format } from 'date-fns';
-// import { useModal } from '../context/ModalContext';
 import { BellIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { useOutletContext } from 'react-router-dom';
 
@@ -25,18 +24,15 @@ export function NotificationsPage() {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
-                console.warn('Brak tokenu - pomijam pobieranie powiadomień');
                 setNotifications([]);
                 setLoading(false);
                 return;
             }
             const response = await api.get('/Notifications/user');
             const data = response.data.$values || response.data;
-            // Upewnij się, że data jest tablicą
             if (Array.isArray(data)) {
                 setNotifications(data);
             } else {
-                console.warn('Otrzymano nieprawidłowy format danych powiadomień:', data);
                 setNotifications([]);
             }
         } catch (error: unknown) {
@@ -50,24 +46,22 @@ export function NotificationsPage() {
         } finally {
             setLoading(false);
         }
-    }, []); // Usunięto apiUrl i openModal z zależności
+    }, []);
 
     useEffect(() => {
         fetchNotifications();
-    }, []); // Usunięto fetchNotifications z zależności
+    }, []);
 
     const handleMarkAsRead = async (id: number) => {
         try {
             await api.post(`/Notifications/mark-as-read/${id}`, {});
-            fetchNotifications(); // Odśwież lokalnie
-            globalFetchNotifications(); // Odśwież licznik w Layout
+            fetchNotifications();
+            globalFetchNotifications();
         } catch (err) {
             console.error("Błąd oznaczania jako przeczytane:", err);
-            // Możesz dodać openModal z błędem, jeśli chcesz
         }
     };
 
-    // Dodaj funkcję do masowego oznaczania
     const handleMarkAllAsRead = async () => {
         const unread = notifications.filter(n => !n.isRead);
         try {

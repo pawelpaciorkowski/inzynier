@@ -9,7 +9,6 @@ class Payment(db.Model):
     PaidAt = db.Column(db.DateTime, nullable=False)
     Amount = db.Column(db.Numeric(65, 30), nullable=False)
     
-    # Relacje
     invoice = db.relationship('Invoice', backref='payments')
     
     def to_dict(self):

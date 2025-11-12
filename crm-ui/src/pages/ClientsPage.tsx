@@ -1,5 +1,3 @@
-// Plik: crm-ui/src/pages/ClientsPage.tsx
-
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api'; // Używamy nowej instancji axios
@@ -59,7 +57,6 @@ export default function ClientsPage() {
         } catch (error) {
             console.error("Błąd pobierania klientów:", error);
 
-            // Sprawdź czy to błąd autoryzacji
             if (error && typeof error === 'object' && 'response' in error) {
                 const axiosErr = error as { response?: { status?: number } };
                 const status = axiosErr.response?.status;
@@ -82,11 +79,11 @@ export default function ClientsPage() {
         } finally {
             setLoading(false);
         }
-    }, []); // Usunięto openModal z zależności
+    }, []);
 
     useEffect(() => {
         fetchClients();
-    }, []); // Usunięto fetchClients z zależności
+    }, []);
 
     const handleDelete = (client: Client) => {
         openModal({

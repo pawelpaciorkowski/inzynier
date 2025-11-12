@@ -11,7 +11,6 @@ customers_bp = Blueprint('customers', __name__)
 def get_customers():
     """Pobiera listę klientów, posortowaną od najnowszych (malejąco według ID)"""
     try:
-        # Pobierz klientów, sortując od najnowszych (największe ID na początku)
         customers = Customer.query.order_by(Customer.Id.desc()).all()
         return jsonify([customer.to_dict() for customer in customers]), 200
     except Exception as e:
@@ -68,7 +67,6 @@ def update_customer(customer_id):
         
         data = request.get_json()
         
-        # Aktualizuj podstawowe pola klienta
         if 'name' in data:
             customer.Name = data['name']
         if 'email' in data:
@@ -95,12 +93,9 @@ def update_customer(customer_id):
         if 'assignedUserId' in data:
             customer.AssignedUserId = data['assignedUserId']
         
-        # Aktualizuj tagi klienta
         if 'tagIds' in data:
             from app.models import Tag
-            # Usuń wszystkie istniejące powiązania z tagami
             customer.tags.clear()
-            # Dodaj nowe tagi
             tag_ids = data['tagIds']
             if tag_ids:
                 for tag_id in tag_ids:

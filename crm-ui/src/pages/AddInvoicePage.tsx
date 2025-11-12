@@ -119,7 +119,7 @@ export function AddInvoicePage() {
             }
         };
         fetchData();
-    }, []); // Usunięto api z zależności
+    }, []);
 
     const handleAddItem = () => {
         if (!selectedServiceId) {

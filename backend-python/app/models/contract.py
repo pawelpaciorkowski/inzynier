@@ -32,7 +32,6 @@ class Contract(db.Model):
     CreatedByUserId = db.Column(db.Integer)
     ResponsibleGroupId = db.Column(db.Integer)
     
-    # Relacje
     customer = db.relationship('Customer', backref='contracts')
     # Relacja many-to-many z tagami
     tags = db.relationship('Tag', secondary=contract_tags, backref='contracts')

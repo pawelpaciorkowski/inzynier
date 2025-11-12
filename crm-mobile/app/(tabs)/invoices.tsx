@@ -68,19 +68,7 @@ export default function InvoicesScreen() {
             const response = await api.get('/Invoices');
 
             const data = response.data;
-            console.log("Odpowiedź z backendu (raw):", JSON.stringify(data, null, 2));
-
             const invoicesData = data.$values || data;
-            console.log("Przetworzone dane faktur:", invoicesData);
-
-            if (invoicesData.length > 0) {
-                const firstInvoice = invoicesData[0];
-                console.log("Pierwsza faktura (pełna):", JSON.stringify(firstInvoice, null, 2));
-                console.log("Pierwsza faktura totalAmount:", firstInvoice.totalAmount);
-                console.log("Typ totalAmount:", typeof firstInvoice.totalAmount);
-                console.log("Czy totalAmount jest null:", firstInvoice.totalAmount === null);
-                console.log("Czy totalAmount jest undefined:", firstInvoice.totalAmount === undefined);
-            }
 
             setAllInvoices(invoicesData);
             setFilteredInvoices(invoicesData);

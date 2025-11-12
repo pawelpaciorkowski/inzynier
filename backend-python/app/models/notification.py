@@ -10,7 +10,6 @@ class Notification(db.Model):
     CreatedAt = db.Column(db.DateTime, default=datetime.utcnow)
     UserId = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     
-    # Relacje
     user = db.relationship('User', backref=db.backref('notifications', cascade='all, delete-orphan'))
     
     def to_dict(self):

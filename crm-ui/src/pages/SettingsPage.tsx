@@ -41,7 +41,7 @@ export function SettingsPage() {
 
     return (
         <div className="p-6 max-w-4xl mx-auto">
-            <h1 className="text-3xl font-bold text-white mb-8">Ustawienia</h1>
+            <h1 className="text-3xl font-bold text-white mb-8">⚙️ Ustawienia</h1>
 
             <div className="space-y-8">
                 {/* --- Sekcja dla Admina --- */}

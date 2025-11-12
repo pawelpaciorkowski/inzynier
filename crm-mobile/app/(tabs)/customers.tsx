@@ -1,4 +1,3 @@
-// Plik: crm-mobile/app/(tabs)/customers.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, Text, View, TouchableOpacity, Pressable } from 'react-native';
 import { Link, Stack, useRouter, useFocusEffect } from 'expo-router';
@@ -28,71 +27,42 @@ interface Customer {
  * @returns {JSX.Element} - Zwraca widok z listą klientów.
  */
 export default function CustomersScreen() {
-    // Pobranie tokena uwierzytelniającego z kontekstu.
     const { token } = useAuth();
-    // Inicjalizacja hooka do nawigacji.
     const router = useRouter();
 
-    // Stan przechowujący pełną listę klientów pobraną z serwera.
     const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
-    // Stan przechowujący listę klientów po zastosowaniu filtrów (np. wyszukiwania).
     const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
-    // Stan wskazujący, czy trwa ładowanie danych.
     const [loading, setLoading] = useState(true);
-    // Stan wskazujący, czy trwa proces odświeżania listy.
     const [refreshing, setRefreshing] = useState(false);
-    // Stan przechowujący ewentualny błąd, który wystąpił podczas pobierania danych.
     const [error, setError] = useState<string | null>(null);
-    // Stan przechowujący aktualną frazę wyszukiwania wprowadzoną przez użytkownika.
     const [searchQuery, setSearchQuery] = useState('');
-    // Ref do śledzenia czy to pierwsze załadowanie
     const isInitialLoad = useRef(true);
-    // Ref do przechowywania informacji czy mamy już załadowane dane
     const hasDataLoaded = useRef(false);
-    // Ref do śledzenia czy już odświeżyliśmy przy obecnym focus (zapobiega pętli)
     const hasRefreshedOnThisFocus = useRef(false);
 
-    // Funkcja do pobierania listy klientów z API, opakowana w useCallback dla optymalizacji.
     const fetchCustomers = useCallback(async () => {
-        // Przerywa wykonanie, jeśli brakuje tokena.
         if (!token) {
             setError("Brak tokena autoryzacyjnego.");
             setLoading(false);
             return;
         }
 
-        // Ustawia stan ładowania tylko przy pierwszym ładowaniu, nie przy odświeżaniu, by uniknąć migotania.
         if (!refreshing) {
             setLoading(true);
         }
-        // Resetuje stan błędu przed nowym zapytaniem.
         setError(null);
 
         try {
-            // Logowanie rozpoczęcia pobierania danych.
-            console.log("Pobieranie klientów...");
-            // Wykonanie zapytania GET do API.
             const response = await api.get('/Customers');
-            // Logowanie odpowiedzi z serwera.
-            console.log("Odpowiedź z serwera:", response.data);
-
-            // Przypisanie danych z odpowiedzi do zmiennej.
             const data = response.data;
-            // Logowanie typu i struktury otrzymanych danych.
-            console.log("Typ danych:", typeof data);
-            console.log("Czy data jest tablicą:", Array.isArray(data));
 
-            // Zmienna do przechowywania przetworzonych danych klientów.
             let customersData;
-            // Sprawdzenie różnych możliwych formatów odpowiedzi z serwera .NET.
             if (Array.isArray(data)) {
                 customersData = data;
             } else if (data && data.$values && Array.isArray(data.$values)) {
-                customersData = data.$values; // Typowy format dla referencji cyklicznych w JSON.NET.
+                customersData = data.$values;
             } else if (data && typeof data === 'object') {
-                // Próba znalezienia tablicy wewnątrz obiektu, jeśli format jest nietypowy.
                 const keys = Object.keys(data);
-                console.log("Klucze w obiekcie:", keys);
                 for (const key of keys) {
                     if (Array.isArray(data[key])) {
                         customersData = data[key];
@@ -101,83 +71,64 @@ export default function CustomersScreen() {
                 }
             }
 
-            // Logowanie danych po przetworzeniu.
-            console.log("Przetworzone dane klientów:", customersData);
-
-            // Jeśli dane są poprawną tablicą, przetwarzamy je dalej.
             if (Array.isArray(customersData)) {
-                // Walidacja każdego obiektu klienta w tablicy.
                 const validCustomers = customersData.filter(customer => {
                     if (!customer || typeof customer !== 'object') {
-                        console.warn("Nieprawidłowy klient:", customer);
                         return false;
                     }
                     if (!customer.id && customer.id !== 0) {
-                        console.warn("Klient bez ID:", customer);
                         return false;
                     }
                     return true;
                 });
 
-                // Logowanie poprawnych klientów.
-                console.log("Poprawni klienci:", validCustomers);
-                // Ustawienie pełnej listy klientów i listy filtrowanej.
                 setAllCustomers(validCustomers);
                 setFilteredCustomers(validCustomers);
-                // Oznacz że pierwsze załadowanie się zakończyło
                 if (isInitialLoad.current) {
                     isInitialLoad.current = false;
                 }
-                // Oznacz że mamy już załadowane dane
                 hasDataLoaded.current = true;
             } else {
-                // Obsługa błędu nieprawidłowego formatu danych.
-                console.error("Nieprawidłowy format danych:", data);
                 setError("Nieprawidłowy format danych z serwera");
             }
         } catch (err: any) {
-            // Obsługa błędów zapytania sieciowego.
             console.error("Błąd podczas pobierania klientów:", err);
-            console.error("Szczegóły błędu:", err.response?.data);
             setError(err.message || "Błąd podczas pobierania danych");
         } finally {
-            // Zakończenie stanu ładowania i odświeżania.
             setLoading(false);
             setRefreshing(false);
         }
-    }, [token, refreshing]); // Zależności hooka useCallback.
+    }, [token, refreshing]);
 
-    // Efekt uruchamiający pobieranie klientów tylko przy pierwszym załadowaniu komponentu.
     useEffect(() => {
         if (isInitialLoad.current) {
             fetchCustomers();
         }
     }, [fetchCustomers]);
 
-    // Odświeżanie listy po powrocie z ekranu edycji (bez pokazywania spinnera)
     useFocusEffect(
         useCallback(() => {
             let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-           
+
             if (!isInitialLoad.current && token && hasDataLoaded.current && !hasRefreshedOnThisFocus.current) {
                 hasRefreshedOnThisFocus.current = true; // Oznacz że już odświeżyliśmy
 
-             
+
                 timeoutId = setTimeout(() => {
                     setRefreshing(true); // Ustaw refreshing, aby nie pokazywać 
                     fetchCustomers();
                 }, 300);
             }
 
-            
+
             return () => {
                 if (timeoutId) {
                     clearTimeout(timeoutId);
                 }
-                hasRefreshedOnThisFocus.current = false; 
+                hasRefreshedOnThisFocus.current = false;
             };
-        }, [token]) 
+        }, [token])
     );
 
     const onRefresh = useCallback(() => {
@@ -196,7 +147,7 @@ export default function CustomersScreen() {
             );
             setFilteredCustomers(filtered);
         }
-    }, [searchQuery, allCustomers]); 
+    }, [searchQuery, allCustomers]);
 
     if (loading) {
         return (
@@ -214,7 +165,6 @@ export default function CustomersScreen() {
         );
     }
 
-    // Główny widok komponentu z listą klientów.
     return (
         <>
             {/* Konfiguracja nagłówka ekranu z przyciskiem do dodawania klienta. */}

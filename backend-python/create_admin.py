@@ -13,14 +13,11 @@ from app.models.role import Role
 def create_admin_user():
     """Tworzy użytkownika admin z rolą Administrator"""
     
-    # Tworzymy kontekst aplikacji
     app = create_app()
     
     with app.app_context():
-        # Sprawdź, czy rola Admin istnieje
         admin_role = Role.query.filter_by(name='Admin').first()
         
-        # Jeśli nie ma roli Admin, utwórz ją
         if not admin_role:
             admin_role = Role(
                 name='Admin',
@@ -32,7 +29,6 @@ def create_admin_user():
         else:
             print("✅ Rola Admin już istnieje")
         
-        # Sprawdź, czy użytkownik admin już istnieje
         existing_admin = User.query.filter_by(username='admin').first()
         
         if existing_admin:
@@ -40,7 +36,6 @@ def create_admin_user():
             response = input("Czy chcesz zaktualizować hasło? (tak/nie): ")
             
             if response.lower() in ['tak', 't', 'yes', 'y']:
-                # Aktualizuj hasło
                 existing_admin.password_hash = generate_password_hash('Diviruse007@')
                 db.session.commit()
                 print("✅ Hasło użytkownika admin zostało zaktualizowane!")
@@ -48,7 +43,6 @@ def create_admin_user():
                 print("❌ Anulowano operację")
                 return
         else:
-            # Utwórz nowego użytkownika admin
             admin_user = User(
                 username='admin',
                 email='admin@crm.local',

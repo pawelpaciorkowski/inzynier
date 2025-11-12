@@ -10,7 +10,6 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
     
-    # Relacje
     role = db.relationship('Role', backref='users')
     
     def to_dict(self):

@@ -80,7 +80,6 @@ export default function CustomerDetailScreen() {
         fetchCustomerDetails();
     }, [id, token]);
 
-    // Pobierz listę użytkowników przy załadowaniu komponentu
     useEffect(() => {
         const fetchUsers = async () => {
             if (!token) return;
@@ -97,7 +96,6 @@ export default function CustomerDetailScreen() {
         fetchUsers();
     }, [token]);
 
-    // Funkcja do zapisywania zmian w danych klienta.
     const handleSave = async () => {
         if (!customer || !token) return;
 
@@ -120,7 +118,6 @@ export default function CustomerDetailScreen() {
         }
     };
 
-    // Funkcja do usuwania klienta.
     const handleDelete = () => {
         Alert.alert(
             "Usuń klienta",
@@ -146,21 +143,18 @@ export default function CustomerDetailScreen() {
         );
     };
 
-    // Widok ładowania.
     if (loading) return (
         <View style={styles.centered}>
             <ActivityIndicator size="large" color="#fff" />
         </View>
     );
 
-    // Widok błędu lub braku klienta.
     if (error || !customer) return (
         <View style={styles.centered}>
             <Text style={styles.errorText}>{error || 'Nie znaleziono klienta.'}</Text>
         </View>
     );
 
-    // Główny widok komponentu.
     return (
         <>
             <Stack.Screen
@@ -279,7 +273,6 @@ export default function CustomerDetailScreen() {
                             </View>
                         </View>
                     ) : (
-                        // Widok szczegółów klienta.
                         <>
                             <InfoRow label="Nazwa" value={customer.name} />
                             <InfoRow label="Email" value={customer.email} />

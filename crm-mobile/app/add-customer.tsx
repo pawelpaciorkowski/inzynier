@@ -21,7 +21,6 @@ export default function AddCustomerScreen() {
     const [loading, setLoading] = useState(false);
     const [loadingUsers, setLoadingUsers] = useState(false);
 
-    // Pobierz listę użytkowników przy załadowaniu komponentu
     useEffect(() => {
         const fetchUsers = async () => {
             if (!token) return;
@@ -44,7 +43,6 @@ export default function AddCustomerScreen() {
             return;
         }
 
-        // Walidacja email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             Alert.alert("Błąd walidacji", "Podaj poprawny adres email.");

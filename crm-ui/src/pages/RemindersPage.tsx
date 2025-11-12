@@ -1,6 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Plik: crm-ui/src/pages/RemindersPage.tsx
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useModal } from '../context/ModalContext';
 import api from '../services/api';
@@ -47,7 +45,7 @@ export function RemindersPage() {
 
     useEffect(() => {
         fetchReminders();
-    }, []); // Usunięto fetchReminders z zależności
+    }, []);
 
     useEffect(() => {
         const filtered = reminders.filter(r =>

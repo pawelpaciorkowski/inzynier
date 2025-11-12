@@ -20,7 +20,6 @@ class Invoice(db.Model):
     AssignedGroupId = db.Column(db.Integer)
     CreatedByUserId = db.Column(db.Integer)
     
-    # Relacje
     customer = db.relationship('Customer', backref='invoices')
     # Relacja many-to-many z tagami
     tags = db.relationship('Tag', secondary=invoice_tags, backref='invoices')

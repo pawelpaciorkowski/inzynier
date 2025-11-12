@@ -15,11 +15,9 @@ def get_dashboard():
         if not user:
             return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
         
-        # Sprawdź czy użytkownik ma uprawnienia administratora
         if user.role.name != 'Admin':
             return jsonify({'error': 'Brak uprawnień administratora'}), 403
         
-        # Pobierz statystyki
         stats = db.session.execute(text("""
             SELECT 
                 (SELECT COUNT(*) FROM users) as total_users,
@@ -34,7 +32,6 @@ def get_dashboard():
                 (SELECT SUM(TotalAmount) FROM Invoices) as total_invoices_value
         """)).fetchone()
         
-        # Pobierz zadania na użytkownika
         task_per_user = db.session.execute(text("""
             SELECT 
                 u.username,
@@ -81,11 +78,9 @@ def get_users():
         if not user:
             return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
         
-        # Sprawdź czy użytkownik ma uprawnienia administratora
         if user.role.name != 'Admin':
             return jsonify({'error': 'Brak uprawnień administratora'}), 403
         
-        # Pobierz użytkowników, sortując od najnowszych (największe ID na początku)
         users = User.query.order_by(User.id.desc()).all()
         return jsonify([user.to_dict() for user in users]), 200
         
@@ -102,7 +97,6 @@ def create_user():
         if not user:
             return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
         
-        # Sprawdź czy użytkownik ma uprawnienia administratora
         if user.role.name != 'Admin':
             return jsonify({'error': 'Brak uprawnień administratora'}), 403
         
@@ -115,14 +109,12 @@ def create_user():
         if not username or not email or not password:
             return jsonify({'error': 'Brak wymaganych danych'}), 400
         
-        # Sprawdź czy użytkownik już istnieje
         if User.query.filter_by(username=username).first():
             return jsonify({'error': 'Użytkownik o tej nazwie już istnieje'}), 400
         
         if User.query.filter_by(email=email).first():
             return jsonify({'error': 'Użytkownik o tym emailu już istnieje'}), 400
         
-        # Utwórz nowego użytkownika
         from werkzeug.security import generate_password_hash
         new_user = User(
             username=username,
@@ -150,7 +142,6 @@ def get_user(user_id):
         if not user:
             return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
         
-        # Sprawdź czy użytkownik ma uprawnienia administratora
         if user.role.name != 'Admin':
             return jsonify({'error': 'Brak uprawnień administratora'}), 403
         
@@ -173,7 +164,6 @@ def update_user(user_id):
         if not user:
             return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
         
-        # Sprawdź czy użytkownik ma uprawnienia administratora
         if user.role.name != 'Admin':
             return jsonify({'error': 'Brak uprawnień administratora'}), 403
         
@@ -191,8 +181,6 @@ def update_user(user_id):
             target_user.role_id = data.get('role_id') or data.get('roleId')
         
         db.session.commit()
-        
-        # Odśwież relację role po commit
         db.session.refresh(target_user)
         
         return jsonify(target_user.to_dict()), 200
@@ -211,7 +199,6 @@ def delete_user(user_id):
         if not user:
             return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
         
-        # Sprawdź czy użytkownik ma uprawnienia administratora
         if user.role.name != 'Admin':
             return jsonify({'error': 'Brak uprawnień administratora'}), 403
         
@@ -219,7 +206,6 @@ def delete_user(user_id):
         if not target_user:
             return jsonify({'error': 'Użytkownik nie znaleziony'}), 404
         
-        # Nie można usunąć samego siebie
         if target_user.id == user.id:
             return jsonify({'error': 'Nie można usunąć samego siebie'}), 400
         
@@ -242,7 +228,6 @@ def create_role():
         if not user:
             return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
         
-        # Sprawdź czy użytkownik ma uprawnienia administratora
         if user.role.name != 'Admin':
             return jsonify({'error': 'Brak uprawnień administratora'}), 403
         
@@ -253,11 +238,9 @@ def create_role():
         if not name:
             return jsonify({'error': 'Nazwa roli jest wymagana'}), 400
         
-        # Sprawdź czy rola już istnieje
         if Role.query.filter_by(name=name).first():
             return jsonify({'error': 'Rola o tej nazwie już istnieje'}), 400
         
-        # Utwórz nową rolę
         new_role = Role(
             name=name,
             Description=description
@@ -281,11 +264,9 @@ def get_roles():
         if not user:
             return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
         
-        # Sprawdź czy użytkownik ma uprawnienia administratora
         if user.role.name != 'Admin':
             return jsonify({'error': 'Brak uprawnień administratora'}), 403
         
-        # Pobierz role, sortując od najnowszych (największe ID na początku)
         roles = Role.query.order_by(Role.id.desc()).all()
         return jsonify([role.to_dict() for role in roles]), 200
         
@@ -301,7 +282,6 @@ def update_role(role_id):
         if not user:
             return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
         
-        # Sprawdź czy użytkownik ma uprawnienia administratora
         if user.role.name != 'Admin':
             return jsonify({'error': 'Brak uprawnień administratora'}), 403
         
@@ -333,7 +313,6 @@ def delete_role(role_id):
         if not user:
             return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
         
-        # Sprawdź czy użytkownik ma uprawnienia administratora
         if user.role.name != 'Admin':
             return jsonify({'error': 'Brak uprawnień administratora'}), 403
         
@@ -341,12 +320,10 @@ def delete_role(role_id):
         if not role:
             return jsonify({'error': 'Rola nie znaleziona'}), 404
         
-        # Sprawdź czy rola nie jest używana przez użytkowników
         users_with_role = User.query.filter_by(role_id=role_id).count()
         if users_with_role > 0:
             return jsonify({'error': f'Nie można usunąć roli używanej przez {users_with_role} użytkowników'}), 400
         
-        # Usuń rolę
         db.session.delete(role)
         db.session.commit()
         
@@ -365,11 +342,9 @@ def get_all_tasks():
         if not user:
             return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
         
-        # Sprawdź czy użytkownik ma uprawnienia administratora
         if user.role.name != 'Admin':
             return jsonify({'error': 'Brak uprawnień administratora'}), 403
         
-        # Pobierz wszystkie zadania z JOIN do tabel Users i Customers
         tasks = db.session.execute(text("""
             SELECT 
                 t.Id, t.Title, t.Description, t.DueDate, t.Completed,
@@ -383,7 +358,6 @@ def get_all_tasks():
         
         result = []
         for row in tasks:
-            # Debug: sprawdź typ due_date
             due_date_value = None
             if row[3]:
                 if hasattr(row[3], 'isoformat'):
@@ -408,9 +382,6 @@ def get_all_tasks():
         return jsonify(result), 200
         
     except Exception as e:
-        import traceback
-        print(f"Błąd w get_all_tasks: {str(e)}")
-        print(f"Traceback: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/Roles/<int:role_id>/users', methods=['GET'])
@@ -422,16 +393,13 @@ def get_users_by_role(role_id):
         if not user:
             return jsonify({'error': 'Użytkownik nie znaleziony'}), 401
         
-        # Sprawdź czy użytkownik ma uprawnienia administratora
         if user.role.name != 'Admin':
             return jsonify({'error': 'Brak uprawnień administratora'}), 403
         
-        # Sprawdź czy rola istnieje
         role = Role.query.get(role_id)
         if not role:
             return jsonify({'error': 'Rola nie znaleziona'}), 404
         
-        # Pobierz użytkowników z tą rolą
         users = db.session.execute(text("""
             SELECT u.id, u.username, u.email
             FROM users u
@@ -454,7 +422,4 @@ def get_users_by_role(role_id):
         }), 200
         
     except Exception as e:
-        import traceback
-        print(f"Błąd w get_users_by_role: {str(e)}")
-        print(f"Traceback: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500

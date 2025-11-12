@@ -17,7 +17,6 @@ class Meeting(db.Model):
     AssignedGroupId = db.Column(db.Integer, db.ForeignKey('Groups.Id'), nullable=True)
     CreatedByUserId = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     
-    # Relacje
     customer = db.relationship('Customer', backref='meetings')
     assigned_group = db.relationship('Group', backref='meetings')
     created_by_user = db.relationship('User', backref='meetings')

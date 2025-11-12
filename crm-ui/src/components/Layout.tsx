@@ -1,105 +1,64 @@
-// Import hooków React - useState do stanu komponentu, useCallback do memoizacji funkcji
 import { useState, type JSX, useCallback } from "react";
-// Import useRef do referencji DOM, useEffect do efektów ubocznych
 import { useRef, useEffect } from "react";
-// Import komponentów React Router - Link do nawigacji, useNavigate do programowej nawigacji, Outlet do renderowania dzieci tras
 import { Link, useNavigate, Outlet } from "react-router-dom";
-// Import kontekstu uwierzytelnienia do zarządzania stanem użytkownika
 import { useAuth } from "../context/AuthContext";
-// Import ikon Heroicons do interfejsu użytkownika
 import HomeIcon from '@heroicons/react/24/solid/HomeIcon';
 import UsersIcon from '@heroicons/react/24/solid/UsersIcon';
 import UserCircleIcon from '@heroicons/react/24/solid/UserCircleIcon';
 import CheckCircleIcon from '@heroicons/react/24/solid/CheckCircleIcon';
 import { ClipboardDocumentListIcon, CalendarDaysIcon, DocumentDuplicateIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, BellIcon } from "@heroicons/react/24/solid";
-// Import biblioteki axios do wykonywania zapytań HTTP
 import api from '../services/api';
-// Import funkcji formatDistanceToNow do formatowania dat jako "X minut temu"
 import { formatDistanceToNow } from 'date-fns';
-// Import polskiej lokalizacji dla date-fns
 import { pl } from 'date-fns/locale';
 import { parseBackendDate } from '../utils/dateUtils';
 
-// Interface definiujący strukturę powiadomienia z backendu
 interface Notification {
-    // Unikalny identyfikator powiadomienia
     id: number;
-    // Treść wiadomości powiadomienia
     message: string;
-    // Data i czas utworzenia powiadomienia (format ISO string)
     createdAt: string;
-    // Flaga określająca czy powiadomienie zostało przeczytane
     isRead: boolean;
 }
 
-// Interface definiujący strukturę przypomnienia z backendu
 interface Reminder {
-    // Unikalny identyfikator przypomnienia
     id: number;
-    // Treść notatki przypomnienia
     note: string;
-    // Data i czas przypomnienia (format ISO string)
     remind_at: string;
-    // ID użytkownika któremu przypomnienie jest przypisane
     user_id: number;
 }
 
-
-// Główny komponent Layout - renderuje nawigację, nagłówek i obszar roboczy aplikacji CRM
 export default function Layout() {
-    // Pobieramy użytkownika i funkcję wylogowania z kontekstu uwierzytelnienia
     const { user, logout } = useAuth();
-    // Hook do programowej nawigacji po trasach
     const navigate = useNavigate();
-    // Stan określający które menu jest aktualnie rozwinęte (null = wszystkie zwinęte)
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
-    // Stan kontrolujący widoczność dropdownu powiadomień
     const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
-    // Stan przechowujący listę powiadomień użytkownika
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [newNotificationToast, setNewNotificationToast] = useState<Notification | null>(null);
     const navRef = useRef<HTMLDivElement>(null);
-    // Referencja do elementu DOM dropdownu powiadomień
     const notificationsRef = useRef<HTMLDivElement>(null);
-    // URL API z zmiennej środowiskowej Vite
-    const apiUrl = import.meta.env.VITE_API_URL;
-    // Stan przechowujący listę przypomnień z backendu
     const [reminders, setReminders] = useState<Reminder[]>([]);
-    // Stan aktualnie wyświetlanego przypomnienia (toast)
     const [activeReminder, setActiveReminder] = useState<Reminder | null>(null);
-    // Stan przechowujący ID już pokazanych przypomnień (persystowany w localStorage)
     const [shownReminders, setShownReminders] = useState<number[]>(() => {
-        // Załaduj pokazane przypomnienia z localStorage
         const stored = localStorage.getItem('shownReminders');
         return stored ? JSON.parse(stored) : [];
     });
-    // Stan przechowujący ostatnią sprawdzoną datę (do resetowania przypomnnień codziennie)
     const [lastCheckedDate, setLastCheckedDate] = useState<string>(() => {
-        // Załaduj ostatnią sprawdzoną datę z localStorage
         return localStorage.getItem('lastCheckedDate') || '';
     });
-    // Stan zegara wyświetlanego w nagłówku
     const [clock, setClock] = useState<string>("");
 
-    // Zapisz shownReminders do localStorage przy każdej zmianie
     useEffect(() => {
         localStorage.setItem('shownReminders', JSON.stringify(shownReminders));
     }, [shownReminders]);
 
-    // Zapisz lastCheckedDate do localStorage przy każdej zmianie
     useEffect(() => {
         if (lastCheckedDate) {
             localStorage.setItem('lastCheckedDate', lastCheckedDate);
         }
     }, [lastCheckedDate]);
 
-    // Funkcja do resetowania pokazanych przypomnień każdego dnia
     const resetShownRemindersIfNewDay = useCallback(() => {
         const today = new Date().toDateString();
         if (lastCheckedDate !== today) {
-            console.log('🔄 Nowy dzień - resetuję pokazane przypomnienia');
-            console.log('  - Poprzedni dzień:', lastCheckedDate);
-            console.log('  - Dzisiejszy dzień:', today);
             setShownReminders([]);
             setLastCheckedDate(today);
         }
@@ -148,46 +107,35 @@ export default function Layout() {
         } catch (err) {
             console.error("Błąd pobierania powiadomień:", err);
         }
-    }, []); // Usunięto apiUrl z zależności
+    }, []);
 
     const handleMarkAsRead = async (id: number) => {
         try {
             await api.post(`/Notifications/mark-as-read/${id}`, {});
-            fetchNotifications(); // Refresh notifications
+            fetchNotifications();
         } catch (err) {
             console.error("Błąd oznaczania jako przeczytane:", err);
         }
     };
 
-    // Pobieraj przypomnienia globalnie co 2 minuty
     useEffect(() => {
         const fetchReminders = async () => {
             try {
-                console.log('🔄 Pobieram przypomnienia z API...');
                 const response = await api.get('/Reminders/');
                 const data = response.data.$values || response.data;
-                console.log('📥 Otrzymane przypomnienia:', data);
                 setReminders(data);
-
-                // Resetuj pokazane przypomnienia gdy ładują się nowe dane
-                // to pozwoli na wyświetlenie nowych przypomnień
-                console.log('🔄 Resetuję pokazane przypomnienia po załadowaniu nowych danych');
                 setShownReminders([]);
             } catch (error) {
-                console.error('❌ Błąd pobierania przypomnień:', error);
+                console.error('Błąd pobierania przypomnień:', error);
             }
         };
         fetchReminders();
-        const interval = setInterval(fetchReminders, 2 * 60 * 1000); // 2 minuty
+        const interval = setInterval(fetchReminders, 2 * 60 * 1000);
         return () => clearInterval(interval);
     }, []);
 
-    // Natychmiastowe sprawdzenie po załadowaniu przypomnień
     useEffect(() => {
         if (reminders.length > 0) {
-            console.log('📥 Przypomnienia załadowane - sprawdzam natychmiast');
-
-            // Resetuj pokazane przypomnienia jeśli to nowy dzień
             resetShownRemindersIfNewDay();
 
             const now = new Date();
@@ -212,19 +160,14 @@ export default function Layout() {
             });
 
             if (found) {
-                console.log('🎉 NATYCHMIASTOWE PRZYPOMNIENIE:', found);
                 setActiveReminder(found);
                 setShownReminders(prev => [...prev, found.id]);
             }
         }
     }, [reminders, shownReminders, resetShownRemindersIfNewDay]);
 
-    // Sprawdzaj, czy jest przypomnienie na teraz
     useEffect(() => {
         const checkReminders = () => {
-            console.log('🔄 checkReminders() wywołane o:', new Date().toLocaleTimeString());
-
-            // Resetuj pokazane przypomnienia jeśli to nowy dzień
             resetShownRemindersIfNewDay();
 
             const now = new Date();
@@ -232,20 +175,12 @@ export default function Layout() {
             const currentHour = now.getHours();
             const currentDate = now.toDateString();
 
-            console.log('=== SPRAWDZANIE PRZYPOMNIEŃ ===');
-            console.log('Aktualny czas:', currentHour + ':' + currentMinute, 'dnia:', currentDate);
-            console.log('Liczba przypomnień w pamięci:', reminders.length);
-            console.log('Pokazane przypomnienia:', shownReminders);
-            console.log('Data ostatniego sprawdzenia:', lastCheckedDate);
-
             if (reminders.length === 0) {
-                console.log('Brak przypomnień do sprawdzenia');
                 return;
             }
 
             const found = reminders.find(r => {
                 if (shownReminders.includes(r.id)) {
-                    console.log('Przypomnienie', r.id, 'już pokazane - pomijam');
                     return false;
                 }
 
@@ -254,56 +189,30 @@ export default function Layout() {
                 const reminderHour = reminderDate.getHours();
                 const reminderDateStr = reminderDate.toDateString();
 
-                console.log('Sprawdzam przypomnienie ID:', r.id);
-                console.log('  - Treść:', r.note);
-                console.log('  - Czas przypomnienia:', reminderHour + ':' + reminderMinute, 'dnia:', reminderDateStr);
-                console.log('  - Surowa data z API:', r.remind_at);
-
-                // Sprawdź czy to dokładnie ten sam dzień i ta sama godzina/minuta (bez sekund)
                 const dateMatches = reminderDateStr === currentDate;
                 const hourMatches = reminderHour === currentHour;
                 const minuteMatches = reminderMinute === currentMinute;
 
-                console.log('  - Porównania:');
-                console.log('    * Dzień pasuje:', dateMatches, `(${reminderDateStr} === ${currentDate})`);
-                console.log('    * Godzina pasuje:', hourMatches, `(${reminderHour} === ${currentHour})`);
-                console.log('    * Minuta pasuje:', minuteMatches, `(${reminderMinute} === ${currentMinute})`);
-
-                const matches = dateMatches && hourMatches && minuteMatches;
-
-                if (matches) {
-                    console.log('  ✅ ZNALEZIONO DOPASOWANIE!');
-                } else {
-                    console.log('  ❌ Brak dopasowania');
-                }
-
-                return matches;
+                return dateMatches && hourMatches && minuteMatches;
             });
 
             if (found) {
-                console.log('🎉 Znaleziono przypomnienie do wyświetlenia jako toast:', found);
                 setActiveReminder(found);
                 setShownReminders(prev => [...prev, found.id]);
-            } else {
-                console.log('Nie znaleziono żadnego przypomnienia do wyświetlenia');
             }
-            console.log('=== KONIEC SPRAWDZANIA ===');
         };
 
-        // Sprawdź od razu przy załadowaniu
         checkReminders();
-
-        // Sprawdź co minutę
         const interval = setInterval(checkReminders, 60 * 1000);
 
         return () => clearInterval(interval);
-    }, [reminders, shownReminders]); // Usunięto resetShownRemindersIfNewDay z zależności
+    }, [reminders, shownReminders]);
 
     useEffect(() => {
         fetchNotifications();
-        const interval = setInterval(fetchNotifications, 30000); // Refresh every 30 seconds for real-time notifications
+        const interval = setInterval(fetchNotifications, 30000);
         return () => clearInterval(interval);
-    }, []); // Usunięto fetchNotifications z zależności
+    }, []);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -473,19 +382,15 @@ export default function Layout() {
                     <Outlet context={{ fetchNotifications }} />
                 </main>
             </div>
-            {/* Toast w prawym górnym rogu */}
-            {activeReminder && (() => {
-                console.log('Renderuje toast:', activeReminder);
-                return (
-                    <div className="fixed top-4 right-4 bg-blue-700 text-white p-4 rounded-lg shadow-lg z-50 animate-fade-in">
-                        <strong>⏰ Przypomnienie!</strong>
-                        <div className="mt-2">{activeReminder.note}</div>
-                        <button className="mt-3 bg-white text-blue-700 px-3 py-1 rounded" onClick={() => setActiveReminder(null)}>
-                            Zamknij
-                        </button>
-                    </div>
-                );
-            })()}
+            {activeReminder && (
+                <div className="fixed top-4 right-4 bg-blue-700 text-white p-4 rounded-lg shadow-lg z-50 animate-fade-in">
+                    <strong>⏰ Przypomnienie!</strong>
+                    <div className="mt-2">{activeReminder.note}</div>
+                    <button className="mt-3 bg-white text-blue-700 px-3 py-1 rounded" onClick={() => setActiveReminder(null)}>
+                        Zamknij
+                    </button>
+                </div>
+            )}
 
             {/* Notification toast */}
             {newNotificationToast && (

@@ -142,10 +142,7 @@ export default function TasksPage() {
             setSelectedCustomerId("");
             setSelectedCustomer(null);
 
-            // Pokaż toast o sukcesie
             openToast('Zadanie zostało dodane!', 'success');
-
-            // Odśwież dane
             await fetchInitialData();
         } catch {
             openModal({ type: 'error', title: 'Błąd', message: 'Nie udało się dodać zadania.' });

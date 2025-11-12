@@ -65,7 +65,6 @@ export function GroupDetailsPage() {
             try {
                 const payload = JSON.parse(atob(token.split('.')[1]));
 
-                // Sprawdź różne możliwe klucze roli
                 const possibleRoleKeys = [
                     'role',
                     'Role',
@@ -85,7 +84,6 @@ export function GroupDetailsPage() {
                     }
                 }
 
-                // Jeśli nie znaleziono roli, sprawdź czy jest w claims
                 if (!foundRole && payload.claims) {
                     for (const claim of payload.claims) {
                         if (claim.type && claim.type.includes('role')) {
@@ -95,9 +93,7 @@ export function GroupDetailsPage() {
                     }
                 }
 
-                // Tymczasowe rozwiązanie - jeśli nie ma roli, sprawdź ID użytkownika
                 if (!foundRole && payload.nameid) {
-                    // Jeśli ID użytkownika to 1, prawdopodobnie to admin
                     if (payload.nameid === '1') {
                         foundRole = 'Admin';
                     }
@@ -115,11 +111,9 @@ export function GroupDetailsPage() {
         userRole.toLowerCase() === 'administrator' ||
         userRole.toLowerCase() === 'superadmin';
 
-    // --- POBIERANIE DANYCH ---
     const fetchAllData = async () => {
         setLoading(true);
         try {
-            // Pobieramy wszystkie dane równolegle
             const [groupResponse, usersResponse, customersResponse, groupsResponse] = await Promise.all([
                 api.get(`/Groups/${id}`),
                 api.get('/admin/users'),
@@ -127,31 +121,24 @@ export function GroupDetailsPage() {
                 api.get('/Groups/')
             ]);
 
-            // Przetwarzanie danych grupy
             const groupData = groupResponse.data;
             if (groupData.members && groupData.members.$values) groupData.members = groupData.members.$values;
             if (groupData.assignedCustomers && groupData.assignedCustomers.$values) groupData.assignedCustomers = groupData.assignedCustomers.$values;
             setGroup(groupData);
 
-            // Przetwarzanie danych użytkowników
             const allUsersData = usersResponse.data.$values || usersResponse.data;
             const usersArray = Array.isArray(allUsersData) ? allUsersData : [];
             setAllUsers(usersArray);
 
-            // Przetwarzanie danych grup
             const allGroupsData = groupsResponse.data.$values || groupsResponse.data;
             const groupsArray = Array.isArray(allGroupsData) ? allGroupsData : [];
 
-            // Przetwarzanie danych klientów
             const allCustomersData = customersResponse.data.$values || customersResponse.data;
             const customersArray = Array.isArray(allCustomersData) ? allCustomersData : [];
-            // Pokazujemy wszystkich klientów (także przypisanych do innej grupy), aby umożliwić przenoszenie
-            // Filtrujemy tylko klientów już przypisanych do BIEŻĄCEJ grupy
             const filteredCustomers = customersArray.filter((c: Customer) =>
                 c.assignedGroupId !== parseInt(id || '0')
             );
 
-            // Dodajemy nazwy grup do klientów
             const customersWithGroupNames = filteredCustomers.map((c: Customer) => {
                 const assignedGroup = groupsArray.find((g: Group) => g.id === c.assignedGroupId);
                 return {
@@ -261,7 +248,7 @@ export function GroupDetailsPage() {
 
             {/* SEKCJA STATYSTYK */}
             <div className="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
-                <h3 className="text-lg font-semibold text-white mb-4">📊 Statystyki działu/zespołu</h3>
+                <h3 className="text-lg font-semibold text-white mb-4">Statystyki działu/zespołu</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                     <div className="bg-blue-600 p-4 rounded-lg text-center">
                         <div className="text-2xl font-bold text-white">{group.memberCount}</div>

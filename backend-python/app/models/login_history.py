@@ -13,7 +13,6 @@ class LoginHistory(db.Model):
     UserAgent = db.Column(db.Text)
     Success = db.Column(db.Boolean, default=True)
     
-    # Relacje
     user = db.relationship('User', backref=db.backref('login_history', cascade='all, delete-orphan'))
     
     def to_dict(self):

@@ -10,7 +10,6 @@ class Activity(db.Model):
     UserId = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     CustomerId = db.Column(db.Integer, db.ForeignKey('Customers.Id'))
     
-    # Relacje
     user = db.relationship('User', backref=db.backref('activities', cascade='all, delete-orphan'))
     customer = db.relationship('Customer', backref='activities')
     

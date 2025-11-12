@@ -90,7 +90,6 @@ export function AddContractPage() {
         return total.toFixed(2);
     }, [selectedServiceIds, serviceQuantities, services]);
 
-    // Aktualizuj netAmount gdy zmienią się wybrane usługi lub ilości
     useEffect(() => {
         const calculatedAmount = calculateNetAmount();
         if (selectedServiceIds.length > 0) {
@@ -101,13 +100,11 @@ export function AddContractPage() {
     const handleServiceToggle = (serviceId: number) => {
         setSelectedServiceIds(prev => {
             if (prev.includes(serviceId)) {
-                // Usuń usługę
                 const newQuantities = { ...serviceQuantities };
                 delete newQuantities[serviceId];
                 setServiceQuantities(newQuantities);
                 return prev.filter(id => id !== serviceId);
             } else {
-                // Dodaj usługę z domyślną ilością 1
                 setServiceQuantities(prev => ({ ...prev, [serviceId]: 1 }));
                 return [...prev, serviceId];
             }

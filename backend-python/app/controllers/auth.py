@@ -22,11 +22,9 @@ def login():
         if not username or not password:
             return jsonify({'error': 'Brak nazwy użytkownika lub hasła'}), 400
         
-        # Znajdź użytkownika
         user = User.query.filter_by(username=username).first()
         
         if not user:
-            # Zapisz nieudaną próbę logowania dla nieistniejącego użytkownika
             try:
                 login_history = LoginHistory(
                     UserId=None,
@@ -38,20 +36,14 @@ def login():
                 db.session.add(login_history)
                 db.session.commit()
             except Exception as e:
-                print(f"Błąd przy zapisywaniu nieudanej próby logowania: {e}")
                 db.session.rollback()
             
             return jsonify({'error': 'Nieprawidłowe dane logowania'}), 401
         
-        # Sprawdź hasło - obsługa różnych formatów hash
         password_valid = False
         try:
-            # Próbuj użyć check_password_hash
             password_valid = check_password_hash(user.password_hash, password)
         except Exception as e:
-            # Jeśli check_password_hash nie działa, sprawdź czy to prosty hash
-            print(f"Password check error: {e}")
-            # Dla prostych przypadków, sprawdź MD5 hash
             if user.password_hash and len(user.password_hash) == 32:
                 password_hash = hashlib.md5(password.encode()).hexdigest()
                 password_valid = user.password_hash == password_hash
@@ -59,7 +51,6 @@ def login():
                 password_valid = False
         
         if not password_valid:
-            # Zapisz nieudaną próbę logowania
             try:
                 login_history = LoginHistory(
                     UserId=user.id if user else None,
@@ -71,12 +62,10 @@ def login():
                 db.session.add(login_history)
                 db.session.commit()
             except Exception as e:
-                print(f"Błąd przy zapisywaniu nieudanej próby logowania: {e}")
                 db.session.rollback()
             
             return jsonify({'error': 'Nieprawidłowe dane logowania'}), 401
         
-        # Generuj token JWT
         payload = {
             'user_id': user.id,
             'username': user.username,
@@ -86,10 +75,8 @@ def login():
         
         token = jwt.encode(payload, Config.JWT_SECRET_KEY, algorithm='HS256')
         
-        # Pobierz informacje o urządzeniu
         device_info = get_device_info(request.headers.get('User-Agent', ''))
         
-        # Zapisz historię logowania
         try:
             login_history = LoginHistory(
                 UserId=user.id,
@@ -101,10 +88,8 @@ def login():
             db.session.add(login_history)
             db.session.commit()
         except Exception as e:
-            print(f"Błąd przy zapisywaniu historii logowania: {e}")
             db.session.rollback()
         
-        # Loguj zdarzenie systemowe
         try:
             from app.controllers.logs import log_system_event
             log_system_event(
@@ -114,8 +99,8 @@ def login():
                 user_id=user.id,
                 details=f'{{"device": "{device_info}", "ip": "{request.remote_addr}"}}'
             )
-        except Exception as e:
-            print(f"Błąd przy logowaniu zdarzenia: {e}")
+        except Exception:
+            pass
         
         return jsonify({
             'token': token,

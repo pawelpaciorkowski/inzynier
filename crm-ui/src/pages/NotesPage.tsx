@@ -56,11 +56,11 @@ export function NotesPage() {
         } finally {
             setLoading(false);
         }
-    }, []); // Usunięto openModal z zależności
+    }, []);
 
     useEffect(() => {
         fetchNotes();
-    }, []); // Usunięto fetchNotes z zależności
+    }, []);
 
     // Filtrowanie notatek na podstawie wyszukiwania
     useEffect(() => {

@@ -69,13 +69,10 @@ export function EditContractPage() {
                 setStartDate(contractRes.data.startDate ? format(new Date(contractRes.data.startDate), 'yyyy-MM-dd') : '');
                 setEndDate(contractRes.data.endDate ? format(new Date(contractRes.data.endDate), 'yyyy-MM-dd') : '');
                 setNetAmount(contractRes.data.netAmount ? contractRes.data.netAmount.toString() : '');
-                // Ustaw paymentTermDays - obsłuż null/undefined
                 setPaymentTermDays(contractRes.data.paymentTermDays != null ? contractRes.data.paymentTermDays.toString() : '');
-                // Ustaw scopeOfServices - obsłuż null/undefined
                 setScopeOfServices(contractRes.data.scopeOfServices || '');
                 setCustomerId(contractRes.data.customerId);
 
-                // Ustaw wybrane usługi z kontraktu
                 if (contractRes.data.services && Array.isArray(contractRes.data.services)) {
                     const serviceIds: number[] = [];
                     const quantities: Record<number, number> = {};
@@ -103,7 +100,6 @@ export function EditContractPage() {
 
                 setCustomers(customersData);
 
-                // Pobierz listę wszystkich usług
                 const servicesData = servicesRes.data;
                 let servicesList: Service[] = [];
                 if (servicesData && typeof servicesData === 'object' && '$values' in servicesData && Array.isArray(servicesData.$values)) {
@@ -138,7 +134,6 @@ export function EditContractPage() {
         return total.toFixed(2);
     }, [selectedServiceIds, serviceQuantities, services]);
 
-    // Aktualizuj netAmount gdy zmienią się wybrane usługi lub ilości
     useEffect(() => {
         const calculatedAmount = calculateNetAmount();
         if (selectedServiceIds.length > 0) {
@@ -149,13 +144,11 @@ export function EditContractPage() {
     const handleServiceToggle = (serviceId: number) => {
         setSelectedServiceIds(prev => {
             if (prev.includes(serviceId)) {
-                // Usuń usługę
                 const newQuantities = { ...serviceQuantities };
                 delete newQuantities[serviceId];
                 setServiceQuantities(newQuantities);
                 return prev.filter(id => id !== serviceId);
             } else {
-                // Dodaj usługę z domyślną ilością 1
                 setServiceQuantities(prev => ({ ...prev, [serviceId]: 1 }));
                 return [...prev, serviceId];
             }

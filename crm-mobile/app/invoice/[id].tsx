@@ -81,7 +81,6 @@ export default function InvoiceDetailScreen() {
     // Ref do śledzenia czy już odświeżyliśmy dane na tym focusie.
     const hasRefreshedOnThisFocus = useRef(false);
 
-    // Funkcja do pobierania szczegółów faktury z API.
     const fetchInvoiceDetails = useCallback(async () => {
         if (!id || !token) { setLoading(false); return; }
         setLoading(true);
@@ -89,11 +88,6 @@ export default function InvoiceDetailScreen() {
             const response = await api.get(`/Invoices/${id}`);
             if (!response.data) throw new Error(`Nie udało się pobrać danych faktury (status: ${response.status})`);
             const data = response.data;
-            console.log("Dane faktury z backendu:", data);
-            console.log("totalAmount:", data.totalAmount);
-            console.log("paidAmount:", data.paidAmount);
-            console.log("remainingAmount:", data.remainingAmount);
-            console.log("payments:", data.payments);
             setInvoice(data);
             hasDataLoaded.current = true;
         } catch (err: any) {
@@ -104,20 +98,16 @@ export default function InvoiceDetailScreen() {
         }
     }, [id, token]);
 
-    // Efekt do pobierania szczegółów faktury przy pierwszym załadowaniu.
     useEffect(() => {
         if (!hasDataLoaded.current) {
             fetchInvoiceDetails();
         }
     }, [fetchInvoiceDetails]);
 
-    // Efekt do automatycznego odświeżania danych po powrocie na ekran.
     useFocusEffect(
         useCallback(() => {
-            // Reset flagi przy każdym focusie
             hasRefreshedOnThisFocus.current = false;
 
-            // Odśwież dane tylko jeśli faktura została już wcześniej załadowana i jeszcze nie odświeżyliśmy na tym focusie
             if (hasDataLoaded.current && !hasRefreshedOnThisFocus.current) {
                 const timeoutId = setTimeout(() => {
                     fetchInvoiceDetails();
@@ -129,7 +119,6 @@ export default function InvoiceDetailScreen() {
         }, [fetchInvoiceDetails])
     );
 
-    // Funkcja do obsługi pobierania faktury w formacie PDF.
     const handleDownloadPdf = async () => {
         if (!token || !id || !invoice) return;
         setIsDownloading(true);
@@ -137,16 +126,12 @@ export default function InvoiceDetailScreen() {
             const fileName = `${invoice.invoiceNumber.replace(/\//g, '_')}.pdf`;
             const fileUri = FileSystem.documentDirectory + fileName;
 
-            // Pobranie pliku PDF jako blob (token przekazywany w URL bo api.get nie zadziała dla blob)
             const response = await api.get(`/Invoices/${id}/pdf?token=${token}`, { responseType: 'blob' });
 
-            // Użycie FileReader do odczytania bloba jako Base64.
             const reader = new FileReader();
             reader.onload = async () => {
                 if (reader.result && typeof reader.result === 'string') {
-                    // Zapisanie pliku w systemie plików urządzenia.
                     await FileSystem.writeAsStringAsync(fileUri, reader.result.split(',')[1], { encoding: FileSystem.EncodingType.Base64 });
-                    // Udostępnienie zapisanego pliku.
                     if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(fileUri);
                     else Alert.alert("Błąd", "Udostępnianie nie jest dostępne na tym urządzeniu.");
                 }
@@ -160,12 +145,9 @@ export default function InvoiceDetailScreen() {
         }
     };
 
-    // Widok ładowania.
     if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color="#fff" /></View>;
-    // Widok błędu.
     if (error || !invoice) return <View style={styles.centered}><Text style={styles.errorText}>{error || 'Nie znaleziono faktury.'}</Text></View>;
 
-    // Główny widok komponentu.
     return (
         <>
             {/* Konfiguracja nagłówka ekranu. */}

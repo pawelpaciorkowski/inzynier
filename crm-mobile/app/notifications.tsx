@@ -44,7 +44,6 @@ export default function NotificationsPage() {
     const [loadingDetails, setLoadingDetails] = useState(false);
     const { token } = useAuth();
 
-    // Funkcja do pobierania powiadomień z API
     const fetchNotifications = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -65,12 +64,10 @@ export default function NotificationsPage() {
         }
     }, [token]);
 
-    // Efekt uruchamiający pobieranie powiadomień po zamontowaniu komponentu
     useEffect(() => {
         fetchNotifications();
     }, [fetchNotifications]);
 
-    // Funkcja do oznaczania powiadomienia jako przeczytane
     const handleMarkAsRead = async (id: number) => {
         if (!token) return;
         try {
@@ -81,7 +78,6 @@ export default function NotificationsPage() {
         }
     };
 
-    // Funkcja do oznaczania wszystkich powiadomień jako przeczytane
     const handleMarkAllAsRead = async () => {
         const unreadNotifications = notifications.filter(n => !n.isRead);
         if (unreadNotifications.length === 0) return;
@@ -97,7 +93,6 @@ export default function NotificationsPage() {
         }
     };
 
-    // Funkcja do pobierania szczegółów wiadomości
     const fetchMessageDetails = async (messageId: number) => {
         if (!token) return null;
         try {
@@ -112,13 +107,11 @@ export default function NotificationsPage() {
         }
     };
 
-    // Funkcja obsługująca naciśnięcie powiadomienia
     const handleNotificationPress = async (notification: Notification) => {
         setSelectedNotification(notification);
         setMessageDetails(null);
         setModalVisible(true);
 
-        // Jeśli powiadomienie ma MessageId, pobiera szczegóły wiadomości
         if (notification.messageId) {
             const details = await fetchMessageDetails(notification.messageId);
             if (details) {
@@ -127,14 +120,12 @@ export default function NotificationsPage() {
         }
     };
 
-    // Funkcja zamykająca modal
     const closeModal = () => {
         setModalVisible(false);
         setSelectedNotification(null);
         setMessageDetails(null);
     };
 
-    // Widok ładowania
     if (loading) {
         return (
             <View style={styles.centered}>
@@ -144,7 +135,6 @@ export default function NotificationsPage() {
         );
     }
 
-    // Widok błędu
     if (error) {
         return (
             <View style={styles.centered}>
@@ -154,10 +144,8 @@ export default function NotificationsPage() {
         );
     }
 
-    // Liczba nieprzeczytanych powiadomień
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
-    // Główny widok komponentu
     return (
         <View style={styles.container}>
             <Text style={styles.header}>🔔 Powiadomienia</Text>
@@ -275,7 +263,7 @@ export default function NotificationsPage() {
                                     {selectedNotification.messageId && !messageDetails && !loadingDetails && (
                                         <View style={styles.messageHint}>
                                             <Text style={styles.modalHintText}>
-                                                ⚠️ Nie udało się załadować szczegółów wiadomości.
+                                                Nie udało się załadować szczegółów wiadomości.
                                             </Text>
                                         </View>
                                     )}
