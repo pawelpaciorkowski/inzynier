@@ -245,29 +245,28 @@ def generate_document(contract_id):
             return jsonify({'error': f'Plik szablonu nie istnieje: {template_path}'}), 404
         
         # Pobierz dane klienta
-        customer_data = db.session.execute(text("""
-            SELECT Name, Email, Phone, Company, Address, NIP, Representative
-            FROM Customers 
-            WHERE Id = :customer_id
-        """), {'customer_id': contract.CustomerId}).fetchone()
-        
-        if not customer_data:
+        customer = Customer.query.filter_by(Id=contract.CustomerId).first()
+        if not customer:
             return jsonify({'error': 'Nie znaleziono danych klienta'}), 404
         
         # Otwórz szablon Word
         doc = Document(template_path)
         
         # Przygotuj dane do zastąpienia w dokumencie
+        representative_str = 'Brak przedstawiciela'
+        if customer.representative_user:
+            representative_str = f"{customer.representative_user.username} ({customer.representative_user.email})"
+        
         replacements = {
             '{{CONTRACT_TITLE}}': contract.Title,
             '{{CONTRACT_NUMBER}}': contract.ContractNumber or 'Brak numeru',
-            '{{CUSTOMER_NAME}}': customer_data[0] or 'Brak nazwy',
-            '{{CUSTOMER_EMAIL}}': customer_data[1] or 'Brak email',
-            '{{CUSTOMER_PHONE}}': customer_data[2] or 'Brak telefonu',
-            '{{CUSTOMER_COMPANY}}': customer_data[3] or 'Brak firmy',
-            '{{CUSTOMER_ADDRESS}}': customer_data[4] or 'Brak adresu',
-            '{{CUSTOMER_NIP}}': customer_data[5] or 'Brak NIP',
-            '{{CUSTOMER_REPRESENTATIVE}}': customer_data[6] or 'Brak przedstawiciela',
+            '{{CUSTOMER_NAME}}': customer.Name or 'Brak nazwy',
+            '{{CUSTOMER_EMAIL}}': customer.Email or 'Brak email',
+            '{{CUSTOMER_PHONE}}': customer.Phone or 'Brak telefonu',
+            '{{CUSTOMER_COMPANY}}': customer.Company or 'Brak firmy',
+            '{{CUSTOMER_ADDRESS}}': customer.Address or 'Brak adresu',
+            '{{CUSTOMER_NIP}}': customer.NIP or 'Brak NIP',
+            '{{CUSTOMER_REPRESENTATIVE}}': representative_str,
             '{{NET_AMOUNT}}': f"{float(contract.NetAmount):.2f}" if contract.NetAmount else "0.00",
             '{{SIGNED_DATE}}': contract.SignedAt.strftime('%d.%m.%Y') if contract.SignedAt else 'Nie podpisano',
             '{{START_DATE}}': contract.StartDate.strftime('%d.%m.%Y') if contract.StartDate else 'Nie określono',
@@ -357,7 +356,7 @@ def generate_contract_from_template(contract_id):
             'NAZWA_KLIENTA': customer.Company or customer.Name,
             'ADRES_KLIENTA': customer.Address or 'Brak adresu',
             'NIP_KLIENTA': customer.NIP or 'Brak NIP',
-            'REPREZENTANT_KLIENTA': customer.Representative or 'Brak danych',
+            'REPREZENTANT_KLIENTA': (customer.representative_user.username + ' (' + customer.representative_user.email + ')') if customer.representative_user else 'Brak danych',
             'NAZWA_WYKONAWCY': company_settings.get('CompanyName', 'Twoja Firma Sp. z o.o.'),
             'ADRES_WYKONAWCY': company_settings.get('CompanyAddress', 'ul. Przykładowa 123, 00-000 Warszawa'),
             'NIP_WYKONAWCY': company_settings.get('CompanyNIP', '1234567890'),

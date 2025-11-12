@@ -240,9 +240,7 @@ export function ClientTagsPage() {
 
                         <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
                             <div>Klienci: {tag.customerCount}</div>
-                            <div>Kontrakty: {tag.contractCount}</div>
-                            <div>Faktury: {tag.invoiceCount}</div>
-                            <div>Zadania: {tag.taskCount}</div>
+
                         </div>
                     </div>
                 ))}

@@ -357,6 +357,70 @@ def create_single_table(data, headers, column_indices):
     table.setStyle(TableStyle(table_style))
     return table
 
+
+
+def create_section_table(data, headers, page_width, header_style, cell_style):
+    """Tworzy tabelę dla pojedynczej sekcji raportu"""
+    num_cols = len(headers)
+    
+    # Oblicz szerokości kolumn - dostosuj do liczby kolumn
+    if num_cols == 3:
+        col_widths = [page_width * 0.35, page_width * 0.30, page_width * 0.30]
+    elif num_cols == 2:
+        col_widths = [page_width * 0.50, page_width * 0.45]
+    else:
+        col_widths = [page_width / num_cols] * num_cols
+    
+    # Przygotuj dane tabeli
+    table_data = []
+    
+    # Nagłówki
+    header_row = []
+    for header in headers:
+        if header:  # Pomiń puste nagłówki
+            header_row.append(Paragraph(header, header_style))
+        else:
+            header_row.append(Paragraph("", header_style))
+    table_data.append(header_row)
+    
+    # Dane
+    for row in data:
+        data_row = []
+        for i, cell in enumerate(row):
+            if i < len(headers):
+                cell_text = str(cell) if cell is not None else ''
+                data_row.append(Paragraph(cell_text, cell_style))
+        # Uzupełnij brakujące kolumny
+        while len(data_row) < num_cols:
+            data_row.append(Paragraph("", cell_style))
+        table_data.append(data_row)
+    
+    table = Table(table_data, colWidths=col_widths, repeatRows=1)
+    
+    # Styl tabeli
+    table_style = [
+        ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), POLISH_FONT),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('TOPPADDING', (0, 0), (-1, 0), 8),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+        ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 1), (-1, -1), POLISH_FONT),
+        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+        ('TOPPADDING', (0, 1), (-1, -1), 6),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('LINEBELOW', (0, 0), (-1, 0), 2, colors.darkblue),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+    ]
+    
+    table.setStyle(TableStyle(table_style))
+    return table
+
 def create_pdf_table(data, headers, title):
     """Tworzy tabelę PDF z polskimi znakami - dzieli na części jeśli za dużo kolumn"""
     buffer = io.BytesIO()
@@ -500,7 +564,13 @@ def create_pdf_table(data, headers, title):
         is_section_header = False
         
         for i, cell in enumerate(row):
-            cell_text = str(cell) if cell is not None else ''
+            # Upewnij się, że cell jest stringiem
+            if cell is None:
+                cell_text = ''
+            elif isinstance(cell, (int, float)):
+                cell_text = str(cell)
+            else:
+                cell_text = str(cell) if cell is not None else ''
             
             # Sprawdź czy to nagłówek sekcji (zawiera duże litery i dwukropek lub jest w całości dużymi literami)
             if (cell_text.isupper() and len(cell_text) > 3) or cell_text.endswith(':'):
@@ -552,8 +622,15 @@ def create_pdf_table(data, headers, title):
     # Dodaj style dla nagłówków sekcji - znajdź wiersze z nagłówkami sekcji
     for row_idx, row in enumerate(table_data):
         if row_idx > 0:  # Pomijamy nagłówek tabeli
-            first_cell_text = str(row[0])
-            if first_cell_text.isupper() and len(first_cell_text) > 3:
+            # Pobierz tekst z pierwszego Paragraph object
+            first_cell = row[0]
+            if isinstance(first_cell, Paragraph):
+                first_cell_text = first_cell.getPlainText()
+            else:
+                first_cell_text = str(first_cell)
+            
+            # Sprawdź czy to nagłówek sekcji (zawiera duże litery i dwukropek lub jest w całości dużymi literami)
+            if (first_cell_text.isupper() and len(first_cell_text) > 3) or first_cell_text.endswith(':'):
                 # To jest nagłówek sekcji - zastosuj specjalne style
                 table_style.extend([
                     ('BACKGROUND', (0, row_idx), (-1, row_idx), colors.lightblue),
@@ -569,8 +646,15 @@ def create_pdf_table(data, headers, title):
     data_rows = []
     for row_idx, row in enumerate(table_data):
         if row_idx > 0:  # Pomijamy nagłówek tabeli
-            first_cell_text = str(row[0])
-            if not (first_cell_text.isupper() and len(first_cell_text) > 3):
+            # Pobierz tekst z pierwszego Paragraph object
+            first_cell = row[0]
+            if isinstance(first_cell, Paragraph):
+                first_cell_text = first_cell.getPlainText()
+            else:
+                first_cell_text = str(first_cell)
+            
+            # Sprawdź czy to NIE jest nagłówek sekcji
+            if not ((first_cell_text.isupper() and len(first_cell_text) > 3) or first_cell_text.endswith(':')):
                 data_rows.append(row_idx)
     
     # Zastosuj alternujące kolory tylko do wierszy danych
@@ -672,113 +756,181 @@ def get_group_pdf_report(group_id):
         total_payments = len(payments_data)
         total_paid_amount = sum(float(p[1]) for p in payments_data if p[1])
         
-        # Przygotuj szczegółowe dane dla PDF - struktura z nagłówkami sekcji
-        data = []
+        # Utwórz PDF z osobnymi tabelami dla każdej sekcji
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), 
+                              leftMargin=15, rightMargin=15, 
+                              topMargin=20, bottomMargin=20)
         
-        # Statystyki ogólne - pierwsza sekcja
-        data.extend([
-            ["STATYSTYKI OGÓLNE", "", ""],
-            [f"Liczba członków grupy:", f"{len(users_data)}", ""],
-            [f"Liczba klientów:", f"{len(customers_data)}", ""],
-            [f"Liczba faktur:", f"{total_invoices}", ""],
-            [f"  - Opłacone:", f"{paid_invoices}", ""],
-            [f"  - Nieopłacone:", f"{unpaid_invoices}", ""],
-            [f"Wartość wszystkich faktur:", f"{total_invoice_value:.2f} PLN", ""],
-            [f"  - Opłacone:", f"{paid_value:.2f} PLN", ""],
-            [f"  - Nieopłacone:", f"{unpaid_value:.2f} PLN", ""],
-            [f"Liczba zadań:", f"{total_tasks}", ""],
-            [f"  - Ukończone:", f"{completed_tasks}", ""],
-            [f"  - W trakcie:", f"{pending_tasks}", ""],
-            [f"Liczba płatności:", f"{total_payments}", ""],
-            [f"Łączna kwota płatności:", f"{total_paid_amount:.2f} PLN", ""]
-        ])
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontName=POLISH_FONT,
+            fontSize=18,
+            spaceAfter=25,
+            alignment=1,
+            textColor=colors.darkblue
+        )
         
-        # Członkowie grupy
-        if users_data:
-            data.extend([
-                ["CZŁONKOWIE GRUPY", "", ""]
-            ])
-            for user in users_data:
-                data.append([f"ID: {user[0]}", f"Użytkownik: {user[1]}", f"Email: {user[2]}"])
-        else:
-            data.append(["CZŁONKOWIE GRUPY", "Brak członków", ""])
+        section_title_style = ParagraphStyle(
+            'SectionTitle',
+            parent=styles['Heading2'],
+            fontName=POLISH_FONT,
+            fontSize=14,
+            spaceAfter=10,
+            spaceBefore=20,
+            alignment=0,
+            textColor=colors.darkblue
+        )
         
-        # Klienci
-        if customers_data:
-            data.extend([
-                ["KLIENCI W GRUPIE", "", ""]
-            ])
-            for customer in customers_data:
-                company_info = f" ({customer[4]})" if customer[4] else ""
-                phone_info = f" | Tel: {customer[3]}" if customer[3] else ""
-                data.append([
-                    f"ID: {customer[0]}", 
-                    f"{customer[1]}{company_info}", 
-                    f"Email: {customer[2]}{phone_info}"
-                ])
-        else:
-            data.append(["KLIENCI W GRUPIE", "Brak klientów", ""])
+        header_style = ParagraphStyle(
+            'HeaderStyle',
+            parent=styles['Normal'],
+            fontName=POLISH_FONT,
+            fontSize=10,
+            textColor=colors.white,
+            alignment=1,
+            spaceAfter=6,
+            spaceBefore=6
+        )
         
-        # Faktury
-        if invoices_data:
-            data.extend([
-                ["FAKTURY", "", ""]
-            ])
-            for invoice in invoices_data:
-                status = "OPŁACONA" if invoice[3] else "NIEOFŁACONA"
-                date_str = invoice[4].strftime('%d.%m.%Y') if invoice[4] else 'Brak daty'
-                data.append([
-                    f"ID: {invoice[0]}", 
-                    f"{invoice[1]} - {invoice[5]}", 
-                    f"{float(invoice[2]):.2f} PLN | {status} | {date_str}"
-                ])
-        else:
-            data.append(["FAKTURY", "Brak faktur", ""])
+        cell_style = ParagraphStyle(
+            'CellStyle',
+            parent=styles['Normal'],
+            fontName=POLISH_FONT,
+            fontSize=9,
+            textColor=colors.black,
+            alignment=0,
+            spaceAfter=4,
+            spaceBefore=4,
+            leftIndent=6,
+            rightIndent=6
+        )
         
-        # Zadania
-        if tasks_data:
-            data.extend([
-                ["ZADANIA", "", ""]
-            ])
-            for task in tasks_data:
-                status = "UKOŃCZONE" if task[3] else "W TRAKCIE"
-                due_date = task[4].strftime('%d.%m.%Y') if task[4] else 'Brak terminu'
-                data.append([
-                    f"ID: {task[0]}", 
-                    f"{task[1]} - {task[5]}", 
-                    f"{status} | Termin: {due_date}"
-                ])
-        else:
-            data.append(["ZADANIA", "Brak zadań", ""])
+        elements = []
         
-        # Płatności
-        if payments_data:
-            data.extend([
-                ["PŁATNOŚCI", "", ""]
-            ])
-            for payment in payments_data:
-                date_str = payment[2].strftime('%d.%m.%Y %H:%M') if payment[2] else 'Brak daty'
-                data.append([
-                    f"ID: {payment[0]}", 
-                    f"{payment[3]} - {payment[4]}", 
-                    f"{float(payment[1]):.2f} PLN | {date_str}"
-                ])
-        else:
-            data.append(["PŁATNOŚCI", "Brak płatności", ""])
-        
-        headers = ["Kategoria", "Wartość", "Dodatkowe informacje"]
-        
-        # Dodaj informacje o raporcie w tytule
+        # Tytuł raportu
         report_title = f"Raport grupy: {group_data[1]}"
         if group_data[2]:
             report_title += f" - {group_data[2]}"
         report_title += f" (wygenerowano: {datetime.now().strftime('%d.%m.%Y %H:%M')})"
+        elements.append(Paragraph(report_title, title_style))
+        elements.append(Spacer(1, 20))
         
-        buffer = create_pdf_table(data, headers, report_title)
+        page_width = landscape(A4)[0] - 30
+        
+        # 1. STATYSTYKI OGÓLNE
+        stats_data = [
+            ["Liczba członków grupy", f"{len(users_data)}", ""],
+            ["Liczba klientów", f"{len(customers_data)}", ""],
+            ["Liczba faktur", f"{total_invoices}", ""],
+            ["  - Opłacone", f"{paid_invoices}", ""],
+            ["  - Nieopłacone", f"{unpaid_invoices}", ""],
+            ["Wartość wszystkich faktur", f"{total_invoice_value:.2f} PLN", ""],
+            ["  - Opłacone", f"{paid_value:.2f} PLN", ""],
+            ["  - Nieopłacone", f"{unpaid_value:.2f} PLN", ""],
+            ["Liczba zadań", f"{total_tasks}", ""],
+            ["  - Ukończone", f"{completed_tasks}", ""],
+            ["  - W trakcie", f"{pending_tasks}", ""],
+            ["Liczba płatności", f"{total_payments}", ""],
+            ["Łączna kwota płatności", f"{total_paid_amount:.2f} PLN", ""]
+        ]
+        elements.append(Paragraph("STATYSTYKI OGÓLNE", section_title_style))
+        elements.append(create_section_table(stats_data, ["Kategoria", "Wartość", "Dodatkowe informacje"], page_width, header_style, cell_style))
+        elements.append(Spacer(1, 20))
+        
+        # 2. CZŁONKOWIE GRUPY
+        if users_data:
+            members_data = []
+            for user in users_data:
+                members_data.append([f"Użytkownik: {user[1]}", f"Email: {user[2]}", ""])
+            elements.append(Paragraph("CZŁONKOWIE GRUPY", section_title_style))
+            elements.append(create_section_table(members_data, ["Użytkownik", "Email", ""], page_width, header_style, cell_style))
+            elements.append(Spacer(1, 20))
+        else:
+            elements.append(Paragraph("CZŁONKOWIE GRUPY", section_title_style))
+            elements.append(create_section_table([["Brak członków", "", ""]], ["Użytkownik", "Email", ""], page_width, header_style, cell_style))
+            elements.append(Spacer(1, 20))
+        
+        # 3. KLIENCI W GRUPIE
+        if customers_data:
+            customers_table_data = []
+            for customer in customers_data:
+                company_info = f" ({customer[4]})" if customer[4] else ""
+                phone_info = f" | Tel: {customer[3]}" if customer[3] else ""
+                customers_table_data.append([
+                    f"{customer[1]}{company_info}",
+                    f"Email: {customer[2]}{phone_info}",
+                    ""
+                ])
+            elements.append(Paragraph("KLIENCI W GRUPIE", section_title_style))
+            elements.append(create_section_table(customers_table_data, ["Klient", "Kontakt", ""], page_width, header_style, cell_style))
+            elements.append(Spacer(1, 20))
+        else:
+            elements.append(Paragraph("KLIENCI W GRUPIE", section_title_style))
+            elements.append(create_section_table([["Brak klientów", "", ""]], ["Klient", "Kontakt", ""], page_width, header_style, cell_style))
+            elements.append(Spacer(1, 20))
+        
+        # 4. FAKTURY
+        if invoices_data:
+            invoices_table_data = []
+            for invoice in invoices_data:
+                status = "OPŁACONA" if invoice[3] else "NIEOFŁACONA"
+                date_str = invoice[4].strftime('%d.%m.%Y') if invoice[4] else 'Brak daty'
+                invoices_table_data.append([
+                    f"{invoice[1]} - {invoice[5]}",
+                    f"{float(invoice[2]):.2f} PLN",
+                    f"{status} | {date_str}"
+                ])
+            elements.append(Paragraph("FAKTURY", section_title_style))
+            elements.append(create_section_table(invoices_table_data, ["Faktura", "Kwota", "Status i data"], page_width, header_style, cell_style))
+            elements.append(Spacer(1, 20))
+        else:
+            elements.append(Paragraph("FAKTURY", section_title_style))
+            elements.append(create_section_table([["Brak faktur", "", ""]], ["Faktura", "Kwota", "Status i data"], page_width, header_style, cell_style))
+            elements.append(Spacer(1, 20))
+        
+        # 5. ZADANIA
+        if tasks_data:
+            tasks_table_data = []
+            for task in tasks_data:
+                status = "UKOŃCZONE" if task[3] else "W TRAKCIE"
+                due_date = task[4].strftime('%d.%m.%Y') if task[4] else 'Brak terminu'
+                tasks_table_data.append([
+                    f"{task[1]} - {task[5]}",
+                    status,
+                    f"Termin: {due_date}"
+                ])
+            elements.append(Paragraph("ZADANIA", section_title_style))
+            elements.append(create_section_table(tasks_table_data, ["Zadanie", "Status", "Termin"], page_width, header_style, cell_style))
+            elements.append(Spacer(1, 20))
+        else:
+            elements.append(Paragraph("ZADANIA", section_title_style))
+            elements.append(create_section_table([["Brak zadań", "", ""]], ["Zadanie", "Status", "Termin"], page_width, header_style, cell_style))
+            elements.append(Spacer(1, 20))
+        
+        # 6. PŁATNOŚCI
+        if payments_data:
+            payments_table_data = []
+            for payment in payments_data:
+                date_str = payment[2].strftime('%d.%m.%Y %H:%M') if payment[2] else 'Brak daty'
+                payments_table_data.append([
+                    f"{payment[3]} - {payment[4]}",
+                    f"{float(payment[1]):.2f} PLN",
+                    date_str
+                ])
+            elements.append(Paragraph("PŁATNOŚCI", section_title_style))
+            elements.append(create_section_table(payments_table_data, ["Faktura", "Kwota", "Data płatności"], page_width, header_style, cell_style))
+        else:
+            elements.append(Paragraph("PŁATNOŚCI", section_title_style))
+            elements.append(create_section_table([["Brak płatności", "", ""]], ["Faktura", "Kwota", "Data płatności"], page_width, header_style, cell_style))
+        
+        doc.build(elements)
+        buffer.seek(0)
         
         response = make_response(buffer.getvalue())
         response.headers['Content-Type'] = 'application/pdf'
-        # Usuń polskie znaki z nazwy pliku
         safe_group_name = group_data[1].replace('ą', 'a').replace('ć', 'c').replace('ę', 'e').replace('ł', 'l').replace('ń', 'n').replace('ó', 'o').replace('ś', 's').replace('ź', 'z').replace('ż', 'z')
         response.headers['Content-Disposition'] = f'attachment; filename=raport_grupy_{group_id}_{safe_group_name}.pdf'
         
@@ -1268,18 +1420,62 @@ def export_tasks():
         columns = request.args.get('columns', '').split(',')
         
         if not columns or columns == ['']:
-            columns = ['id', 'title', 'description', 'status', 'createdAt']
+            columns = ['id', 'title', 'description', 'customerName', 'assignedUser', 'dueDate', 'completed', 'createdAt']
         
-        # Pobierz dane
-        query = text("""
-            SELECT t.Id, t.Title, t.Description, t.Status, t.CreatedAt
-            FROM Tasks t
-            ORDER BY t.CreatedAt DESC
-        """)
+        # Pobierz dane - dynamiczne zapytanie w zależności od kolumn
+        select_fields = []
+        need_customer_join = False
+        need_user_join = False
+        need_tags = False
         
+        for col in columns:
+            if col == 'id':
+                select_fields.append('t.Id')
+            elif col == 'title':
+                select_fields.append('t.Title')
+            elif col == 'description':
+                select_fields.append('t.Description')
+            elif col == 'customerName':
+                select_fields.append('c.Name as customerName')
+                need_customer_join = True
+            elif col == 'assignedUser':
+                select_fields.append('u.username as assignedUser')
+                need_user_join = True
+            elif col == 'dueDate':
+                select_fields.append('t.DueDate')
+            elif col == 'completed':
+                select_fields.append('t.Completed')
+            elif col == 'priority':
+                # Tasks nie ma kolumny Priority, użyj Completed jako zamiennik
+                select_fields.append('CASE WHEN t.Completed = 1 THEN "Niski" ELSE "Wysoki" END as priority')
+            elif col == 'createdAt':
+                # Tasks nie ma kolumny CreatedAt, użyj DueDate jako zamiennik
+                select_fields.append('t.DueDate as createdAt')
+            elif col == 'tags':
+                select_fields.append('(SELECT GROUP_CONCAT(tag.Name SEPARATOR \', \') FROM Tags tag JOIN TaskTags tt ON tag.Id = tt.TagId WHERE tt.TaskId = t.Id) as tags')
+                need_tags = True
+        
+        if not select_fields:
+            select_fields = ['t.Id', 't.Title', 't.Description', 't.Completed', 't.DueDate']
+        
+        # Buduj zapytanie SQL
+        query_parts = ['SELECT']
+        query_parts.append(', '.join(select_fields))
+        query_parts.append('FROM Tasks t')
+        
+        if need_customer_join:
+            query_parts.append('LEFT JOIN Customers c ON t.CustomerId = c.Id')
+        
+        if need_user_join:
+            query_parts.append('LEFT JOIN users u ON t.UserId = u.id')
+        
+        query_parts.append('ORDER BY t.DueDate DESC')
+        
+        query = text(' '.join(query_parts))
         result = db.session.execute(query)
         data = result.fetchall()
         
+        # Mapuj nagłówki
         headers = []
         for col in columns:
             if col == 'id':
@@ -1288,10 +1484,20 @@ def export_tasks():
                 headers.append('Tytuł')
             elif col == 'description':
                 headers.append('Opis')
-            elif col == 'status':
-                headers.append('Status')
+            elif col == 'customerName':
+                headers.append('Klient')
+            elif col == 'assignedUser':
+                headers.append('Przypisany użytkownik')
+            elif col == 'dueDate':
+                headers.append('Termin')
+            elif col == 'completed':
+                headers.append('Ukończone')
+            elif col == 'priority':
+                headers.append('Priorytet')
             elif col == 'createdAt':
                 headers.append('Data utworzenia')
+            elif col == 'tags':
+                headers.append('Tagi')
             else:
                 headers.append(col)
         
@@ -1301,7 +1507,20 @@ def export_tasks():
             writer.writerow(headers)
             
             for row in data:
-                writer.writerow(row)
+                row_list = []
+                for i, col in enumerate(columns):
+                    if i < len(row):
+                        value = row[i]
+                        # Formatuj wartości
+                        if col == 'completed' and value is not None:
+                            row_list.append('Tak' if value else 'Nie')
+                        elif col in ['dueDate', 'createdAt'] and value is not None and hasattr(value, 'strftime'):
+                            row_list.append(value.strftime('%d.%m.%Y %H:%M'))
+                        else:
+                            row_list.append(str(value) if value is not None else '')
+                    else:
+                        row_list.append('')
+                writer.writerow(row_list)
             
             response = make_response(buffer.getvalue())
             response.headers['Content-Type'] = 'text/csv; charset=utf-8'
@@ -1319,8 +1538,18 @@ def export_tasks():
             
             # Dodaj dane
             for row_idx, row in enumerate(data, 1):
-                for col_idx, value in enumerate(row):
-                    worksheet.write(row_idx, col_idx, str(value) if value is not None else '')
+                for col_idx, col in enumerate(columns):
+                    if col_idx < len(row):
+                        value = row[col_idx]
+                        # Formatuj wartości
+                        if col == 'completed' and value is not None:
+                            worksheet.write(row_idx, col_idx, 'Tak' if value else 'Nie')
+                        elif col in ['dueDate', 'createdAt'] and value is not None and hasattr(value, 'strftime'):
+                            worksheet.write(row_idx, col_idx, value.strftime('%d.%m.%Y %H:%M'))
+                        else:
+                            worksheet.write(row_idx, col_idx, str(value) if value is not None else '')
+                    else:
+                        worksheet.write(row_idx, col_idx, '')
             
             workbook.close()
             buffer.seek(0)
@@ -1334,10 +1563,19 @@ def export_tasks():
             # Przygotuj dane dla PDF
             pdf_data = []
             for row in data:
-                pdf_row = list(row)
-                # Format createdAt (index 4)
-                if len(pdf_row) > 4 and pdf_row[4] is not None and hasattr(pdf_row[4], 'strftime'):
-                    pdf_row[4] = pdf_row[4].strftime('%d.%m.%Y %H:%M')
+                pdf_row = []
+                for i, col in enumerate(columns):
+                    if i < len(row):
+                        value = row[i]
+                        # Formatuj wartości
+                        if col == 'completed' and value is not None:
+                            pdf_row.append('Tak' if value else 'Nie')
+                        elif col in ['dueDate', 'createdAt'] and value is not None and hasattr(value, 'strftime'):
+                            pdf_row.append(value.strftime('%d.%m.%Y %H:%M'))
+                        else:
+                            pdf_row.append(str(value) if value is not None else '')
+                    else:
+                        pdf_row.append('')
                 pdf_data.append(pdf_row)
 
             buffer = create_pdf_table(pdf_data, headers, "Raport zadań")
@@ -1351,7 +1589,10 @@ def export_tasks():
             return jsonify({'error': 'Nieobsługiwany format eksportu'}), 400
             
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        print(f"ERROR in export_tasks: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({'error': f'Błąd eksportu: {str(e)}'}), 500
 
 @reports_bp.route('/export-notes', methods=['GET'])
 @require_auth
@@ -1588,121 +1829,163 @@ def export_customers():
             return response
             
         elif format_type == 'pdf':
-            # Przygotuj dane dla PDF
-            pdf_data = []
-
-            # Find indexes of columns to format
-            try:
-                total_invoice_value_index = columns.index('totalInvoiceValue')
-            except ValueError:
-                total_invoice_value_index = -1
+            # Utwórz PDF z osobnymi tabelami dla każdego klienta
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), 
+                                  leftMargin=15, rightMargin=15, 
+                                  topMargin=20, bottomMargin=20)
             
-            try:
-                paid_invoice_value_index = columns.index('paidInvoiceValue')
-            except ValueError:
-                paid_invoice_value_index = -1
-
-            try:
-                created_at_index = columns.index('createdAt')
-            except ValueError:
-                created_at_index = -1
-
-            for row in data:
-                # Konwertuj Row object z SQLAlchemy na listę w kolejności odpowiadającej columns
-                pdf_row = []
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontName=POLISH_FONT,
+                fontSize=18,
+                spaceAfter=25,
+                alignment=1,
+                textColor=colors.darkblue
+            )
+            
+            section_title_style = ParagraphStyle(
+                'SectionTitle',
+                parent=styles['Heading2'],
+                fontName=POLISH_FONT,
+                fontSize=14,
+                spaceAfter=10,
+                spaceBefore=20,
+                alignment=0,
+                textColor=colors.darkblue
+            )
+            
+            header_style = ParagraphStyle(
+                'HeaderStyle',
+                parent=styles['Normal'],
+                fontName=POLISH_FONT,
+                fontSize=10,
+                textColor=colors.white,
+                alignment=1,
+                spaceAfter=6,
+                spaceBefore=6
+            )
+            
+            cell_style = ParagraphStyle(
+                'CellStyle',
+                parent=styles['Normal'],
+                fontName=POLISH_FONT,
+                fontSize=9,
+                textColor=colors.black,
+                alignment=0,
+                spaceAfter=4,
+                spaceBefore=4,
+                leftIndent=6,
+                rightIndent=6
+            )
+            
+            elements = []
+            
+            # Tytuł raportu
+            elements.append(Paragraph("Raport klientów", title_style))
+            elements.append(Spacer(1, 20))
+            
+            page_width = landscape(A4)[0] - 30
+            
+            # Dla każdego klienta utwórz osobną tabelę
+            for customer_row in data:
+                customer_data = []
+                customer_title = ""
+                
+                # Tworzymy mapowanie nazw kolumn do wartości
+                row_dict = {}
                 try:
-                    # Tworzymy mapowanie nazw kolumn do wartości
-                    row_dict = {}
-                    if hasattr(row, '_mapping'):
-                        # SQLAlchemy Row object z 1.4+
-                        row_dict = dict(row._mapping)
-                    elif hasattr(row, 'keys'):
-                        # SQLAlchemy Row object z keys()
-                        row_dict = {key: row[key] for key in row.keys()}
-                    elif hasattr(row, '__iter__') and not isinstance(row, str):
-                        # Tuple lub lista - używamy nazw kolumn z select_fields
-                        row_values = list(row)
+                    if hasattr(customer_row, '_mapping'):
+                        row_dict = dict(customer_row._mapping)
+                    elif hasattr(customer_row, 'keys'):
+                        row_dict = {key: customer_row[key] for key in customer_row.keys()}
+                    elif hasattr(customer_row, '__iter__') and not isinstance(customer_row, str):
+                        row_values = list(customer_row)
                         for i, field in enumerate(select_fields):
-                            # Wyciągnij alias z pola (np. "as representative" -> "representative")
                             if ' as ' in field.lower():
                                 alias = field.split(' as ')[-1].strip()
                             elif ' AS ' in field:
                                 alias = field.split(' AS ')[-1].strip()
                             else:
-                                # Jeśli nie ma aliasu, użyj ostatniej części po kropce
                                 alias = field.split('.')[-1].strip()
                             if i < len(row_values):
                                 row_dict[alias] = row_values[i]
-                    else:
-                        row_dict = {}
-                    
-                    # Mapuj wartości w kolejności odpowiadającej columns
-                    for col in columns:
-                        # Mapuj nazwę kolumny na alias w SQL
-                        sql_alias = col
-                        if col == 'id':
-                            sql_alias = 'Id'
-                        elif col == 'name':
-                            sql_alias = 'Name'
-                        elif col == 'email':
-                            sql_alias = 'Email'
-                        elif col == 'phone':
-                            sql_alias = 'Phone'
-                        elif col == 'company':
-                            sql_alias = 'Company'
-                        elif col == 'address':
-                            sql_alias = 'Address'
-                        elif col == 'nip':
-                            sql_alias = 'NIP'
-                        elif col == 'representative':
-                            sql_alias = 'representative'
-                        elif col == 'tags':
-                            sql_alias = 'tags'
-                        elif col == 'createdAt':
-                            sql_alias = 'CreatedAt'
-                        elif col == 'assignedGroup':
-                            sql_alias = 'AssignedGroup'
-                        elif col == 'assignedUser':
-                            sql_alias = 'AssignedUser'
-                        
-                        value = row_dict.get(sql_alias, None)
-                        # Jeśli wartość jest None lub pustym stringiem dla representative, ustaw pusty string
-                        if col == 'representative' and (value is None or value == ' ()' or value == '()'):
-                            value = ''
-                        pdf_row.append(value)
-                except (TypeError, AttributeError, IndexError, KeyError) as e:
-                    # Fallback - użyj pozycji
-                    try:
-                        row_values = list(row) if hasattr(row, '__iter__') and not isinstance(row, str) else []
-                        for i, col in enumerate(columns):
-                            if i < len(row_values):
-                                pdf_row.append(row_values[i])
-                            else:
-                                pdf_row.append(None)
-                    except Exception:
-                        pdf_row = []
-                # Format totalInvoiceValue
-                if total_invoice_value_index != -1 and len(pdf_row) > total_invoice_value_index and pdf_row[total_invoice_value_index] is not None:
-                    try:
-                        pdf_row[total_invoice_value_index] = f"{float(pdf_row[total_invoice_value_index]):.2f} PLN"
-                    except (ValueError, TypeError):
-                        pdf_row[total_invoice_value_index] = str(pdf_row[total_invoice_value_index])
+                except Exception:
+                    row_dict = {}
                 
-                # Format paidInvoiceValue
-                if paid_invoice_value_index != -1 and len(pdf_row) > paid_invoice_value_index and pdf_row[paid_invoice_value_index] is not None:
-                    try:
-                        pdf_row[paid_invoice_value_index] = f"{float(pdf_row[paid_invoice_value_index]):.2f} PLN"
-                    except (ValueError, TypeError):
-                        pdf_row[paid_invoice_value_index] = str(pdf_row[paid_invoice_value_index])
-
-                # Format createdAt
-                if created_at_index != -1 and len(pdf_row) > created_at_index and pdf_row[created_at_index] is not None and hasattr(pdf_row[created_at_index], 'strftime'):
-                    pdf_row[created_at_index] = pdf_row[created_at_index].strftime('%d.%m.%Y')
-
-                pdf_data.append(pdf_row)
-
-            print(f"DEBUG: Headers before create_pdf_table: {headers}")
-            buffer = create_pdf_table(pdf_data, headers, "Raport klientów")
+                # Przygotuj dane dla klienta
+                for i, col in enumerate(columns):
+                    # Mapuj nazwę kolumny na alias w SQL
+                    sql_alias = col
+                    if col == 'id':
+                        sql_alias = 'Id'
+                    elif col == 'name':
+                        sql_alias = 'Name'
+                    elif col == 'email':
+                        sql_alias = 'Email'
+                    elif col == 'phone':
+                        sql_alias = 'Phone'
+                    elif col == 'company':
+                        sql_alias = 'Company'
+                    elif col == 'address':
+                        sql_alias = 'Address'
+                    elif col == 'nip':
+                        sql_alias = 'NIP'
+                    elif col == 'representative':
+                        sql_alias = 'representative'
+                    elif col == 'tags':
+                        sql_alias = 'tags'
+                    elif col == 'createdAt':
+                        sql_alias = 'CreatedAt'
+                    elif col == 'assignedGroup':
+                        sql_alias = 'AssignedGroup'
+                    elif col == 'assignedUser':
+                        sql_alias = 'AssignedUser'
+                    elif col == 'totalInvoiceValue':
+                        sql_alias = 'totalInvoiceValue'
+                    elif col == 'paidInvoiceValue':
+                        sql_alias = 'paidInvoiceValue'
+                    
+                    value = row_dict.get(sql_alias, None)
+                    
+                    # Jeśli wartość jest None lub pustym stringiem dla representative, ustaw pusty string
+                    if col == 'representative' and (value is None or value == ' ()' or value == '()'):
+                        value = ''
+                    
+                    # Formatuj wartości
+                    if col in ['totalInvoiceValue', 'paidInvoiceValue'] and value is not None:
+                        try:
+                            formatted_value = f"{float(value):.2f} PLN"
+                        except (ValueError, TypeError):
+                            formatted_value = str(value)
+                    elif col == 'createdAt' and value is not None and hasattr(value, 'strftime'):
+                        formatted_value = value.strftime('%d.%m.%Y')
+                    else:
+                        formatted_value = str(value) if value is not None else ''
+                    
+                    # Pomiń ID - nie wyświetlaj go
+                    if col != 'id':
+                        # Znajdź polską nazwę kolumny
+                        header_name = headers[i] if i < len(headers) else col
+                        customer_data.append([header_name, formatted_value])
+                        
+                        # Użyj nazwy klienta jako nagłówka sekcji
+                        if col == 'name' and formatted_value:
+                            customer_title = formatted_value
+                
+                # Jeśli nie ma nazwy, użyj domyślnego
+                if not customer_title:
+                    customer_title = "Klient"
+                
+                # Utwórz tabelę dla klienta
+                elements.append(Paragraph(customer_title, section_title_style))
+                elements.append(create_section_table(customer_data, ["Pole", "Wartość"], page_width, header_style, cell_style))
+                elements.append(Spacer(1, 20))
+            
+            doc.build(elements)
+            buffer.seek(0)
             
             response = make_response(buffer.getvalue())
             response.headers['Content-Type'] = 'application/pdf'
@@ -1835,28 +2118,115 @@ def export_invoices():
             return response
             
         elif format_type == 'pdf':
-            # Przygotuj dane dla PDF
-            pdf_data = []
-            for row in data:
-                pdf_row = list(row)
-                # Format totalAmount (index 4)
-                if len(pdf_row) > 4 and pdf_row[4] is not None:
-                    try:
-                        pdf_row[4] = f"{float(pdf_row[4]):.2f} PLN"
-                    except (ValueError, TypeError):
-                        pdf_row[4] = str(pdf_row[4])
-                # Format isPaid (index 5)
-                if len(pdf_row) > 5 and pdf_row[5] is not None:
-                    pdf_row[5] = "Tak" if pdf_row[5] else "Nie"
-                # Format issuedAt (index 6)
-                if len(pdf_row) > 6 and pdf_row[6] is not None and hasattr(pdf_row[6], 'strftime'):
-                    pdf_row[6] = pdf_row[6].strftime('%d.%m.%Y')
-                # Format dueDate (index 7)
-                if len(pdf_row) > 7 and pdf_row[7] is not None and hasattr(pdf_row[7], 'strftime'):
-                    pdf_row[7] = pdf_row[7].strftime('%d.%m.%Y')
-                pdf_data.append(pdf_row)
-
-            buffer = create_pdf_table(pdf_data, headers, "Raport faktur")
+            # Utwórz PDF z osobnymi tabelami dla każdej faktury
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), 
+                                  leftMargin=15, rightMargin=15, 
+                                  topMargin=20, bottomMargin=20)
+            
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontName=POLISH_FONT,
+                fontSize=18,
+                spaceAfter=25,
+                alignment=1,
+                textColor=colors.darkblue
+            )
+            
+            section_title_style = ParagraphStyle(
+                'SectionTitle',
+                parent=styles['Heading2'],
+                fontName=POLISH_FONT,
+                fontSize=14,
+                spaceAfter=10,
+                spaceBefore=20,
+                alignment=0,
+                textColor=colors.darkblue
+            )
+            
+            header_style = ParagraphStyle(
+                'HeaderStyle',
+                parent=styles['Normal'],
+                fontName=POLISH_FONT,
+                fontSize=10,
+                textColor=colors.white,
+                alignment=1,
+                spaceAfter=6,
+                spaceBefore=6
+            )
+            
+            cell_style = ParagraphStyle(
+                'CellStyle',
+                parent=styles['Normal'],
+                fontName=POLISH_FONT,
+                fontSize=9,
+                textColor=colors.black,
+                alignment=0,
+                spaceAfter=4,
+                spaceBefore=4,
+                leftIndent=6,
+                rightIndent=6
+            )
+            
+            elements = []
+            
+            # Tytuł raportu
+            elements.append(Paragraph("Raport faktur", title_style))
+            elements.append(Spacer(1, 20))
+            
+            page_width = landscape(A4)[0] - 30
+            
+            # Dla każdej faktury utwórz osobną tabelę
+            for invoice_row in data:
+                invoice_data = []
+                invoice_title = ""
+                
+                # Przygotuj dane dla faktury
+                for i, col in enumerate(columns):
+                    if i < len(invoice_row):
+                        value = invoice_row[i]
+                        
+                        # Formatuj wartości
+                        if col == 'totalAmount' and value is not None:
+                            try:
+                                formatted_value = f"{float(value):.2f} PLN"
+                            except (ValueError, TypeError):
+                                formatted_value = str(value)
+                        elif col == 'isPaid' and value is not None:
+                            formatted_value = "Tak" if value else "Nie"
+                        elif col in ['issuedAt', 'dueDate'] and value is not None:
+                            if hasattr(value, 'strftime'):
+                                formatted_value = value.strftime('%d.%m.%Y')
+                            else:
+                                formatted_value = str(value)
+                        else:
+                            formatted_value = str(value) if value is not None else ''
+                        
+                        # Pomiń ID - nie wyświetlaj go
+                        if col != 'id':
+                            # Znajdź polską nazwę kolumny
+                            header_name = headers[i] if i < len(headers) else col
+                            invoice_data.append([header_name, formatted_value])
+                            
+                            # Użyj numeru faktury jako nagłówka sekcji
+                            if col == 'number' and formatted_value:
+                                invoice_title = f"Faktura {formatted_value}"
+                            elif col == 'customerName' and formatted_value and not invoice_title:
+                                invoice_title = f"Faktura - {formatted_value}"
+                
+                # Jeśli nie ma tytułu, użyj domyślnego
+                if not invoice_title:
+                    invoice_title = "Faktura"
+                
+                # Utwórz tabelę dla faktury
+                elements.append(Paragraph(invoice_title, section_title_style))
+                elements.append(create_section_table(invoice_data, ["Pole", "Wartość"], page_width, header_style, cell_style))
+                elements.append(Spacer(1, 20))
+            
+            doc.build(elements)
+            buffer.seek(0)
             
             response = make_response(buffer.getvalue())
             response.headers['Content-Type'] = 'application/pdf'
@@ -2090,33 +2460,113 @@ def export_contracts():
             return response
             
         elif format_type == 'pdf':
-            # Przygotuj dane dla PDF z dynamicznym formatowaniem
-            pdf_data = []
-            for row in data:
-                pdf_row = list(row)
+            # Utwórz PDF z osobnymi tabelami dla każdej umowy
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), 
+                                  leftMargin=15, rightMargin=15, 
+                                  topMargin=20, bottomMargin=20)
+            
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontName=POLISH_FONT,
+                fontSize=18,
+                spaceAfter=25,
+                alignment=1,
+                textColor=colors.darkblue
+            )
+            
+            section_title_style = ParagraphStyle(
+                'SectionTitle',
+                parent=styles['Heading2'],
+                fontName=POLISH_FONT,
+                fontSize=14,
+                spaceAfter=10,
+                spaceBefore=20,
+                alignment=0,
+                textColor=colors.darkblue
+            )
+            
+            header_style = ParagraphStyle(
+                'HeaderStyle',
+                parent=styles['Normal'],
+                fontName=POLISH_FONT,
+                fontSize=10,
+                textColor=colors.white,
+                alignment=1,
+                spaceAfter=6,
+                spaceBefore=6
+            )
+            
+            cell_style = ParagraphStyle(
+                'CellStyle',
+                parent=styles['Normal'],
+                fontName=POLISH_FONT,
+                fontSize=9,
+                textColor=colors.black,
+                alignment=0,
+                spaceAfter=4,
+                spaceBefore=4,
+                leftIndent=6,
+                rightIndent=6
+            )
+            
+            elements = []
+            
+            # Tytuł raportu
+            elements.append(Paragraph("Raport umów", title_style))
+            elements.append(Spacer(1, 20))
+            
+            page_width = landscape(A4)[0] - 30
+            
+            # Dla każdej umowy utwórz osobną tabelę
+            for contract_row in data:
+                contract_data = []
+                contract_title = ""
                 
-                # Formatuj dane w zależności od typu kolumny
+                # Przygotuj dane dla umowy
                 for i, col in enumerate(columns):
-                    if i < len(pdf_row) and pdf_row[i] is not None:
-                        # Format kwot
-                        if col in ['netAmount']:
+                    if i < len(contract_row):
+                        value = contract_row[i]
+                        
+                        # Formatuj wartości
+                        if col == 'netAmount' and value is not None:
                             try:
-                                pdf_row[i] = f"{float(pdf_row[i]):.2f} PLN"
+                                formatted_value = f"{float(value):.2f} PLN"
                             except (ValueError, TypeError):
-                                pdf_row[i] = str(pdf_row[i])
-                        # Format dat
-                        elif col in ['signedAt', 'startDate', 'endDate']:
-                            if hasattr(pdf_row[i], 'strftime'):
-                                pdf_row[i] = pdf_row[i].strftime('%d.%m.%Y')
+                                formatted_value = str(value)
+                        elif col in ['signedAt', 'startDate', 'endDate'] and value is not None:
+                            if hasattr(value, 'strftime'):
+                                formatted_value = value.strftime('%d.%m.%Y')
                             else:
-                                pdf_row[i] = str(pdf_row[i])
-                        # Inne dane jako string
+                                formatted_value = str(value)
                         else:
-                            pdf_row[i] = str(pdf_row[i])
+                            formatted_value = str(value) if value is not None else ''
+                        
+                        # Pomiń ID i customerId - nie wyświetlaj ich
+                        if col not in ['id', 'customerId']:
+                            # Znajdź polską nazwę kolumny
+                            header_name = headers[i] if i < len(headers) else col
+                            contract_data.append([header_name, formatted_value])
+                            
+                            # Użyj tytułu lub numeru umowy jako nagłówka sekcji
+                            if col == 'title' and formatted_value:
+                                contract_title = formatted_value
+                            elif col == 'contractNumber' and formatted_value and not contract_title:
+                                contract_title = f"Umowa {formatted_value}"
                 
-                pdf_data.append(pdf_row)
-
-            buffer = create_pdf_table(pdf_data, headers, "Raport umów")
+                # Jeśli nie ma tytułu, użyj domyślnego
+                if not contract_title:
+                    contract_title = "Umowa"
+                
+                # Utwórz tabelę dla umowy
+                elements.append(Paragraph(contract_title, section_title_style))
+                elements.append(create_section_table(contract_data, ["Pole", "Wartość"], page_width, header_style, cell_style))
+                elements.append(Spacer(1, 20))
+            
+            doc.build(elements)
+            buffer.seek(0)
             
             response = make_response(buffer.getvalue())
             response.headers['Content-Type'] = 'application/pdf'

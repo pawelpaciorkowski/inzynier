@@ -50,3 +50,14 @@ logs/
 *.db
 backend-python/app/crm_db.sqlite
 backend-python/crm.db
+
+# ---- PYTHON ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.pytest_cache/

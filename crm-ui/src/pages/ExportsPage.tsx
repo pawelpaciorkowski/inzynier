@@ -8,7 +8,6 @@ import {
     FunnelIcon,
     TableCellsIcon,
     ChartBarIcon,
-    ArrowDownTrayIcon,
     UsersIcon,
     DocumentTextIcon,
     CurrencyDollarIcon,
@@ -209,10 +208,11 @@ export function ExportsPage() {
                 link.click();
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
-            } catch (downloadError) {
-                const url = window.URL.createObjectURL(blob);
-                window.open(url, '_blank');
-                setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+            } catch {
+                // W przypadku błędu pobierania (np. w Safari), otwórz plik w nowej karcie
+                const altUrl = window.URL.createObjectURL(blob);
+                window.open(altUrl, '_blank');
+                setTimeout(() => window.URL.revokeObjectURL(altUrl), 5000);
             }
 
             openToast(`Dane ${config.type} zostały wyeksportowane w formacie ${config.format.toUpperCase()}.`, 'success');

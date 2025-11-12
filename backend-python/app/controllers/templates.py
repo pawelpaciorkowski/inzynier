@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, send_file
 from werkzeug.utils import secure_filename
 import os
 from app.database import db
@@ -259,6 +259,32 @@ def get_template_types():
         type_list = ['document', 'contract', 'invoice', 'report']
         
         return jsonify(type_list), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@templates_bp.route('/<int:template_id>/download', methods=['GET'])
+@require_auth
+def download_template(template_id):
+    """Pobierz plik szablonu"""
+    try:
+        user_id = get_current_user_id()
+        template = Template.query.filter_by(Id=template_id).first()
+        
+        if not template:
+            return jsonify({'error': 'Szablon nie został znaleziony'}), 404
+        
+        # Sprawdź czy plik istnieje
+        if not os.path.exists(template.FilePath):
+            return jsonify({'error': 'Plik szablonu nie został znaleziony na serwerze'}), 404
+        
+        # Pobierz plik i zwróć jako odpowiedź
+        return send_file(
+            template.FilePath,
+            as_attachment=True,
+            download_name=template.FileName,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document' if template.FileName.endswith('.docx') else 'application/msword' if template.FileName.endswith('.doc') else 'application/octet-stream'
+        )
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
