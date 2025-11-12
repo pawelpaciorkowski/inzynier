@@ -1,6 +1,6 @@
 # CRM Backend w Python
 
-Prosty backend CRM napisany w Python używając Flask - idealny dla juniora!
+Backend API dla systemu CRM napisany w Python przy użyciu Flask.
 
 ## 🚀 Szybki start
 
@@ -28,7 +28,7 @@ pip install -r requirements.txt
 CREATE DATABASE crm_db;
 ```
 
-3. Skonfiguruj połączenie w pliku `config.py`:
+3. Skonfiguruj połączenie w pliku `app/config.py`:
 ```python
 SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://username:password@localhost:3306/crm_db'
 ```
@@ -44,29 +44,44 @@ Aplikacja będzie dostępna pod adresem: `http://localhost:5000`
 ## 📋 Dostępne endpointy
 
 ### Autoryzacja
-- `POST /api/auth/login` - logowanie
-- `POST /api/auth/register` - rejestracja
-
-### Przypomnienia
-- `GET /api/reminders` - lista przypomnień
-- `GET /api/reminders/{id}` - szczegóły przypomnienia
-- `POST /api/reminders` - utwórz przypomnienie
-- `PUT /api/reminders/{id}` - aktualizuj przypomnienie
-- `DELETE /api/reminders/{id}` - usuń przypomnienie
+- `POST /api/Auth/login` - logowanie
+- `POST /api/Auth/register` - rejestracja
 
 ### Klienci
-- `GET /api/customers` - lista klientów
-- `GET /api/customers/{id}` - szczegóły klienta
-- `POST /api/customers` - utwórz klienta
-- `PUT /api/customers/{id}` - aktualizuj klienta
-- `DELETE /api/customers/{id}` - usuń klienta
+- `GET /api/Customers` - lista klientów
+- `GET /api/Customers/{id}` - szczegóły klienta
+- `POST /api/Customers` - utwórz klienta
+- `PUT /api/Customers/{id}` - aktualizuj klienta
+- `DELETE /api/Customers/{id}` - usuń klienta
 
-## 🔐 Użytkownicy testowi
+### Przypomnienia
+- `GET /api/Reminders` - lista przypomnień
+- `GET /api/Reminders/{id}` - szczegóły przypomnienia
+- `POST /api/Reminders` - utwórz przypomnienie
+- `PUT /api/Reminders/{id}` - aktualizuj przypomnienie
+- `DELETE /api/Reminders/{id}` - usuń przypomnienie
 
-Po uruchomieniu aplikacji zostaną utworzeni użytkownicy testowi:
+### Inne moduły
+- Faktury (`/api/Invoices`)
+- Kontrakty (`/api/Contracts`)
+- Spotkania (`/api/Meetings`)
+- Zadania (`/api/user/tasks`)
+- Raporty (`/api/reports`)
+- Tagi (`/api/Tags`)
+- Szablony (`/api/Templates`)
+- Płatności (`/api/Payments`)
 
-- **Admin**: `admin` / `admin123`
-- **User**: `user` / `user123`
+## 🔐 Tworzenie użytkownika administratora
+
+Aby utworzyć użytkownika administratora, uruchom:
+
+```bash
+python create_admin.py
+```
+
+Domyślne dane logowania:
+- **Username**: `admin`
+- **Password**: `Diviruse007@`
 
 ## 📁 Struktura projektu
 
@@ -74,80 +89,54 @@ Po uruchomieniu aplikacji zostaną utworzeni użytkownicy testowi:
 backend-python/
 ├── app/
 │   ├── controllers/     # Kontrolery (endpointy API)
-│   ├── models/         # Modele danych
-│   ├── services/       # Logika biznesowa
-│   └── database/       # Konfiguracja bazy danych
-├── config.py           # Konfiguracja aplikacji
+│   ├── models/         # Modele danych SQLAlchemy
+│   ├── database/       # Konfiguracja bazy danych
+│   ├── uploads/        # Przesłane pliki (szablony)
+│   ├── config.py       # Konfiguracja aplikacji
+│   ├── middleware.py   # Middleware autoryzacji
+│   └── utils.py        # Funkcje pomocnicze
+├── tests/              # Testy jednostkowe
 ├── app.py             # Główny plik aplikacji
+├── create_admin.py    # Skrypt tworzenia administratora
 └── requirements.txt   # Zależności Python
 ```
 
 ## 🛠️ Technologie
 
-- **Flask** - prosty framework webowy
+- **Flask** - framework webowy
 - **SQLAlchemy** - ORM do bazy danych
-- **PyJWT** - tokeny JWT
+- **PyJWT** - tokeny JWT do autoryzacji
 - **bcrypt** - hashowanie haseł
-- **MySQL** - baza danych
+- **PyMySQL** - sterownik MySQL
+- **ReportLab** - generowanie raportów PDF
+- **python-docx** - generowanie dokumentów Word
 
 ## 💡 Przykłady użycia
 
 ### Logowanie
 ```bash
-curl -X POST http://localhost:5000/api/auth/login \
+curl -X POST http://localhost:5000/api/Auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "admin123"}'
+  -d '{"username": "admin", "password": "Diviruse007@"}'
 ```
 
 ### Utworzenie przypomnienia
 ```bash
-curl -X POST http://localhost:5000/api/reminders \
+curl -X POST http://localhost:5000/api/Reminders \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -d '{"note": "Zadzwoń do klienta", "remind_at": "2024-12-31T10:00:00Z"}'
 ```
 
-## 🎯 Cechy
+## 🎯 Funkcjonalności
 
-- ✅ Prosty kod - jakby napisał junior
-- ✅ Brak niepotrzebnych komplikacji
-- ✅ Podstawowe funkcje CRM
-- ✅ Autoryzacja JWT
-- ✅ CRUD dla klientów i przypomnień
-- ✅ Automatyczne seedowanie danych testowych
-
-## 🔧 Rozwój
-
-To jest podstawowa wersja. Można łatwo dodać:
-- Więcej modeli (faktury, kontrakty, spotkania)
-- Walidację danych
-- Testy jednostkowe
-- Dokumentację API (Swagger)
-- Logowanie
-- Cache
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+- ✅ RESTful API z pełną obsługą CRUD
+- ✅ Autoryzacja JWT z obsługą ról (Admin/User)
+- ✅ Zarządzanie klientami, faktury, kontrakty, spotkania
+- ✅ System zadań i przypomnień
+- ✅ Generowanie raportów PDF
+- ✅ Generowanie dokumentów Word z szablonów
+- ✅ System tagów i grup
+- ✅ Historia logowań i logi systemowe
+- ✅ Powiadomienia i wiadomości
+- ✅ Panel administracyjny
